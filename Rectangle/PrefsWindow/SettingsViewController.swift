@@ -350,6 +350,44 @@ class SettingsViewController: NSViewController {
             integerFormatter.minimum = 1
             widthStepField.formatter = integerFormatter
 
+            let splitRatioHeaderLabel = NSTextField(labelWithString: NSLocalizedString("Half Split Ratios", tableName: "Main", value: "", comment: ""))
+            splitRatioHeaderLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
+            splitRatioHeaderLabel.alignment = .center
+            splitRatioHeaderLabel.translatesAutoresizingMaskIntoConstraints = false
+
+            let hSplitLabel = NSTextField(labelWithString: NSLocalizedString("Horizontal (L/R, %)", tableName: "Main", value: "", comment: ""))
+            hSplitLabel.alignment = .right
+            hSplitLabel.translatesAutoresizingMaskIntoConstraints = false
+
+            let vSplitLabel = NSTextField(labelWithString: NSLocalizedString("Vertical (T/B, %)", tableName: "Main", value: "", comment: ""))
+            vSplitLabel.alignment = .right
+            vSplitLabel.translatesAutoresizingMaskIntoConstraints = false
+
+            let percentFormatter = NumberFormatter()
+            percentFormatter.allowsFloats = false
+            percentFormatter.minimum = 1
+            percentFormatter.maximum = 99
+
+            let hSplitField = AutoSaveFloatField(frame: NSRect(x: 0, y: 0, width: 160, height: 19))
+            hSplitField.stringValue = String(Int(Defaults.horizontalSplitRatio.value))
+            hSplitField.delegate = self
+            hSplitField.defaults = Defaults.horizontalSplitRatio
+            hSplitField.fallbackValue = 50
+            hSplitField.translatesAutoresizingMaskIntoConstraints = false
+            hSplitField.refusesFirstResponder = true
+            hSplitField.alignment = .right
+            hSplitField.formatter = percentFormatter
+
+            let vSplitField = AutoSaveFloatField(frame: NSRect(x: 0, y: 0, width: 160, height: 19))
+            vSplitField.stringValue = String(Int(Defaults.verticalSplitRatio.value))
+            vSplitField.delegate = self
+            vSplitField.defaults = Defaults.verticalSplitRatio
+            vSplitField.fallbackValue = 50
+            vSplitField.translatesAutoresizingMaskIntoConstraints = false
+            vSplitField.refusesFirstResponder = true
+            vSplitField.alignment = .right
+            vSplitField.formatter = percentFormatter
+
             largerWidthShortcutView.setAssociatedUserDefaultsKey(WindowAction.largerWidth.name, withTransformerName: MASDictionaryTransformerName)
             smallerWidthShortcutView.setAssociatedUserDefaultsKey(WindowAction.smallerWidth.name, withTransformerName: MASDictionaryTransformerName)
             
@@ -572,6 +610,20 @@ class SettingsViewController: NSViewController {
             widthStepRow.spacing = 18
             widthStepRow.addArrangedSubview(widthStepLabel)
             widthStepRow.addArrangedSubview(widthStepField)
+
+            let hSplitRow = NSStackView()
+            hSplitRow.orientation = .horizontal
+            hSplitRow.alignment = .centerY
+            hSplitRow.spacing = 18
+            hSplitRow.addArrangedSubview(hSplitLabel)
+            hSplitRow.addArrangedSubview(hSplitField)
+
+            let vSplitRow = NSStackView()
+            vSplitRow.orientation = .horizontal
+            vSplitRow.alignment = .centerY
+            vSplitRow.spacing = 18
+            vSplitRow.addArrangedSubview(vSplitLabel)
+            vSplitRow.addArrangedSubview(vSplitField)
             
             let topVerticalThirdRow = NSStackView()
             topVerticalThirdRow.orientation = .horizontal
@@ -682,9 +734,14 @@ class SettingsViewController: NSViewController {
             mainStackView.addArrangedSubview(bottomCenterLeftEighthRow)
             mainStackView.addArrangedSubview(bottomCenterRightEighthRow)
             mainStackView.addArrangedSubview(bottomRightEighthRow)
+            mainStackView.addArrangedSubview(splitRatioHeaderLabel)
+            mainStackView.setCustomSpacing(10, after: splitRatioHeaderLabel)
+            mainStackView.addArrangedSubview(hSplitRow)
+            mainStackView.addArrangedSubview(vSplitRow)
 
             NSLayoutConstraint.activate([
                 headerLabel.widthAnchor.constraint(equalTo: mainStackView.widthAnchor),
+                splitRatioHeaderLabel.widthAnchor.constraint(equalTo: mainStackView.widthAnchor),
                 largerWidthLabel.widthAnchor.constraint(equalTo: smallerWidthLabel.widthAnchor),
                 smallerWidthLabel.widthAnchor.constraint(equalTo: widthStepLabel.widthAnchor),
                 widthStepLabel.widthAnchor.constraint(equalTo: topVerticalThirdLabel.widthAnchor),
@@ -700,6 +757,8 @@ class SettingsViewController: NSViewController {
                 bottomLeftEighthLabel.widthAnchor.constraint(equalTo: bottomCenterLeftEighthLabel.widthAnchor),
                 bottomCenterLeftEighthLabel.widthAnchor.constraint(equalTo: bottomCenterRightEighthLabel.widthAnchor),
                 bottomCenterRightEighthLabel.widthAnchor.constraint(equalTo: bottomRightEighthLabel.widthAnchor),
+                bottomVerticalTwoThirdsLabel.widthAnchor.constraint(equalTo: hSplitLabel.widthAnchor),
+                hSplitLabel.widthAnchor.constraint(equalTo: vSplitLabel.widthAnchor),
                 largerWidthLabelStack.widthAnchor.constraint(equalTo: smallerWidthLabelStack.widthAnchor),
                 largerWidthShortcutView.widthAnchor.constraint(equalToConstant: 160),
                 smallerWidthShortcutView.widthAnchor.constraint(equalToConstant: 160),
@@ -717,7 +776,12 @@ class SettingsViewController: NSViewController {
                 bottomCenterLeftEighthShortcutView.widthAnchor.constraint(equalToConstant: 160),
                 bottomCenterRightEighthShortcutView.widthAnchor.constraint(equalToConstant: 160),
                 bottomRightEighthShortcutView.widthAnchor.constraint(equalToConstant: 160),
-                widthStepField.trailingAnchor.constraint(equalTo: largerWidthShortcutView.trailingAnchor)
+                widthStepField.trailingAnchor.constraint(equalTo: largerWidthShortcutView.trailingAnchor),
+                hSplitField.widthAnchor.constraint(equalToConstant: 160),
+                vSplitField.widthAnchor.constraint(equalToConstant: 160),
+                widthStepField.trailingAnchor.constraint(equalTo: largerWidthShortcutView.trailingAnchor),
+                hSplitField.trailingAnchor.constraint(equalTo: largerWidthShortcutView.trailingAnchor),
+                vSplitField.trailingAnchor.constraint(equalTo: largerWidthShortcutView.trailingAnchor)
             ])
 
             let containerView = NSView()
@@ -966,8 +1030,9 @@ extension SettingsViewController: NSTextFieldDelegate {
               let defaults: FloatDefault = sender.defaults else { return }
 
         if sender.stringValue.isEmpty {
-            sender.stringValue = "30"
-            defaults.value = 30
+            let fallback = sender.fallbackValue
+            sender.stringValue = "\(Int(fallback))"
+            defaults.value = fallback
             sender.defaultsSetAction?()
         }
     }
@@ -976,4 +1041,5 @@ extension SettingsViewController: NSTextFieldDelegate {
 class AutoSaveFloatField: NSTextField {
     var defaults: FloatDefault?
     var defaultsSetAction: (() -> Void)?
+    var fallbackValue: Float = 30
 }
