@@ -107,6 +107,12 @@ class SettingsViewController: NSViewController {
         Notification.Name.allowAnyShortcut.post(object: newSetting)
     }
     
+    @objc func toggleShowEighthsInMenu(_ sender: NSButton) {
+        let enabled: Bool = sender.state == .on
+        Defaults.showEighthsInMenu.enabled = enabled
+        AppDelegate.instance.eighthsMenuItem?.isHidden = !enabled
+    }
+    
     @IBAction func checkForUpdates(_ sender: Any) {
         AppDelegate.instance.updaterController?.checkForUpdates(sender)
     }
@@ -734,6 +740,14 @@ class SettingsViewController: NSViewController {
             mainStackView.addArrangedSubview(bottomCenterLeftEighthRow)
             mainStackView.addArrangedSubview(bottomCenterRightEighthRow)
             mainStackView.addArrangedSubview(bottomRightEighthRow)
+                        
+            let showEighthsCheckbox = NSButton(checkboxWithTitle: NSLocalizedString("Show Eighths in menu", tableName: "Main", value: "", comment: ""), target: self, action: #selector(toggleShowEighthsInMenu(_:)))
+            showEighthsCheckbox.state = Defaults.showEighthsInMenu.userEnabled ? .on : .off
+            showEighthsCheckbox.translatesAutoresizingMaskIntoConstraints = false
+            showEighthsCheckbox.alignment = .right
+            showEighthsCheckbox.imageHugsTitle = true
+            
+            mainStackView.addArrangedSubview(showEighthsCheckbox)
             mainStackView.addArrangedSubview(splitRatioHeaderLabel)
             mainStackView.setCustomSpacing(10, after: splitRatioHeaderLabel)
             mainStackView.addArrangedSubview(hSplitRow)
@@ -780,6 +794,21 @@ class SettingsViewController: NSViewController {
                 hSplitField.widthAnchor.constraint(equalToConstant: 160),
                 vSplitField.widthAnchor.constraint(equalToConstant: 160),
                 widthStepField.trailingAnchor.constraint(equalTo: largerWidthShortcutView.trailingAnchor),
+                showEighthsCheckbox.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                smallerWidthShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                topVerticalThirdShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                middleVerticalThirdShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                bottomVerticalThirdShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                topVerticalTwoThirdsShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                bottomVerticalTwoThirdsShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                topLeftEighthShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                topCenterLeftEighthShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                topCenterRightEighthShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                topRightEighthShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                bottomLeftEighthShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                bottomCenterLeftEighthShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                bottomCenterRightEighthShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
+                bottomRightEighthShortcutView.leadingAnchor.constraint(equalTo: largerWidthShortcutView.leadingAnchor),
                 hSplitField.trailingAnchor.constraint(equalTo: largerWidthShortcutView.trailingAnchor),
                 vSplitField.trailingAnchor.constraint(equalTo: largerWidthShortcutView.trailingAnchor)
             ])

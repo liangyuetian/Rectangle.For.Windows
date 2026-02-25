@@ -10363,7 +10363,19 @@
         }
       }
     },
+    "Bottom Center Left Eighth" : {
+
+    },
+    "Bottom Center Right Eighth" : {
+
+    },
     "Bottom eighths from corners; thirds" : {
+
+    },
+    "Bottom Left Eighth" : {
+
+    },
+    "Bottom Right Eighth" : {
 
     },
     "Bottom sixths from corners; thirds" : {
@@ -21039,6 +21051,9 @@
         }
       }
     },
+    "Half Split Ratios" : {
+
+    },
     "Halves" : {
       "localizations" : {
         "ar" : {
@@ -22236,6 +22251,9 @@
           }
         }
       }
+    },
+    "Horizontal (L/R, %)" : {
+
     },
     "hQb-2v-fYv.title" : {
       "comment" : "Class = \"NSMenuItem\"; title = \"Smart Quotes\"; ObjectID = \"hQb-2v-fYv\";",
@@ -38758,6 +38776,9 @@
         }
       }
     },
+    "Show Eighths in menu" : {
+
+    },
     "Sixths" : {
       "localizations" : {
         "ar" : {
@@ -41111,7 +41132,19 @@
         }
       }
     },
+    "Top Center Left Eighth" : {
+
+    },
+    "Top Center Right Eighth" : {
+
+    },
     "Top eighths from corners; maximize" : {
+
+    },
+    "Top Left Eighth" : {
+
+    },
+    "Top Right Eighth" : {
 
     },
     "Top screen edge tiling in macOS is now disabled" : {
@@ -43766,6 +43799,9 @@
           }
         }
       }
+    },
+    "Vertical (T/B, %)" : {
+
     },
     "Vfd-fe-hCe.title" : {
       "comment" : "Class = \"NSButtonCell\"; title = \"ⓘ\"; ObjectID = \"Vfd-fe-hCe\";",

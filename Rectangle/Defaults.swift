@@ -98,6 +98,7 @@ class Defaults {
     static let systemWideMouseDownApps = JSONDefault<Set<String>>(key:"systemWideMouseDownApps", defaultValue: Set<String>(["org.languagetool.desktop", "com.microsoft.teams2"]))
     static let internalTilingNotified = BoolDefault(key: "internalTilingNotified")
     static let screensOrderedByX = OptionalBoolDefault(key: "screensOrderedByX")
+    static let showEighthsInMenu = OptionalBoolDefault(key: "showEighthsInMenu")
     
     static var array: [Default] = [
         launchOnLogin,
@@ -181,7 +182,8 @@ class Defaults {
         ignoreDragSnapToo,
         systemWideMouseDown,
         systemWideMouseDownApps,
-        screensOrderedByX
+        screensOrderedByX,
+        showEighthsInMenu
     ]
 }
 
