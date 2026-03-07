@@ -151,4 +151,5 @@ $RECYCLE.BIN/
 ###############################
 Rectangle.Windows/src/Rectangle.Windows/publish/
 Rectangle.Windows/src/Rectangle.Windows/publish-lite/
-Rectangle.Windows/src/Rectangle.Windows/publish-trimmed/
+Rectangle.Windows/publish/
+Rectangle.Windows/publish-lite/
