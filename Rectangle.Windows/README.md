@@ -41,12 +41,6 @@ dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-
 dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./publish-lite
 ```
 
-### 打包并启用裁剪（减小体积，可能影响某些功能）
-
-```bash
-dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:PublishTrimmed=true -o ./publish-trimmed
-```
-
 ### 打包参数说明
 
 | 参数 | 说明 |
@@ -56,8 +50,9 @@ dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-
 | `--self-contained true` | 包含 .NET 运行时，无需用户安装 |
 | `-p:PublishSingleFile=true` | 打包成单个 EXE 文件 |
 | `-p:IncludeNativeLibrariesForSelfExtract=true` | 将原生库提取到临时目录 |
-| `-p:PublishTrimmed=true` | 启用裁剪，移除未使用的代码 |
 | `-o ./publish` | 输出目录 |
+
+> ⚠️ **注意**：由于项目使用 Windows Forms，不支持裁剪功能 (`PublishTrimmed`)。
 
 ## 运行
 
