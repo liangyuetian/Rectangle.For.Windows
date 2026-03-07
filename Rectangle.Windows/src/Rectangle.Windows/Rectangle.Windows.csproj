@@ -11,18 +11,20 @@
     <UseWindowsForms>true</UseWindowsForms>
     <UseRidGraph>true</UseRidGraph>
     
-    <!-- 发布优化 -->
+    <!-- 发布优化：默认框架依赖模式，需要 .NET 9 Runtime -->
     <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>false</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    
-    <!-- 独立部署时启用压缩（需要命令行指定 self-contained true） -->
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     
     <!-- 发布时优化 -->
     <DebugType>none</DebugType>
     <DebugSymbols>false</DebugSymbols>
     <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <!-- 独立部署时自动启用压缩 -->
+  <PropertyGroup Condition="'$(SelfContained)' == 'true'">
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
   </PropertyGroup>
 
   <ItemGroup>
