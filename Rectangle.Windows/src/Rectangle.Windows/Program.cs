@@ -2,6 +2,7 @@ using Rectangle.Windows.Core;
 using Rectangle.Windows.Services;
 using Rectangle.Windows.Views;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -221,6 +222,17 @@ internal static class Program
     private static ContextMenuStrip CreateContextMenu()
     {
         var menu = new ContextMenuStrip();
+        
+        // 加载配置获取快捷键
+        var shortcuts = _configService?.Load()?.Shortcuts ?? new();
+        var defaultShortcuts = ConfigService.GetDefaultShortcuts();
+        
+        // 合并默认快捷键和用户配置
+        var mergedShortcuts = new Dictionary<string, ShortcutConfig>(defaultShortcuts);
+        foreach (var kvp in shortcuts)
+        {
+            mergedShortcuts[kvp.Key] = kvp.Value;
+        }
 
         // 忽略 [应用名] - 动态菜单项
         _ignoreAppMenuItem = new ToolStripMenuItem("忽略 [无有效窗口]") { Enabled = false };
@@ -235,29 +247,29 @@ internal static class Program
         menu.Items.Add(new ToolStripSeparator());
 
         // 半屏
-        menu.Items.Add("左半屏 (&L)", LoadMenuIcon("leftHalfTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.LeftHalf));
-        menu.Items.Add("右半屏 (&R)", LoadMenuIcon("rightHalfTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.RightHalf));
-        menu.Items.Add("上半屏 (&T)", LoadMenuIcon("topHalfTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.TopHalf));
-        menu.Items.Add("下半屏 (&B)", LoadMenuIcon("bottomHalfTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.BottomHalf));
+        AddMenuItem(menu, "左半屏", GetShortcutText(mergedShortcuts, "LeftHalf"), LoadMenuIcon("leftHalfTemplate.png"), WindowAction.LeftHalf);
+        AddMenuItem(menu, "右半屏", GetShortcutText(mergedShortcuts, "RightHalf"), LoadMenuIcon("rightHalfTemplate.png"), WindowAction.RightHalf);
+        AddMenuItem(menu, "上半屏", GetShortcutText(mergedShortcuts, "TopHalf"), LoadMenuIcon("topHalfTemplate.png"), WindowAction.TopHalf);
+        AddMenuItem(menu, "下半屏", GetShortcutText(mergedShortcuts, "BottomHalf"), LoadMenuIcon("bottomHalfTemplate.png"), WindowAction.BottomHalf);
         menu.Items.Add(new ToolStripSeparator());
 
         // 四角
-        menu.Items.Add("左上角", LoadMenuIcon("topLeftTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.TopLeft));
-        menu.Items.Add("右上角", LoadMenuIcon("topRightTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.TopRight));
-        menu.Items.Add("左下角", LoadMenuIcon("bottomLeftTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.BottomLeft));
-        menu.Items.Add("右下角", LoadMenuIcon("bottomRightTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.BottomRight));
+        AddMenuItem(menu, "左上角", GetShortcutText(mergedShortcuts, "TopLeft"), LoadMenuIcon("topLeftTemplate.png"), WindowAction.TopLeft);
+        AddMenuItem(menu, "右上角", GetShortcutText(mergedShortcuts, "TopRight"), LoadMenuIcon("topRightTemplate.png"), WindowAction.TopRight);
+        AddMenuItem(menu, "左下角", GetShortcutText(mergedShortcuts, "BottomLeft"), LoadMenuIcon("bottomLeftTemplate.png"), WindowAction.BottomLeft);
+        AddMenuItem(menu, "右下角", GetShortcutText(mergedShortcuts, "BottomRight"), LoadMenuIcon("bottomRightTemplate.png"), WindowAction.BottomRight);
         menu.Items.Add(new ToolStripSeparator());
 
         // 三分之一
-        menu.Items.Add("左首 1/3", LoadMenuIcon("firstThirdTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.FirstThird));
-        menu.Items.Add("中间 1/3", LoadMenuIcon("centerThirdTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.CenterThird));
-        menu.Items.Add("右首 1/3", LoadMenuIcon("lastThirdTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.LastThird));
+        AddMenuItem(menu, "左首 1/3", GetShortcutText(mergedShortcuts, "FirstThird"), LoadMenuIcon("firstThirdTemplate.png"), WindowAction.FirstThird);
+        AddMenuItem(menu, "中间 1/3", GetShortcutText(mergedShortcuts, "CenterThird"), LoadMenuIcon("centerThirdTemplate.png"), WindowAction.CenterThird);
+        AddMenuItem(menu, "右首 1/3", GetShortcutText(mergedShortcuts, "LastThird"), LoadMenuIcon("lastThirdTemplate.png"), WindowAction.LastThird);
         menu.Items.Add(new ToolStripSeparator());
 
         // 最大化与恢复
-        menu.Items.Add("最大化", LoadMenuIcon("maximizeTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.Maximize));
-        menu.Items.Add("恢复", LoadMenuIcon("restoreTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.Restore));
-        menu.Items.Add("居中", LoadMenuIcon("centerTemplate.png"), (s, e) => _windowManager?.Execute(WindowAction.Center));
+        AddMenuItem(menu, "最大化", GetShortcutText(mergedShortcuts, "Maximize"), LoadMenuIcon("maximizeTemplate.png"), WindowAction.Maximize);
+        AddMenuItem(menu, "恢复", GetShortcutText(mergedShortcuts, "Restore"), LoadMenuIcon("restoreTemplate.png"), WindowAction.Restore);
+        AddMenuItem(menu, "居中", GetShortcutText(mergedShortcuts, "Center"), LoadMenuIcon("centerTemplate.png"), WindowAction.Center);
         menu.Items.Add(new ToolStripSeparator());
 
         // 设置与退出
@@ -268,6 +280,61 @@ internal static class Program
         });
 
         return menu;
+    }
+    
+    private static void AddMenuItem(ContextMenuStrip menu, string text, string shortcut, System.Drawing.Image? icon, WindowAction action)
+    {
+        var item = new ToolStripMenuItem(text, icon, (s, e) => _windowManager?.Execute(action));
+        if (!string.IsNullOrEmpty(shortcut))
+        {
+            item.ShortcutKeyDisplayString = shortcut;
+        }
+        menu.Items.Add(item);
+    }
+    
+    private static string GetShortcutText(Dictionary<string, ShortcutConfig> shortcuts, string actionName)
+    {
+        if (!shortcuts.TryGetValue(actionName, out var config) || !config.Enabled || config.KeyCode <= 0)
+            return string.Empty;
+        
+        var parts = new System.Collections.Generic.List<string>();
+        
+        if ((config.ModifierFlags & 0x0002) != 0) parts.Add("Ctrl");
+        if ((config.ModifierFlags & 0x0001) != 0) parts.Add("Alt");
+        if ((config.ModifierFlags & 0x0004) != 0) parts.Add("Shift");
+        if ((config.ModifierFlags & 0x0008) != 0) parts.Add("Win");
+        
+        parts.Add(GetKeyName(config.KeyCode));
+        
+        return string.Join("+", parts);
+    }
+    
+    private static string GetKeyName(int vk)
+    {
+        return vk switch
+        {
+            0x25 => "←",
+            0x26 => "↑",
+            0x27 => "→",
+            0x28 => "↓",
+            0x0D => "Enter",
+            0x08 => "Backspace",
+            0x2E => "Delete",
+            0x43 => "C",
+            0x44 => "D",
+            0x45 => "E",
+            0x46 => "F",
+            0x47 => "G",
+            0x49 => "I",
+            0x4A => "J",
+            0x4B => "K",
+            0x52 => "R",
+            0x54 => "T",
+            0x55 => "U",
+            0xBB => "=",
+            0xBD => "-",
+            _ => $""
+        };
     }
 
     private static void OpenSettings()

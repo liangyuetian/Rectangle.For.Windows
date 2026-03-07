@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "Rectangle.Windows.WinUI (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "Rectangle.Windows.WinUI (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

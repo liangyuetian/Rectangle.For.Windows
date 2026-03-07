@@ -16,6 +16,7 @@ public class HotkeyManager
     private readonly Dictionary<int, WindowAction> _hotkeyActions = new();
     private readonly Dictionary<int, (ushort Vk, HOT_KEY_MODIFIERS Modifiers)> _hotkeyInfo = new();
     private readonly List<uint> _registeredIds = new();
+    private bool _isCapturingMode = false;
 
     public HotkeyManager(nint hwnd, WindowManager windowManager, AppConfig config)
     {
@@ -142,6 +143,12 @@ public class HotkeyManager
 
     public void HandleHotKey(int id)
     {
+        // 如果正在设置快捷键，忽略热键响应
+        if (_isCapturingMode)
+        {
+            return;
+        }
+        
         if (_hotkeyActions.TryGetValue(id, out var action))
         {
             if (_hotkeyInfo.TryGetValue(id, out var info))
@@ -151,6 +158,14 @@ public class HotkeyManager
             }
             _windowManager.Execute(action);
         }
+    }
+    
+    /// <summary>
+    /// 设置捕获模式。在修改快捷键时启用，此时热键不响应功能
+    /// </summary>
+    public void SetCapturingMode(bool capturing)
+    {
+        _isCapturingMode = capturing;
     }
 
     private static string GetShortcutString(ushort vk, HOT_KEY_MODIFIERS modifiers)
@@ -210,8 +225,45 @@ public class HotkeyManager
         _hotkeyActions.Clear();
         _hotkeyInfo.Clear();
         
-        // 重新注册默认热键
-        RegisterDefaultHotkeys();
+        // 获取默认快捷键
+        var defaultShortcuts = ConfigService.GetDefaultShortcuts();
+        
+        // 合并配置：先用默认值，再用用户配置覆盖
+        var mergedShortcuts = new Dictionary<string, ShortcutConfig>(defaultShortcuts);
+        if (shortcuts != null)
+        {
+            foreach (var kvp in shortcuts)
+            {
+                mergedShortcuts[kvp.Key] = kvp.Value;
+            }
+        }
+        
+        // 根据合并后的配置注册热键
+        var newId = 1;
+        foreach (var kvp in mergedShortcuts)
+        {
+            var actionName = kvp.Key;
+            var config = kvp.Value;
+            
+            // 跳过禁用的快捷键
+            if (!config.Enabled || config.KeyCode <= 0)
+                continue;
+            
+            // 解析 WindowAction
+            if (!Enum.TryParse<WindowAction>(actionName, out var action))
+                continue;
+            
+            // 转换修饰键
+            HOT_KEY_MODIFIERS newModifiers = 0;
+            if ((config.ModifierFlags & 0x0002) != 0) newModifiers |= HOT_KEY_MODIFIERS.MOD_CONTROL;
+            if ((config.ModifierFlags & 0x0001) != 0) newModifiers |= HOT_KEY_MODIFIERS.MOD_ALT;
+            if ((config.ModifierFlags & 0x0004) != 0) newModifiers |= HOT_KEY_MODIFIERS.MOD_SHIFT;
+            if ((config.ModifierFlags & 0x0008) != 0) newModifiers |= HOT_KEY_MODIFIERS.MOD_WIN;
+            
+            RegisterHotkey(ref newId, (ushort)config.KeyCode, newModifiers, action);
+        }
+        
+        Console.WriteLine($"[HotkeyManager] 已重新注册 {newId - 1} 个快捷键");
     }
 
     public void Dispose()

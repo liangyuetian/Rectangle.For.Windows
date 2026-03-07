@@ -269,22 +269,26 @@ public class SettingsForm : Form
 
     private void ShowShortcutCaptureDialog(string action, ShortcutRow row)
     {
+        // 暂时禁用热键响应，避免在设置快捷键时触发功能
+        Program.HotkeyManager?.SetCapturingMode(true);
+        
         var captureForm = new Form
         {
             Text = "按下新的快捷键...",
-            Size = new Size(300, 120),
+            Size = new Size(320, 150),
             FormBorderStyle = FormBorderStyle.FixedDialog,
             StartPosition = FormStartPosition.CenterParent,
             MaximizeBox = false,
-            MinimizeBox = false
+            MinimizeBox = false,
+            KeyPreview = true
         };
 
         var label = new Label
         {
-            Text = "请按下新的快捷键组合\n(例如: Ctrl+Alt+Left)",
+            Text = "请按下新的快捷键组合\n(例如: Ctrl+Alt+Left)\n按 Escape 取消",
             Dock = DockStyle.Top,
             TextAlign = ContentAlignment.MiddleCenter,
-            Height = 50
+            Height = 60
         };
 
         var cancelButton = new Button
@@ -298,27 +302,73 @@ public class SettingsForm : Form
         captureForm.Controls.Add(label);
         captureForm.Controls.Add(cancelButton);
 
-        uint modifiers = 0;
-        int keyCode = 0;
-
+        // 使用 KeyDown 事件捕获快捷键
         captureForm.KeyDown += (s, e) =>
         {
-            modifiers = 0;
+            // 阻止所有键的默认行为
+            e.Handled = true;
+
+            // Escape 键取消
+            if (e.KeyCode == Keys.Escape)
+            {
+                Program.HotkeyManager?.SetCapturingMode(false);
+                captureForm.Close();
+                return;
+            }
+
+            // 忽略单独的修饰键（等待完整组合）
+            if (e.KeyCode == Keys.ControlKey || e.KeyCode == Keys.LControlKey || 
+                e.KeyCode == Keys.RControlKey || e.KeyCode == Keys.Menu ||
+                e.KeyCode == Keys.LMenu || e.KeyCode == Keys.RMenu ||
+                e.KeyCode == Keys.ShiftKey || e.KeyCode == Keys.LShiftKey ||
+                e.KeyCode == Keys.RShiftKey)
+            {
+                return;
+            }
+
+            uint modifiers = 0;
             if (e.Control) modifiers |= 0x0002; // MOD_CONTROL
             if (e.Alt) modifiers |= 0x0001;     // MOD_ALT
             if (e.Shift) modifiers |= 0x0004;   // MOD_SHIFT
-            keyCode = (int)e.KeyCode;
+            int keyCode = (int)e.KeyCode;
 
+            // 必须有至少一个修饰键
             if (modifiers > 0 && keyCode > 0)
             {
                 var shortcutText = FormatShortcut(keyCode, modifiers);
                 row.KeyLabel.Text = shortcutText;
-                UpdateShortcutConfig(action, row);
+                
+                // 直接保存快捷键到配置
+                if (!_config.Shortcuts.ContainsKey(action))
+                {
+                    _config.Shortcuts[action] = new ShortcutConfig();
+                }
+                _config.Shortcuts[action].KeyCode = keyCode;
+                _config.Shortcuts[action].ModifierFlags = modifiers;
+                _config.Shortcuts[action].Enabled = row.CheckBox.Checked;
+                
+                // 立即保存配置并重新注册热键
+                _configService.Save(_config);
+                Program.HotkeyManager?.ReloadFromConfig(_config.Shortcuts);
+                
+                // 恢复热键响应
+                Program.HotkeyManager?.SetCapturingMode(false);
                 captureForm.Close();
             }
         };
 
-        captureForm.KeyPreview = true;
+        // 阻止 KeyPress 事件的默认行为
+        captureForm.KeyPress += (s, e) =>
+        {
+            e.Handled = true;
+        };
+        
+        // 窗口关闭时恢复热键响应
+        captureForm.FormClosed += (s, e) =>
+        {
+            Program.HotkeyManager?.SetCapturingMode(false);
+        };
+
         captureForm.ShowDialog(this);
     }
 
@@ -331,6 +381,19 @@ public class SettingsForm : Form
             _config.Shortcuts[action].ModifierFlags = 0;
             _config.Shortcuts[action].Enabled = false;
         }
+        else
+        {
+            _config.Shortcuts[action] = new ShortcutConfig
+            {
+                KeyCode = 0,
+                ModifierFlags = 0,
+                Enabled = false
+            };
+        }
+        
+        // 立即保存配置并重新注册热键
+        _configService.Save(_config);
+        Program.HotkeyManager?.ReloadFromConfig(_config.Shortcuts);
     }
 
     private void UpdateShortcutConfig(string action, ShortcutRow row)
