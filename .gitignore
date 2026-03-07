@@ -145,3 +145,10 @@ $RECYCLE.BIN/
 
 ## Windows shortcuts
 *.lnk
+
+###############################
+### Rectangle.Windows 发布目录
+###############################
+Rectangle.Windows/src/Rectangle.Windows/publish/
+Rectangle.Windows/src/Rectangle.Windows/publish-lite/
+Rectangle.Windows/src/Rectangle.Windows/publish-trimmed/
