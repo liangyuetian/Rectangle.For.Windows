@@ -66,15 +66,8 @@ internal static class Program
         // 创建托盘菜单
         _contextMenu = CreateContextMenu();
 
-        // 创建托盘图标
-        string iconPath = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "AppIcon.png");
-        System.Drawing.Icon? appIcon = null;
-        if (System.IO.File.Exists(iconPath))
-        {
-            using var bmp = new System.Drawing.Bitmap(iconPath);
-            var hIcon = bmp.GetHicon();
-            appIcon = System.Drawing.Icon.FromHandle(hIcon);
-        }
+        // 创建托盘图标（从嵌入式资源加载）
+        System.Drawing.Icon? appIcon = LoadAppIcon();
         _notifyIcon = new NotifyIcon
         {
             Icon = appIcon ?? System.Drawing.SystemIcons.Application,
@@ -113,12 +106,33 @@ internal static class Program
         Console.WriteLine("Rectangle 已退出。");
     }
 
+    private static System.Drawing.Icon? LoadAppIcon()
+    {
+        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+        string resourceName = "Rectangle.Windows.Assets.AppIcon.png";
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream != null)
+        {
+            try
+            {
+                using var bmp = new System.Drawing.Bitmap(stream);
+                var hIcon = bmp.GetHicon();
+                return System.Drawing.Icon.FromHandle(hIcon);
+            }
+            catch { }
+        }
+        return null;
+    }
+
     private static System.Drawing.Image? LoadMenuIcon(string iconName)
     {
-        string path = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Assets", "WindowPositions", iconName);
-        if (System.IO.File.Exists(path))
+        // 从嵌入式资源加载
+        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+        string resourceName = $"Rectangle.Windows.Assets.WindowPositions.{iconName}";
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream != null)
         {
-            try { return System.Drawing.Image.FromFile(path); }
+            try { return System.Drawing.Image.FromStream(stream); }
             catch { return null; }
         }
         return null;

@@ -27,19 +27,37 @@ dotnet test src/Rectangle.Windows.Tests/Rectangle.Windows.Tests.csproj
 
 ## 打包发布
 
-### 打包成单独的 EXE 文件（包含运行时，约 132MB）
+### 方式一：压缩单文件（推荐，约 54MB）
+
+包含 .NET 运行时，启用压缩，用户无需安装任何依赖：
 
 ```bash
-dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish
+dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o ./publish
 ```
 
-输出文件：`publish/Rectangle.Windows.exe`
+### 方式二：精简单文件（约 25MB）
 
-### 打包成单独的 EXE 文件（不包含运行时，约 1MB，需要用户安装 .NET 9）
+不包含 .NET 运行时，需要用户安装 [.NET 9 Runtime](https://dotnet.microsoft.com/download/dotnet/9.0)：
 
 ```bash
-dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o ./publish-lite
+dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o ./publish-lite
 ```
+
+### 方式三：未压缩单文件（约 138MB）
+
+包含运行时但不压缩，启动速度稍快：
+
+```bash
+dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o ./publish-full
+```
+
+### 打包大小对比
+
+| 方式 | 文件大小 | 启动速度 | 用户要求 |
+|------|----------|----------|----------|
+| 压缩单文件 | ~54 MB | 稍慢（解压） | 无需安装 |
+| 精简单文件 | ~25 MB | 快 | 需安装 .NET 9 |
+| 未压缩单文件 | ~138 MB | 快 | 无需安装 |
 
 ### 打包参数说明
 
@@ -49,8 +67,10 @@ dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-
 | `-r win-x64` | 目标平台为 Windows 64 位 |
 | `--self-contained true` | 包含 .NET 运行时，无需用户安装 |
 | `-p:PublishSingleFile=true` | 打包成单个 EXE 文件 |
-| `-p:IncludeNativeLibrariesForSelfExtract=true` | 将原生库提取到临时目录 |
-| `-o ./publish` | 输出目录 |
+| `-p:IncludeNativeLibrariesForSelfExtract=true` | 将原生库打包进单文件 |
+| `-p:EnableCompressionInSingleFile=true` | 启用压缩，显著减小体积 |
+| `-p:DebugType=none` | 不生成调试符号 |
+| `-p:DebugSymbols=false` | 不生成 PDB 文件 |
 
 > ⚠️ **注意**：由于项目使用 Windows Forms，不支持裁剪功能 (`PublishTrimmed`)。
 
