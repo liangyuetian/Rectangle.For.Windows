@@ -90,9 +90,17 @@ public class AppConfig
 {
     public int GapSize { get; set; } = 0;
     public bool LaunchOnLogin { get; set; } = false;
-    public List<string> IgnoredApps { get; set; } = new();
+    public List<string> IgnoredApps { get; set; } = GetDefaultIgnoredApps();
     public Dictionary<string, ShortcutConfig> Shortcuts { get; set; } = new();
     public SnapAreaConfig SnapAreas { get; set; } = new();
+
+    private static List<string> GetDefaultIgnoredApps()
+    {
+        return new List<string>
+        {
+            "Rectangle.Windows.exe"
+        };
+    }
 }
 
 public class ShortcutConfig
