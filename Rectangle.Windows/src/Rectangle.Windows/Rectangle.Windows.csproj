@@ -9,6 +9,7 @@
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <UseWindowsForms>true</UseWindowsForms>
+    <UseRidGraph>true</UseRidGraph>
   </PropertyGroup>
 
   <ItemGroup>
@@ -20,4 +21,5 @@
   <ItemGroup>
     <EmbeddedResource Include="Assets\**\*.png" />
   </ItemGroup>
+
 </Project>
