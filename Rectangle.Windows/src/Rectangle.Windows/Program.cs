@@ -33,20 +33,6 @@ internal static class Program
     private static extern bool AttachConsole(int dwProcessId);
     private const int ATTACH_PARENT_PROCESS = -1;
 
-    // 导入 SetConsoleCtrlHandler 用于捕获控制台关闭事件
-    [DllImport("kernel32.dll", SetLastError = true)]
-    private static extern bool SetConsoleCtrlHandler(ConsoleCtrlDelegate? handler, bool add);
-
-    private delegate bool ConsoleCtrlDelegate(int ctrlType);
-
-    // 控制台控制类型
-    private const int CTRL_C_EVENT = 0;
-    private const int CTRL_BREAK_EVENT = 1;
-    private const int CTRL_CLOSE_EVENT = 2;
-    private const int CTRL_LOGOFF_EVENT = 5;
-    private const int CTRL_SHUTDOWN_EVENT = 6;
-
-    private static ConsoleCtrlDelegate? _consoleCtrlHandler;
 
     [STAThread]
     public static void Main()
@@ -54,9 +40,15 @@ internal static class Program
         // 附加到父进程的控制台（用于 dotnet run 时显示输出）
         AttachConsole(ATTACH_PARENT_PROCESS);
 
-        // 设置控制台关闭事件处理器（捕获 Ctrl+C 等）
-        _consoleCtrlHandler = new ConsoleCtrlDelegate(ConsoleCtrlHandler);
-        SetConsoleCtrlHandler(_consoleCtrlHandler, true);
+        // 注册进程退出事件，确保在进程退出时清理托盘图标
+        AppDomain.CurrentDomain.ProcessExit += (s, e) => CleanupTrayIcon();
+
+        // 注册 Ctrl+C 处理器
+        Console.CancelKeyPress += (s, e) =>
+        {
+            e.Cancel = false; // 允许程序继续退出
+            CleanupTrayIcon();
+        };
 
         // 单实例检查
         const string mutexName = "Rectangle.Windows.SingleInstance";
@@ -125,24 +117,6 @@ internal static class Program
         CleanupTrayIcon();
         _lastActiveWindowService?.Dispose();
         Console.WriteLine("Rectangle 已退出。");
-    }
-
-    /// <summary>
-    /// 控制台控制事件处理器 - 捕获 Ctrl+C、关闭窗口等事件
-    /// </summary>
-    private static bool ConsoleCtrlHandler(int ctrlType)
-    {
-        if (ctrlType == CTRL_C_EVENT || ctrlType == CTRL_BREAK_EVENT || ctrlType == CTRL_CLOSE_EVENT)
-        {
-            // 清理托盘图标
-            CleanupTrayIcon();
-            _lastActiveWindowService?.Dispose();
-            Console.WriteLine("Rectangle 已退出。");
-            // 强制退出程序
-            Environment.Exit(0);
-            return true;
-        }
-        return false;
     }
 
     /// <summary>
