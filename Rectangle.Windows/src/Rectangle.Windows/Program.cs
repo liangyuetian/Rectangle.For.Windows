@@ -138,6 +138,8 @@ internal static class Program
             CleanupTrayIcon();
             _lastActiveWindowService?.Dispose();
             Console.WriteLine("Rectangle 已退出。");
+            // 强制退出程序
+            Environment.Exit(0);
             return true;
         }
         return false;
