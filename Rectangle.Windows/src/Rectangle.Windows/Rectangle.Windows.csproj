@@ -18,6 +18,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Assets\**" CopyToOutputDirectory="PreserveNewest" />
+    <EmbeddedResource Include="Assets\**\*.png" />
   </ItemGroup>
 </Project>
