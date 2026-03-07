@@ -35,7 +35,7 @@
 执行 TASK-000 前，确认：
 
 - [ ] 当前目录为 `Rectangle.Windows/` 或可创建该目录
-- [ ] `dotnet --version` 输出 8.x
+- [ ] `dotnet --version` 输出 9.x
 - [ ] 操作系统为 Windows 10/11，非 WSL
 
 ---
@@ -56,7 +56,7 @@
 
 ### 必须掌握的关键信息
 
-- 技术栈：C# + WinUI 3 + .NET 8 + CsWin32 + H.NotifyIcon.WinUI
+- 技术栈：C# + WinUI 3 + .NET 9 + CsWin32 + H.NotifyIcon.WinUI
 - 窗口操作：GetForegroundWindow → GetWindowRect → 计算目标 RECT → SetWindowPos
 - 工作区：GetMonitorInfo 的 rcWork，排除任务栏
 - 左半屏：workArea 左半部分，宽度 = (Right - Left) / 2
@@ -110,7 +110,7 @@ dotnet sln list
 
 1. 在 `Rectangle.Windows/` 下执行：
    ```bash
-   dotnet new winui -n Rectangle.Windows -o src/Rectangle.Windows -f net8-windows
+   dotnet new winui -n Rectangle.Windows -o src/Rectangle.Windows -f net9-windows
    ```
 2. 若模板 `winui` 不存在，尝试：
    ```bash
@@ -120,7 +120,7 @@ dotnet sln list
 3. 备选（若 `dotnet new winui` 失败）：
    ```bash
    dotnet new install Microsoft.WindowsAppSDK.Templates
-   dotnet new winui -n Rectangle.Windows -o src/Rectangle.Windows -f net8-windows
+   dotnet new winui -n Rectangle.Windows -o src/Rectangle.Windows -f net9-windows
    ```
 
 #### 验证
@@ -995,7 +995,7 @@ dotnet build src/Rectangle.Windows/Rectangle.Windows.csproj
 
 ### TASK-037：创建 SettingsWindow（三选项卡结构）
 
-- [ ] **TASK-037** 创建 SettingsWindow（布局参考附录 B；macOS 参考：`Rectangle/PrefsWindow/` 下各 ViewController）
+- [x] **TASK-037** 创建 SettingsWindow（布局参考附录 B；macOS 参考：`Rectangle/PrefsWindow/` 下各 ViewController）
 
 #### 动作
 
@@ -1028,7 +1028,7 @@ dotnet build src/Rectangle.Windows/Rectangle.Windows.csproj
 
 ### TASK-038：设置与 ConfigService 绑定
 
-- [ ] **TASK-038** 绑定配置
+- [x] **TASK-038** 绑定配置
 
 #### 动作
 
@@ -1080,7 +1080,7 @@ dotnet build src/Rectangle.Windows/Rectangle.Windows.csproj
 
 ### TASK-039：托盘「设置」打开 SettingsWindow
 
-- [ ] **TASK-039** 托盘打开设置
+- [x] **TASK-039** 托盘打开设置
 
 #### 动作
 
@@ -1131,17 +1131,25 @@ dotnet build src/Rectangle.Windows/Rectangle.Windows.csproj
 
 ### TASK-041a：CenterHalf、AlmostMaximize、MaximizeHeight、Larger、Smaller
 
+- [x] **TASK-041a** CenterHalf、AlmostMaximize、MaximizeHeight、Larger、Smaller
+
 CenterHalf：Width=w/2, X=Left+w/4。AlmostMaximize：Maximize 四周留 10px。MaximizeHeight：Width=current.Width, Height=workArea.Height。Larger/Smaller：按 10% 缩放，限制在 workArea 内。注册到 CalculatorFactory。**参考**：`CenterHalfCalculation`、`AlmostMaximizeCalculation`、`MaximizeHeightCalculation`、`ChangeSizeCalculation`。
 
 ### TASK-041b：MoveLeft/Right/Up/Down
+
+- [x] **TASK-041b** MoveLeft/Right/Up/Down
 
 同 LeftHalf/RightHalf/TopHalf/BottomHalf，可复用或委托。注册到 CalculatorFactory。
 
 ### TASK-041c：四等分 7 个计算器
 
+- [x] **TASK-041c** 四等分 7 个计算器
+
 1/4：Width=w/4，X 依次 Left, Left+w/4, Left+w/2, Left+3w/4。3/4：Width=3w/4，X 依次 Left, Left+w/8, Left+w/4。注册到 CalculatorFactory。**参考**：`Rectangle/WindowCalculation/FirstFourthCalculation.swift` 等。
 
 ### TASK-041d：六等分 6 个计算器
+
+- [x] **TASK-041d** 六等分 6 个计算器
 
 3 列×2 行，格子 w/3×h/2。坐标：左上(Left,Top)、中上(Left+w/3,Top)、右上(Left+2w/3,Top)、左下(Left,Top+h/2)、中下(Left+w/3,Top+h/2)、右下(Left+2w/3,Top+h/2)。注册到 CalculatorFactory。**参考**：`Rectangle/WindowCalculation/TopLeftSixthCalculation.swift` 等。
 
@@ -1464,7 +1472,7 @@ VK：←0x25 ↑0x26 →0x27 ↓0x28 Enter0x0D =0xBB -0xBD D0x44 F0x46 G0x47 U0x
 
 | 现象 | 可能原因 | 修正动作 |
 |------|----------|----------|
-| dotnet: command not found | 未安装 .NET | 安装 .NET 8 SDK |
+| dotnet: command not found | 未安装 .NET | 安装 .NET 9 SDK |
 | Template "winui" could not be found | 缺少 WinUI 模板 | `dotnet new install Microsoft.WindowsAppSDK.Templates` |
 | error NETSDK1147 | 缺少 workload | `dotnet workload install windowsdesktop` |
 | PInvoke/CsWin32 找不到类型 | NativeMethods.txt 未声明或拼写错误 | 检查 API 名，注意 W/A 后缀；`using Windows.Win32` |
