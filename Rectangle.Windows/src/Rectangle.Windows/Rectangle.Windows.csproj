@@ -11,11 +11,13 @@
     <UseWindowsForms>true</UseWindowsForms>
     <UseRidGraph>true</UseRidGraph>
     
-    <!-- 发布优化：框架依赖模式，大幅减小文件大小 -->
-    <!-- 用户需要安装 .NET 9 runtime -->
+    <!-- 发布优化 -->
     <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>false</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    
+    <!-- 独立部署时启用压缩（需要命令行指定 self-contained true） -->
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
     
     <!-- 发布时优化 -->
     <DebugType>none</DebugType>
