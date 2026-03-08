@@ -16,6 +16,7 @@ public class LastActiveWindowService : IDisposable
     private nint _lastValidWindowHwnd;
     private bool _disposed;
     private readonly object _lock = new();
+    private bool _isPaused = false;
 
     // Win32 事件钩子 - 使用 SafeHandle
     private UnhookWinEventSafeHandle? _hook;
@@ -27,6 +28,30 @@ public class LastActiveWindowService : IDisposable
     {
         _lastValidWindowHwnd = 0;
         StartTracking();
+    }
+
+    /// <summary>
+    /// 暂停窗口跟踪（在显示托盘菜单时使用）
+    /// </summary>
+    public void PauseTracking()
+    {
+        lock (_lock)
+        {
+            _isPaused = true;
+            Console.WriteLine("[LastActiveWindowService] 暂停窗口跟踪");
+        }
+    }
+
+    /// <summary>
+    /// 恢复窗口跟踪
+    /// </summary>
+    public void ResumeTracking()
+    {
+        lock (_lock)
+        {
+            _isPaused = false;
+            Console.WriteLine("[LastActiveWindowService] 恢复窗口跟踪");
+        }
     }
 
     private void StartTracking()
@@ -56,6 +81,13 @@ public class LastActiveWindowService : IDisposable
 
     private void OnForegroundWindowChanged(HWINEVENTHOOK hWinEventHook, uint eventType, HWND hwnd, int idObject, int idChild, uint idEventThread, uint dwmsEventTime)
     {
+        // 如果暂停跟踪，直接返回
+        if (_isPaused)
+        {
+            Console.WriteLine($"[LastActiveWindowService] 跟踪已暂停，忽略窗口变化: {hwnd.Value}");
+            return;
+        }
+
         // 只关心窗口本身（idObject == 0, idChild == 0）
         if (idObject != 0 || idChild != 0) return;
 

@@ -91,6 +91,10 @@ internal static class Program
         // 支持左键点击打开菜单
         _notifyIcon.MouseClick += NotifyIcon_MouseClick;
         
+        // 菜单打开时暂停窗口跟踪，菜单关闭时恢复
+        _contextMenu.Opened += (s, e) => _lastActiveWindowService?.PauseTracking();
+        _contextMenu.Closed += (s, e) => _lastActiveWindowService?.ResumeTracking();
+        
         // 定时更新"忽略 [应用名]"菜单项
         var updateTimer = new System.Windows.Forms.Timer { Interval = 500 };
         updateTimer.Tick += (s, e) => UpdateIgnoreMenuItem();
