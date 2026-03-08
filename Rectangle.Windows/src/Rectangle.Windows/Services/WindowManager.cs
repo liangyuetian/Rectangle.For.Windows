@@ -1,6 +1,7 @@
 using Rectangle.Windows.Core;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Rectangle.Windows.Services;
 
@@ -109,12 +110,36 @@ public class WindowManager
 
     private nint GetTargetWindow()
     {
+        // 获取当前前台窗口
+        var foregroundHwnd = _win32.GetForegroundWindowHandle();
+        
+        // 检查前台窗口是否在忽略列表中
+        if (foregroundHwnd != 0)
+        {
+            var processName = _win32.GetProcessNameFromWindow(foregroundHwnd);
+            if (!string.IsNullOrEmpty(processName) && IsIgnoredApp(processName))
+            {
+                Console.WriteLine($"[WindowManager] 前台窗口 {processName} 在忽略列表中，不执行操作");
+                return 0; // 返回 0 表示不执行操作
+            }
+        }
+        
         // 如果有 LastActiveWindowService，使用它获取目标窗口
         if (_lastActiveService != null)
         {
             return _lastActiveService.GetTargetWindow();
         }
-        return _win32.GetForegroundWindowHandle();
+        return foregroundHwnd;
+    }
+
+    private bool IsIgnoredApp(string processName)
+    {
+        // 从 ConfigService 获取忽略列表
+        // 这里需要通过 Program.ConfigService 访问
+        var config = Program.ConfigService?.Load();
+        if (config == null) return false;
+        
+        return config.IgnoredApps.Any(a => a.Equals(processName, StringComparison.OrdinalIgnoreCase));
     }
 
     private void ExecuteMaximizeToggle(nint? targetHwnd = null)
