@@ -95,6 +95,9 @@ public class WindowManager
         // 只在第一次调整时保存原始位置，Restore 会恢复到这个位置
         _history.SaveIfNotExists(hwnd, x, y, w, h);
 
+        // 标记此窗口由程序调整（用于窗口位置监听时排除记录）
+        _history.MarkAsProgramAdjusted(hwnd);
+
         // 执行其他操作时，清除最大化状态
         _maximizedWindows.Remove(hwnd);
 
@@ -142,6 +145,9 @@ public class WindowManager
             var (x, y, w, h) = _win32.GetWindowRect(hwnd);
             _history.Save(hwnd, x, y, w, h);
 
+            // 标记此窗口由程序调整
+            _history.MarkAsProgramAdjusted(hwnd);
+
             // 最大化
             var workArea = _win32.GetWorkAreaFromWindow(hwnd);
             var calculator = _factory.GetCalculator(WindowAction.Maximize);
@@ -185,6 +191,9 @@ public class WindowManager
 
         _history.SaveIfNotExists(hwnd, x, y, w, h);
 
+        // 标记此窗口由程序调整
+        _history.MarkAsProgramAdjusted(hwnd);
+
         // 将窗口移动到下一个显示器居中
         var newX = nextWorkArea.Value.Left + (nextWorkArea.Value.Width - w) / 2;
         var newY = nextWorkArea.Value.Top + (nextWorkArea.Value.Height - h) / 2;
@@ -208,6 +217,9 @@ public class WindowManager
         }
 
         _history.SaveIfNotExists(hwnd, x, y, w, h);
+
+        // 标记此窗口由程序调整
+        _history.MarkAsProgramAdjusted(hwnd);
 
         // 将窗口移动到上一个显示器居中
         var newX = prevWorkArea.Value.Left + (prevWorkArea.Value.Width - w) / 2;
