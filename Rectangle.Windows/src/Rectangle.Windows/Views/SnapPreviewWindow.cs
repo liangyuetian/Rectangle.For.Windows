@@ -7,41 +7,38 @@ namespace Rectangle.Windows.Views;
 
 public class SnapPreviewWindow : Form
 {
-    private readonly SolidBrush _previewBrush;
-    private readonly Pen _borderPen;
+    private static readonly Color PreviewColor = Color.FromArgb(0, 120, 212);
+    private static readonly Color BorderColor = Color.FromArgb(0, 100, 200);
+    private const int BorderWidth = 3;
 
     public SnapPreviewWindow()
     {
-        // 设置窗口样式
         FormBorderStyle = FormBorderStyle.None;
         StartPosition = FormStartPosition.Manual;
         ShowInTaskbar = false;
         TopMost = true;
-        Opacity = 0.5;
-        BackColor = Color.FromArgb(0, 120, 212);
+        Opacity = 0.4;
+        BackColor = PreviewColor;
+        DoubleBuffered = true;
+    }
 
-        _previewBrush = new SolidBrush(Color.FromArgb(0, 120, 212));
-        _borderPen = new Pen(Color.FromArgb(0, 100, 200), 2);
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        base.OnPaint(e);
+        using var borderPen = new Pen(BorderColor, BorderWidth);
+        e.Graphics.DrawRectangle(borderPen, BorderWidth / 2, BorderWidth / 2, 
+            Width - BorderWidth, Height - BorderWidth);
     }
 
     public void ShowPreview(WindowRect rect)
     {
         SetBounds(rect.X, rect.Y, rect.Width, rect.Height);
+        Invalidate();
         Show();
     }
 
     public void HidePreview()
     {
         Hide();
-    }
-
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing)
-        {
-            _previewBrush?.Dispose();
-            _borderPen?.Dispose();
-        }
-        base.Dispose(disposing);
     }
 }
