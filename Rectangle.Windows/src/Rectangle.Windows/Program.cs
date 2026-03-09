@@ -373,7 +373,8 @@ internal static class Program
     
     private static void AddMenuItem(ContextMenuStrip menu, string text, string shortcut, WindowAction action)
     {
-        var icon = GetMenuIcon(action);
+        var iconName = GetIconNameForAction(action);
+        var icon = LoadMenuIcon(iconName) ?? GetMenuIcon(action);
         var item = new ToolStripMenuItem(text, icon, (s, e) => _windowManager?.Execute(action));
         if (!string.IsNullOrEmpty(shortcut))
         {
@@ -381,6 +382,65 @@ internal static class Program
         }
         item.ForeColor = System.Drawing.Color.White;
         menu.Items.Add(item);
+    }
+
+    private static string GetIconNameForAction(WindowAction action)
+    {
+        return action switch
+        {
+            // 半屏
+            WindowAction.LeftHalf => "leftHalfTemplate.png",
+            WindowAction.RightHalf => "rightHalfTemplate.png",
+            WindowAction.CenterHalf => "halfWidthCenterTemplate.png",
+            WindowAction.TopHalf => "topHalfTemplate.png",
+            WindowAction.BottomHalf => "bottomHalfTemplate.png",
+            // 四角
+            WindowAction.TopLeft => "topLeftTemplate.png",
+            WindowAction.TopRight => "topRightTemplate.png",
+            WindowAction.BottomLeft => "bottomLeftTemplate.png",
+            WindowAction.BottomRight => "bottomRightTemplate.png",
+            // 三分之一
+            WindowAction.FirstThird => "firstThirdTemplate.png",
+            WindowAction.CenterThird => "centerThirdTemplate.png",
+            WindowAction.LastThird => "lastThirdTemplate.png",
+            // 三分之二
+            WindowAction.FirstTwoThirds => "firstTwoThirdsTemplate.png",
+            WindowAction.CenterTwoThirds => "centerTwoThirdsTemplate.png",
+            WindowAction.LastTwoThirds => "lastTwoThirdsTemplate.png",
+            // 四等分
+            WindowAction.FirstFourth => "leftFourthTemplate.png",
+            WindowAction.SecondFourth => "centerLeftFourthTemplate.png",
+            WindowAction.ThirdFourth => "centerRightFourthTemplate.png",
+            WindowAction.LastFourth => "rightFourthTemplate.png",
+            WindowAction.FirstThreeFourths => "firstThreeFourthsTemplate.png",
+            WindowAction.CenterThreeFourths => "centerThreeFourthsTemplate.png",
+            WindowAction.LastThreeFourths => "lastThreeFourthsTemplate.png",
+            // 六等分
+            WindowAction.TopLeftSixth => "topLeftSixthTemplate.png",
+            WindowAction.TopCenterSixth => "topCenterSixthTemplate.png",
+            WindowAction.TopRightSixth => "topRightSixthTemplate.png",
+            WindowAction.BottomLeftSixth => "bottomLeftSixthTemplate.png",
+            WindowAction.BottomCenterSixth => "bottomCenterSixthTemplate.png",
+            WindowAction.BottomRightSixth => "bottomRightSixthTemplate.png",
+            // 最大化相关
+            WindowAction.Maximize => "maximizeTemplate.png",
+            WindowAction.AlmostMaximize => "almostMaximizeTemplate.png",
+            WindowAction.MaximizeHeight => "maximizeHeightTemplate.png",
+            WindowAction.Center => "centerTemplate.png",
+            WindowAction.Restore => "restoreTemplate.png",
+            // 放大缩小
+            WindowAction.Larger => "makeLargerTemplate.png",
+            WindowAction.Smaller => "makeSmallerTemplate.png",
+            // 移动
+            WindowAction.MoveLeft => "moveLeftTemplate.png",
+            WindowAction.MoveRight => "moveRightTemplate.png",
+            WindowAction.MoveUp => "moveUpTemplate.png",
+            WindowAction.MoveDown => "moveDownTemplate.png",
+            // 显示器
+            WindowAction.NextDisplay => "nextDisplayTemplate.png",
+            WindowAction.PreviousDisplay => "prevDisplayTemplate.png",
+            _ => ""
+        };
     }
     
     private static string GetShortcutText(Dictionary<string, ShortcutConfig> shortcuts, string actionName)
