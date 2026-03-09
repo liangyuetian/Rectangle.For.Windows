@@ -9,7 +9,7 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Rectangle.Windows.Services;
 
-public class HotkeyManager
+public class HotkeyManager : IDisposable
 {
     private readonly nint _hwnd;
     private readonly WindowManager _windowManager;
@@ -266,11 +266,31 @@ public class HotkeyManager
         Console.WriteLine($"[HotkeyManager] 已重新注册 {newId - 1} 个快捷键");
     }
 
+    private bool _disposed;
+
     public void Dispose()
     {
+        Dispose(true);
+        GC.SuppressFinalize(this);
+    }
+
+    protected virtual void Dispose(bool disposing)
+    {
+        if (_disposed) return;
+
         foreach (var id in _registeredIds)
         {
             PInvoke.UnregisterHotKey((HWND)_hwnd, (int)id);
         }
+        _registeredIds.Clear();
+        _hotkeyActions.Clear();
+        _hotkeyInfo.Clear();
+
+        _disposed = true;
+    }
+
+    ~HotkeyManager()
+    {
+        Dispose(false);
     }
 }

@@ -172,11 +172,12 @@ public unsafe class Win32WindowService
 
         try
         {
-            var process = System.Diagnostics.Process.GetProcessById((int)processId);
+            using var process = System.Diagnostics.Process.GetProcessById((int)processId);
             return process.ProcessName;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"[Win32WindowService] 获取进程名失败: {ex.Message}");
             return "未知";
         }
     }
