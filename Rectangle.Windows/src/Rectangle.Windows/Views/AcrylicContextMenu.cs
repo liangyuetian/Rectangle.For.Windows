@@ -3,11 +3,12 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 namespace Rectangle.Windows.Views;
 
 /// <summary>
-/// 带亚克力/毛玻璃效果的上下文菜单
+/// 带亚克力/毛玻璃效果的上下文菜单，自动适配系统主题
 /// </summary>
 public class AcrylicContextMenu : ContextMenuStrip
 {
@@ -42,15 +43,102 @@ public class AcrylicContextMenu : ContextMenuStrip
     private const int DWMSBT_MAINWINDOW = 2; // Mica
     private const int DWMSBT_TRANSIENTWINDOW = 3; // Acrylic
 
+    private static bool _isDarkTheme;
+    private static bool _themeInitialized = false;
+
     public AcrylicContextMenu()
     {
-        Renderer = new AcrylicMenuRenderer();
+        // 检测系统主题
+        UpdateTheme();
+        
+        // 监听系统主题变化
+        SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
+        
+        var renderer = new AcrylicMenuRenderer(_isDarkTheme);
+        Renderer = renderer;
         ShowImageMargin = true;
         ShowCheckMargin = false;
-        BackColor = Color.FromArgb(240, 32, 32, 32);
-        ForeColor = Color.White;
+        BackColor = _isDarkTheme ? Color.FromArgb(240, 32, 32, 32) : Color.FromArgb(240, 243, 243, 243);
+        ForeColor = _isDarkTheme ? Color.White : Color.FromArgb(30, 30, 30);
         Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular);
         Padding = new Padding(4, 8, 4, 8);
+    }
+
+    private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        if (e.Category == UserPreferenceCategory.General || e.Category == UserPreferenceCategory.Color)
+        {
+            UpdateTheme();
+            ApplyTheme();
+        }
+    }
+
+    private static void UpdateTheme()
+    {
+        try
+        {
+            // 使用注册表检测 Windows 应用模式
+            using var key = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            if (key != null)
+            {
+                var appsUseLightTheme = key.GetValue("AppsUseLightTheme");
+                _isDarkTheme = appsUseLightTheme == null || (int)appsUseLightTheme == 0;
+            }
+            else
+            {
+                // 默认使用浅色主题
+                _isDarkTheme = false;
+            }
+            _themeInitialized = true;
+        }
+        catch
+        {
+            _isDarkTheme = false;
+            _themeInitialized = true;
+        }
+    }
+
+    private void ApplyTheme()
+    {
+        if (IsDisposed) return;
+        
+        var newRenderer = new AcrylicMenuRenderer(_isDarkTheme);
+        Renderer = newRenderer;
+        BackColor = _isDarkTheme ? Color.FromArgb(240, 32, 32, 32) : Color.FromArgb(240, 243, 243, 243);
+        ForeColor = _isDarkTheme ? Color.White : Color.FromArgb(30, 30, 30);
+        
+        // 更新菜单项颜色
+        foreach (ToolStripItem item in Items)
+        {
+            UpdateItemColor(item);
+        }
+        
+        Invalidate();
+    }
+
+    private void UpdateItemColor(ToolStripItem item)
+    {
+        item.ForeColor = _isDarkTheme ? Color.White : Color.FromArgb(30, 30, 30);
+        
+        if (item is ToolStripMenuItem menuItem)
+        {
+            foreach (ToolStripItem subItem in menuItem.DropDownItems)
+            {
+                UpdateItemColor(subItem);
+            }
+        }
+    }
+
+    public static bool IsDarkTheme
+    {
+        get
+        {
+            if (!_themeInitialized)
+            {
+                UpdateTheme();
+            }
+            return _isDarkTheme;
+        }
     }
 
     protected override CreateParams CreateParams
@@ -73,12 +161,12 @@ public class AcrylicContextMenu : ContextMenuStrip
     {
         if (Environment.OSVersion.Version.Build >= 22000) // Windows 11
         {
-            // 使用 Mica 效果
+            // 使用 Acrylic 效果
             int value = DWMSBT_TRANSIENTWINDOW;
             DwmSetWindowAttribute(Handle, DWMWA_SYSTEMBACKDROP_TYPE, ref value, sizeof(int));
 
-            // 启用暗色模式
-            int darkMode = 1;
+            // 根据主题设置暗色/亮色模式
+            int darkMode = _isDarkTheme ? 1 : 0;
             DwmSetWindowAttribute(Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
         }
         else if (Environment.OSVersion.Version.Build >= 17763) // Windows 10 1809+
@@ -89,11 +177,16 @@ public class AcrylicContextMenu : ContextMenuStrip
 
     private void EnableAcrylicBlur()
     {
+        // 根据主题设置颜色
+        int gradientColor = _isDarkTheme 
+            ? unchecked((int)0x99000000)  // 深色主题：半透明黑色
+            : unchecked((int)0x99FFFFFF); // 浅色主题：半透明白色
+
         var accent = new AccentPolicy
         {
             AccentState = 3, // ACCENT_ENABLE_BLURBEHIND
             AccentFlags = 2,
-            GradientColor = unchecked((int)0x99000000) // Semi-transparent black
+            GradientColor = gradientColor
         };
 
         var accentSize = Marshal.SizeOf(accent);
@@ -110,25 +203,55 @@ public class AcrylicContextMenu : ContextMenuStrip
         SetWindowCompositionAttribute(Handle, ref data);
         Marshal.FreeHGlobal(accentPtr);
     }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            SystemEvents.UserPreferenceChanged -= SystemEvents_UserPreferenceChanged;
+        }
+        base.Dispose(disposing);
+    }
 }
 
 /// <summary>
-/// 亚克力风格菜单渲染器
+/// 亚克力风格菜单渲染器，支持深色和浅色主题
 /// </summary>
 public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
 {
-    private static readonly Color BackgroundColor = Color.FromArgb(220, 32, 32, 32);
-    private static readonly Color HoverColor = Color.FromArgb(255, 55, 55, 55);
-    private static readonly Color BorderColor = Color.FromArgb(100, 255, 255, 255);
-    private static readonly Color TextColor = Color.FromArgb(255, 255, 255, 255);
-    private static readonly Color ShortcutColor = Color.FromArgb(180, 200, 200, 200);
-    private static readonly Color SeparatorColor = Color.FromArgb(60, 255, 255, 255);
-    private static readonly Color DisabledColor = Color.FromArgb(100, 150, 150, 150);
+    // 深色主题颜色
+    private static readonly Color DarkBackground = Color.FromArgb(220, 32, 32, 32);
+    private static readonly Color DarkHover = Color.FromArgb(255, 55, 55, 55);
+    private static readonly Color DarkBorder = Color.FromArgb(60, 255, 255, 255);
+    private static readonly Color DarkText = Color.FromArgb(255, 255, 255, 255);
+    private static readonly Color DarkShortcut = Color.FromArgb(180, 200, 200, 200);
+    private static readonly Color DarkSeparator = Color.FromArgb(60, 255, 255, 255);
+    private static readonly Color DarkDisabled = Color.FromArgb(100, 150, 150, 150);
 
-    public AcrylicMenuRenderer() : base(new AcrylicColorTable())
+    // 浅色主题颜色
+    private static readonly Color LightBackground = Color.FromArgb(230, 243, 243, 243);
+    private static readonly Color LightHover = Color.FromArgb(255, 230, 230, 230);
+    private static readonly Color LightBorder = Color.FromArgb(80, 0, 0, 0);
+    private static readonly Color LightText = Color.FromArgb(30, 30, 30);
+    private static readonly Color LightShortcut = Color.FromArgb(120, 80, 80, 80);
+    private static readonly Color LightSeparator = Color.FromArgb(60, 0, 0, 0);
+    private static readonly Color LightDisabled = Color.FromArgb(120, 160, 160, 160);
+
+    private readonly bool _isDark;
+
+    public AcrylicMenuRenderer(bool isDark) : base(isDark ? new DarkAcrylicColorTable() : new LightAcrylicColorTable())
     {
+        _isDark = isDark;
         RoundedEdges = true;
     }
+
+    private Color BackgroundColor => _isDark ? DarkBackground : LightBackground;
+    private Color HoverColor => _isDark ? DarkHover : LightHover;
+    private Color BorderColor => _isDark ? DarkBorder : LightBorder;
+    private Color TextColor => _isDark ? DarkText : LightText;
+    private Color ShortcutColor => _isDark ? DarkShortcut : LightShortcut;
+    private Color SeparatorColor => _isDark ? DarkSeparator : LightSeparator;
+    private Color DisabledColor => _isDark ? DarkDisabled : LightDisabled;
 
     protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
     {
@@ -241,7 +364,16 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
             }
             else
             {
-                e.Graphics.DrawImage(e.Image, rect);
+                // 如果是浅色主题且图像是白色图标，需要着色
+                if (!_isDark)
+                {
+                    using var tintedImage = TintImageForLightTheme(e.Image);
+                    e.Graphics.DrawImage(tintedImage, rect);
+                }
+                else
+                {
+                    e.Graphics.DrawImage(e.Image, rect);
+                }
             }
         }
     }
@@ -250,6 +382,29 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
     {
         e.ArrowColor = e.Item.Enabled ? TextColor : DisabledColor;
         base.OnRenderArrow(e);
+    }
+
+    private Image TintImageForLightTheme(Image original)
+    {
+        // 为浅色主题将白色图标转换为深色
+        var result = new Bitmap(original.Width, original.Height);
+        using var g = Graphics.FromImage(result);
+        using var attr = new System.Drawing.Imaging.ImageAttributes();
+        
+        var matrix = new System.Drawing.Imaging.ColorMatrix(new float[][]
+        {
+            new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
+            new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
+            new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
+            new float[] { 0, 0, 0, 1, 0 },
+            new float[] { 0, 0, 0, 0, 1 }
+        });
+        
+        attr.SetColorMatrix(matrix);
+        g.DrawImage(original, new System.Drawing.Rectangle(0, 0, original.Width, original.Height),
+            0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attr);
+        
+        return result;
     }
 
     private static Image CreateDisabledImage(Image original)
@@ -290,9 +445,9 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
 }
 
 /// <summary>
-/// 亚克力风格颜色表
+/// 深色主题颜色表
 /// </summary>
-public class AcrylicColorTable : ProfessionalColorTable
+public class DarkAcrylicColorTable : ProfessionalColorTable
 {
     public override Color MenuBorder => Color.FromArgb(60, 255, 255, 255);
     public override Color MenuItemBorder => Color.Transparent;
@@ -308,5 +463,27 @@ public class AcrylicColorTable : ProfessionalColorTable
     public override Color ImageMarginGradientMiddle => Color.FromArgb(220, 32, 32, 32);
     public override Color ImageMarginGradientEnd => Color.FromArgb(220, 32, 32, 32);
     public override Color SeparatorDark => Color.FromArgb(60, 255, 255, 255);
+    public override Color SeparatorLight => Color.Transparent;
+}
+
+/// <summary>
+/// 浅色主题颜色表
+/// </summary>
+public class LightAcrylicColorTable : ProfessionalColorTable
+{
+    public override Color MenuBorder => Color.FromArgb(80, 0, 0, 0);
+    public override Color MenuItemBorder => Color.Transparent;
+    public override Color MenuItemSelected => Color.FromArgb(255, 230, 230, 230);
+    public override Color MenuItemSelectedGradientBegin => Color.FromArgb(255, 230, 230, 230);
+    public override Color MenuItemSelectedGradientEnd => Color.FromArgb(255, 230, 230, 230);
+    public override Color MenuItemPressedGradientBegin => Color.FromArgb(255, 0, 120, 212);
+    public override Color MenuItemPressedGradientEnd => Color.FromArgb(255, 0, 120, 212);
+    public override Color MenuStripGradientBegin => Color.FromArgb(230, 243, 243, 243);
+    public override Color MenuStripGradientEnd => Color.FromArgb(230, 243, 243, 243);
+    public override Color ToolStripDropDownBackground => Color.FromArgb(230, 243, 243, 243);
+    public override Color ImageMarginGradientBegin => Color.FromArgb(230, 243, 243, 243);
+    public override Color ImageMarginGradientMiddle => Color.FromArgb(230, 243, 243, 243);
+    public override Color ImageMarginGradientEnd => Color.FromArgb(230, 243, 243, 243);
+    public override Color SeparatorDark => Color.FromArgb(60, 0, 0, 0);
     public override Color SeparatorLight => Color.Transparent;
 }

@@ -358,18 +358,13 @@ internal static class Program
                 ToggleIgnoreApp(processName);
             }
         };
-        _ignoreAppMenuItem.ForeColor = System.Drawing.Color.White;
+        // 颜色由渲染器根据主题自动设置
         menu.Items.Add(_ignoreAppMenuItem);
 
         // 设置与退出
-        var settingsItem = new ToolStripMenuItem("偏好设置...", null, (s, e) => OpenSettings());
-        settingsItem.ForeColor = System.Drawing.Color.White;
-        menu.Items.Add(settingsItem);
+        menu.Items.Add(new ToolStripMenuItem("偏好设置...", null, (s, e) => OpenSettings()));
         menu.Items.Add(new ToolStripSeparator());
-        
-        var exitItem = new ToolStripMenuItem("退出 Rectangle", null, (s, e) => Application.Exit());
-        exitItem.ForeColor = System.Drawing.Color.White;
-        menu.Items.Add(exitItem);
+        menu.Items.Add(new ToolStripMenuItem("退出 Rectangle", null, (s, e) => Application.Exit()));
 
         return menu;
     }
@@ -383,7 +378,7 @@ internal static class Program
         {
             item.ShortcutKeyDisplayString = shortcut;
         }
-        item.ForeColor = System.Drawing.Color.White;
+        // 颜色由渲染器根据主题自动设置
         menu.Items.Add(item);
     }
 
