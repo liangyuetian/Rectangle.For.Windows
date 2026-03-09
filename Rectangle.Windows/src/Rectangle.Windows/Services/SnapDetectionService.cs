@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;
+using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Rectangle.Windows.Services;
 
@@ -17,6 +18,7 @@ public sealed class SnapDetectionService : IDisposable
     private Point _dragStartPoint;
     private WindowAction? _pendingSnapAction;
     private readonly int _snapThreshold = 20;
+    private readonly int _titleBarHeight;
     private static SnapDetectionService? _instance;
 
     private const uint WM_LBUTTONDOWN = 0x0201;
@@ -69,6 +71,12 @@ public sealed class SnapDetectionService : IDisposable
         _windowManager = windowManager;
         _instance = this;
         _hookCallback = MouseHookCallback;
+        
+        // 获取系统标题栏高度 (SM_CYCAPTION = 4) + 边框高度 (SM_CYFRAME = 33)
+        _titleBarHeight = PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYCAPTION) 
+                        + PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CYFRAME) 
+                        + PInvoke.GetSystemMetrics(SYSTEM_METRICS_INDEX.SM_CXPADDEDBORDER);
+        
         InstallHook();
     }
 
@@ -120,8 +128,7 @@ public sealed class SnapDetectionService : IDisposable
             if (rootHwnd != 0)
             {
                 var (x, y, w, h) = _win32.GetWindowRect(rootHwnd);
-                // 标题栏高度约 30px
-                if (point.Y >= y && point.Y <= y + 30 && point.X >= x && point.X <= x + w)
+                if (point.Y >= y && point.Y <= y + _titleBarHeight && point.X >= x && point.X <= x + w)
                 {
                     _draggedWindow = rootHwnd;
                 }

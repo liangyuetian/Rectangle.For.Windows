@@ -25,3 +25,5 @@ UnhookWinEvent
 IsWindowVisible
 GetWindowTextLength
 GetClassName
+DestroyIcon
+GetSystemMetrics
