@@ -164,10 +164,10 @@ public sealed class SnapDetectionService : IDisposable
 
     private void OnMouseUp(Point point)
     {
-        if (_isDragging && _pendingSnapAction.HasValue)
+        if (_isDragging && _pendingSnapAction.HasValue && _draggedWindow != 0)
         {
             SnapPreviewHidden?.Invoke();
-            _windowManager.Execute(_pendingSnapAction.Value);
+            _windowManager.Execute(_pendingSnapAction.Value, _draggedWindow);
         }
         else if (_pendingSnapAction.HasValue)
         {

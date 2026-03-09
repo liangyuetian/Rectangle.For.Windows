@@ -21,6 +21,7 @@ internal static class Program
     private static SnapPreviewWindow? _snapPreviewWindow;
     private static LastActiveWindowService? _lastActiveWindowService;
     private static ToolStripMenuItem? _ignoreAppMenuItem;
+    private static System.Windows.Forms.Timer? _updateTimer;
 
     public static ConfigService? ConfigService => _configService;
     public static HotkeyManager? HotkeyManager => _hotkeyManager;
@@ -93,9 +94,9 @@ internal static class Program
         _notifyIcon.MouseClick += NotifyIcon_MouseClick;
         
         // 定时更新"忽略 [应用名]"菜单项
-        var updateTimer = new System.Windows.Forms.Timer { Interval = 500 };
-        updateTimer.Tick += (s, e) => UpdateIgnoreMenuItem();
-        updateTimer.Start();
+        _updateTimer = new System.Windows.Forms.Timer { Interval = 500 };
+        _updateTimer.Tick += (s, e) => UpdateIgnoreMenuItem();
+        _updateTimer.Start();
 
         // 创建隐藏窗口来接收热键消息
         using var hiddenForm = new HiddenForm();
@@ -116,6 +117,9 @@ internal static class Program
         
         // 清理
         CleanupTrayIcon();
+        _updateTimer?.Stop();
+        _updateTimer?.Dispose();
+        _snapPreviewWindow?.Dispose();
         _snapDetectionService?.Dispose();
         _hotkeyManager?.Dispose();
         _lastActiveWindowService?.Dispose();
@@ -194,14 +198,23 @@ internal static class Program
 
     private static System.Drawing.Image? LoadMenuIcon(string iconName)
     {
-        // 先尝试从嵌入式资源加载
         var assembly = System.Reflection.Assembly.GetExecutingAssembly();
         string resourceName = $"Rectangle.Windows.Assets.WindowPositions.{iconName}";
-        using var stream = assembly.GetManifestResourceStream(resourceName);
+        var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream != null)
         {
-            try { return System.Drawing.Image.FromStream(stream); }
-            catch { }
+            try
+            {
+                var ms = new System.IO.MemoryStream();
+                stream.CopyTo(ms);
+                ms.Position = 0;
+                stream.Dispose();
+                return System.Drawing.Image.FromStream(ms);
+            }
+            catch
+            {
+                stream.Dispose();
+            }
         }
         return null;
     }
@@ -515,6 +528,9 @@ internal static class Program
         settingsForm.ShowDialog();
     }
 
+    private static readonly Win32WindowService _previewWin32Service = new();
+    private static readonly CalculatorFactory _previewCalculatorFactory = new();
+
     private static void OnSnapPreviewRequested(WindowAction? action)
     {
         if (action.HasValue && _windowManager != null)
@@ -522,10 +538,8 @@ internal static class Program
             var hwnd = PInvoke.GetForegroundWindow();
             if (hwnd.Value != 0)
             {
-                var win32 = new Win32WindowService();
-                var workArea = win32.GetWorkAreaFromWindow((nint)hwnd.Value);
-                var factory = new CalculatorFactory();
-                var calculator = factory.GetCalculator(action.Value);
+                var workArea = _previewWin32Service.GetWorkAreaFromWindow((nint)hwnd.Value);
+                var calculator = _previewCalculatorFactory.GetCalculator(action.Value);
                 if (calculator != null)
                 {
                     var rect = calculator.Calculate(workArea, default, action.Value);

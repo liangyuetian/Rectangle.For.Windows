@@ -102,8 +102,11 @@ public unsafe class Win32WindowService
                     mi.cbSize = (uint)Marshal.SizeOf<MONITORINFO>();
                     PInvoke.GetMonitorInfo(hMonitor, ref mi);
                     var rcWork = mi.rcWork;
-                    var list = (List<WorkArea>)GCHandle.FromIntPtr(dwData).Target!;
-                    list.Add(new WorkArea(rcWork.left, rcWork.top, rcWork.right, rcWork.bottom));
+                    var target = GCHandle.FromIntPtr(dwData).Target;
+                    if (target is List<WorkArea> list)
+                    {
+                        list.Add(new WorkArea(rcWork.left, rcWork.top, rcWork.right, rcWork.bottom));
+                    }
                     return true;
                 },
                 (LPARAM)GCHandle.ToIntPtr(handle));
