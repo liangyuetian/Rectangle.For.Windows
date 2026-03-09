@@ -194,16 +194,21 @@ internal static class Program
 
     private static System.Drawing.Image? LoadMenuIcon(string iconName)
     {
-        // 从嵌入式资源加载
+        // 先尝试从嵌入式资源加载
         var assembly = System.Reflection.Assembly.GetExecutingAssembly();
         string resourceName = $"Rectangle.Windows.Assets.WindowPositions.{iconName}";
         using var stream = assembly.GetManifestResourceStream(resourceName);
         if (stream != null)
         {
             try { return System.Drawing.Image.FromStream(stream); }
-            catch { return null; }
+            catch { }
         }
         return null;
+    }
+
+    private static System.Drawing.Image? GetMenuIcon(WindowAction action)
+    {
+        return Views.MenuIconGenerator.GenerateIcon(action);
     }
 
     private static void NotifyIcon_MouseClick(object? sender, MouseEventArgs e)
@@ -288,7 +293,7 @@ internal static class Program
 
     private static ContextMenuStrip CreateContextMenu()
     {
-        var menu = new ContextMenuStrip();
+        var menu = new Views.AcrylicContextMenu();
         
         // 加载配置获取快捷键
         var shortcuts = _configService?.Load()?.Shortcuts ?? new();
@@ -310,65 +315,71 @@ internal static class Program
                 ToggleIgnoreApp(processName);
             }
         };
+        _ignoreAppMenuItem.ForeColor = System.Drawing.Color.White;
         menu.Items.Add(_ignoreAppMenuItem);
         menu.Items.Add(new ToolStripSeparator());
 
         // 半屏
-        AddMenuItem(menu, "左半屏", GetShortcutText(mergedShortcuts, "LeftHalf"), LoadMenuIcon("leftHalfTemplate.png"), WindowAction.LeftHalf);
-        AddMenuItem(menu, "右半屏", GetShortcutText(mergedShortcuts, "RightHalf"), LoadMenuIcon("rightHalfTemplate.png"), WindowAction.RightHalf);
-        AddMenuItem(menu, "中间半屏", GetShortcutText(mergedShortcuts, "CenterHalf"), LoadMenuIcon("centerHalfTemplate.png"), WindowAction.CenterHalf);
-        AddMenuItem(menu, "上半屏", GetShortcutText(mergedShortcuts, "TopHalf"), LoadMenuIcon("topHalfTemplate.png"), WindowAction.TopHalf);
-        AddMenuItem(menu, "下半屏", GetShortcutText(mergedShortcuts, "BottomHalf"), LoadMenuIcon("bottomHalfTemplate.png"), WindowAction.BottomHalf);
+        AddMenuItem(menu, "左半屏", GetShortcutText(mergedShortcuts, "LeftHalf"), WindowAction.LeftHalf);
+        AddMenuItem(menu, "右半屏", GetShortcutText(mergedShortcuts, "RightHalf"), WindowAction.RightHalf);
+        AddMenuItem(menu, "中间半屏", GetShortcutText(mergedShortcuts, "CenterHalf"), WindowAction.CenterHalf);
+        AddMenuItem(menu, "上半屏", GetShortcutText(mergedShortcuts, "TopHalf"), WindowAction.TopHalf);
+        AddMenuItem(menu, "下半屏", GetShortcutText(mergedShortcuts, "BottomHalf"), WindowAction.BottomHalf);
         menu.Items.Add(new ToolStripSeparator());
 
         // 四角
-        AddMenuItem(menu, "左上", GetShortcutText(mergedShortcuts, "TopLeft"), LoadMenuIcon("topLeftTemplate.png"), WindowAction.TopLeft);
-        AddMenuItem(menu, "右上", GetShortcutText(mergedShortcuts, "TopRight"), LoadMenuIcon("topRightTemplate.png"), WindowAction.TopRight);
-        AddMenuItem(menu, "左下", GetShortcutText(mergedShortcuts, "BottomLeft"), LoadMenuIcon("bottomLeftTemplate.png"), WindowAction.BottomLeft);
-        AddMenuItem(menu, "右下", GetShortcutText(mergedShortcuts, "BottomRight"), LoadMenuIcon("bottomRightTemplate.png"), WindowAction.BottomRight);
+        AddMenuItem(menu, "左上", GetShortcutText(mergedShortcuts, "TopLeft"), WindowAction.TopLeft);
+        AddMenuItem(menu, "右上", GetShortcutText(mergedShortcuts, "TopRight"), WindowAction.TopRight);
+        AddMenuItem(menu, "左下", GetShortcutText(mergedShortcuts, "BottomLeft"), WindowAction.BottomLeft);
+        AddMenuItem(menu, "右下", GetShortcutText(mergedShortcuts, "BottomRight"), WindowAction.BottomRight);
         menu.Items.Add(new ToolStripSeparator());
 
         // 三分之一
-        AddMenuItem(menu, "左首 1 / 3", GetShortcutText(mergedShortcuts, "FirstThird"), LoadMenuIcon("firstThirdTemplate.png"), WindowAction.FirstThird);
-        AddMenuItem(menu, "中间 1 / 3", GetShortcutText(mergedShortcuts, "CenterThird"), LoadMenuIcon("centerThirdTemplate.png"), WindowAction.CenterThird);
-        AddMenuItem(menu, "右首 1 / 3", GetShortcutText(mergedShortcuts, "LastThird"), LoadMenuIcon("lastThirdTemplate.png"), WindowAction.LastThird);
-        AddMenuItem(menu, "左侧 2 / 3", GetShortcutText(mergedShortcuts, "FirstTwoThirds"), LoadMenuIcon("firstTwoThirdsTemplate.png"), WindowAction.FirstTwoThirds);
-        AddMenuItem(menu, "中间 2 / 3", GetShortcutText(mergedShortcuts, "CenterTwoThirds"), LoadMenuIcon("centerTwoThirdsTemplate.png"), WindowAction.CenterTwoThirds);
-        AddMenuItem(menu, "右侧 2 / 3", GetShortcutText(mergedShortcuts, "LastTwoThirds"), LoadMenuIcon("lastTwoThirdsTemplate.png"), WindowAction.LastTwoThirds);
+        AddMenuItem(menu, "左首 1/3", GetShortcutText(mergedShortcuts, "FirstThird"), WindowAction.FirstThird);
+        AddMenuItem(menu, "中间 1/3", GetShortcutText(mergedShortcuts, "CenterThird"), WindowAction.CenterThird);
+        AddMenuItem(menu, "右首 1/3", GetShortcutText(mergedShortcuts, "LastThird"), WindowAction.LastThird);
+        AddMenuItem(menu, "左侧 2/3", GetShortcutText(mergedShortcuts, "FirstTwoThirds"), WindowAction.FirstTwoThirds);
+        AddMenuItem(menu, "中间 2/3", GetShortcutText(mergedShortcuts, "CenterTwoThirds"), WindowAction.CenterTwoThirds);
+        AddMenuItem(menu, "右侧 2/3", GetShortcutText(mergedShortcuts, "LastTwoThirds"), WindowAction.LastTwoThirds);
         menu.Items.Add(new ToolStripSeparator());
 
         // 最大化与缩放
-        AddMenuItem(menu, "最大化", GetShortcutText(mergedShortcuts, "Maximize"), LoadMenuIcon("maximizeTemplate.png"), WindowAction.Maximize);
-        AddMenuItem(menu, "接近最大化", GetShortcutText(mergedShortcuts, "AlmostMaximize"), LoadMenuIcon("almostMaximizeTemplate.png"), WindowAction.AlmostMaximize);
-        AddMenuItem(menu, "最大化高度", GetShortcutText(mergedShortcuts, "MaximizeHeight"), LoadMenuIcon("maximizeHeightTemplate.png"), WindowAction.MaximizeHeight);
-        AddMenuItem(menu, "放大", GetShortcutText(mergedShortcuts, "Larger"), LoadMenuIcon("largerTemplate.png"), WindowAction.Larger);
-        AddMenuItem(menu, "缩小", GetShortcutText(mergedShortcuts, "Smaller"), LoadMenuIcon("smallerTemplate.png"), WindowAction.Smaller);
-        AddMenuItem(menu, "居中", GetShortcutText(mergedShortcuts, "Center"), LoadMenuIcon("centerTemplate.png"), WindowAction.Center);
-        AddMenuItem(menu, "恢复", GetShortcutText(mergedShortcuts, "Restore"), LoadMenuIcon("restoreTemplate.png"), WindowAction.Restore);
+        AddMenuItem(menu, "最大化", GetShortcutText(mergedShortcuts, "Maximize"), WindowAction.Maximize);
+        AddMenuItem(menu, "接近最大化", GetShortcutText(mergedShortcuts, "AlmostMaximize"), WindowAction.AlmostMaximize);
+        AddMenuItem(menu, "最大化高度", GetShortcutText(mergedShortcuts, "MaximizeHeight"), WindowAction.MaximizeHeight);
+        AddMenuItem(menu, "放大", GetShortcutText(mergedShortcuts, "Larger"), WindowAction.Larger);
+        AddMenuItem(menu, "缩小", GetShortcutText(mergedShortcuts, "Smaller"), WindowAction.Smaller);
+        AddMenuItem(menu, "居中", GetShortcutText(mergedShortcuts, "Center"), WindowAction.Center);
+        AddMenuItem(menu, "恢复", GetShortcutText(mergedShortcuts, "Restore"), WindowAction.Restore);
         menu.Items.Add(new ToolStripSeparator());
 
         // 显示器
-        AddMenuItem(menu, "下一个显示器", GetShortcutText(mergedShortcuts, "NextDisplay"), LoadMenuIcon("nextDisplayTemplate.png"), WindowAction.NextDisplay);
-        AddMenuItem(menu, "上一个显示器", GetShortcutText(mergedShortcuts, "PreviousDisplay"), LoadMenuIcon("previousDisplayTemplate.png"), WindowAction.PreviousDisplay);
+        AddMenuItem(menu, "下一个显示器", GetShortcutText(mergedShortcuts, "NextDisplay"), WindowAction.NextDisplay);
+        AddMenuItem(menu, "上一个显示器", GetShortcutText(mergedShortcuts, "PreviousDisplay"), WindowAction.PreviousDisplay);
         menu.Items.Add(new ToolStripSeparator());
 
         // 设置与退出
-        menu.Items.Add("偏好设置...", null, (s, e) => OpenSettings());
+        var settingsItem = new ToolStripMenuItem("偏好设置...", null, (s, e) => OpenSettings());
+        settingsItem.ForeColor = System.Drawing.Color.White;
+        menu.Items.Add(settingsItem);
         menu.Items.Add(new ToolStripSeparator());
-        menu.Items.Add("退出 Rectangle", null, (s, e) => {
-            Application.Exit();
-        });
+        
+        var exitItem = new ToolStripMenuItem("退出 Rectangle", null, (s, e) => Application.Exit());
+        exitItem.ForeColor = System.Drawing.Color.White;
+        menu.Items.Add(exitItem);
 
         return menu;
     }
     
-    private static void AddMenuItem(ContextMenuStrip menu, string text, string shortcut, System.Drawing.Image? icon, WindowAction action)
+    private static void AddMenuItem(ContextMenuStrip menu, string text, string shortcut, WindowAction action)
     {
+        var icon = GetMenuIcon(action);
         var item = new ToolStripMenuItem(text, icon, (s, e) => _windowManager?.Execute(action));
         if (!string.IsNullOrEmpty(shortcut))
         {
             item.ShortcutKeyDisplayString = shortcut;
         }
+        item.ForeColor = System.Drawing.Color.White;
         menu.Items.Add(item);
     }
     
