@@ -3,321 +3,711 @@ using Rectangle.Windows.Services;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 
 namespace Rectangle.Windows.Views;
 
+/// <summary>
+/// 现代化设置窗口 - Windows 11 Fluent Design 风格
+/// </summary>
 public class SettingsForm : Form
 {
     private readonly ConfigService _configService;
     private AppConfig _config = new();
     private readonly Dictionary<string, ShortcutRow> _shortcutRows = new();
-    private readonly List<CheckBox> _cycleSizeCheckBoxes = new();
-    
-    // 设置选项卡控件
-    private TabControl _tabControl = null!;
-    private TabPage _shortcutsTab = null!;
-    private TabPage _snapAreasTab = null!;
-    private TabPage _settingsTab = null!;
-    
-    // 设置选项卡控件
-    private TrackBar _gapSizeSlider = null!;
-    private Label _gapSizeLabel = null!;
-    private CheckBox _launchOnLoginCheckBox = null!;
-    private CheckBox _hideTrayIconCheckBox = null!;
-    private ComboBox _subsequentExecutionCombo = null!;
-    
-    // 吸附区域选项卡控件
-    private CheckBox _dragToSnapCheckBox = null!;
-    private CheckBox _restoreSizeCheckBox = null!;
-    private CheckBox _hapticFeedbackCheckBox = null!;
-    private CheckBox _snapAnimationCheckBox = null!;
+
+    // 颜色主题
+    private static readonly Color BackgroundColor = Color.FromArgb(32, 32, 32);
+    private static readonly Color CardColor = Color.FromArgb(45, 45, 45);
+    private static readonly Color CardHoverColor = Color.FromArgb(55, 55, 55);
+    private static readonly Color AccentColor = Color.FromArgb(0, 120, 212);
+    private static readonly Color TextColor = Color.FromArgb(255, 255, 255);
+    private static readonly Color SecondaryTextColor = Color.FromArgb(180, 180, 180);
+    private static readonly Color BorderColor = Color.FromArgb(60, 60, 60);
+    private static readonly Color InputBackColor = Color.FromArgb(38, 38, 38);
+
+    // 导航
+    private Panel _navPanel = null!;
+    private Panel _contentPanel = null!;
+    private int _selectedNavIndex = 0;
+    private readonly List<NavButton> _navButtons = new();
+
+    // 页面
+    private Panel _shortcutsPage = null!;
+    private Panel _snapAreasPage = null!;
+    private Panel _settingsPage = null!;
+
+    // 设置控件
+    private ModernSlider _gapSizeSlider = null!;
+    private ModernCheckBox _launchOnLoginCheckBox = null!;
+    private ModernCheckBox _dragToSnapCheckBox = null!;
+    private ModernCheckBox _restoreSizeCheckBox = null!;
+    private ModernCheckBox _snapAnimationCheckBox = null!;
 
     public SettingsForm()
     {
         _configService = Program.ConfigService ?? new ConfigService();
-        InitializeComponents();
+        InitializeForm();
+        CreateNavigation();
+        CreatePages();
         LoadSettings();
+        ShowPage(0);
     }
 
-    private void InitializeComponents()
+    private void InitializeForm()
     {
-        this.Text = "Rectangle 偏好设置";
-        this.Size = new Size(620, 580);
-        this.FormBorderStyle = FormBorderStyle.FixedDialog;
-        this.MaximizeBox = false;
-        this.MinimizeBox = false;
-        this.StartPosition = FormStartPosition.CenterScreen;
+        Text = "Rectangle 偏好设置";
+        Size = new Size(900, 640);
+        MinimumSize = new Size(800, 500);
+        FormBorderStyle = FormBorderStyle.FixedSingle;
+        MaximizeBox = false;
+        StartPosition = FormStartPosition.CenterScreen;
+        BackColor = BackgroundColor;
+        Font = new Font("Microsoft YaHei UI", 9F);
+        DoubleBuffered = true;
 
-        // 创建 TabControl
-        _tabControl = new TabControl
-        {
-            Dock = DockStyle.Fill,
-            Font = new Font("Microsoft YaHei UI", 9F)
-        };
-
-        InitializeShortcutsTab();
-        InitializeSnapAreasTab();
-        InitializeSettingsTab();
-
-        // 添加选项卡
-        _tabControl.TabPages.Add(_shortcutsTab);
-        _tabControl.TabPages.Add(_snapAreasTab);
-        _tabControl.TabPages.Add(_settingsTab);
-
-        this.Controls.Add(_tabControl);
-        
-        // 窗口关闭时保存
-        this.FormClosed += SettingsForm_FormClosed;
+        FormClosed += SettingsForm_FormClosed;
     }
 
-    private void InitializeShortcutsTab()
+    private void CreateNavigation()
     {
-        _shortcutsTab = new TabPage("键盘快捷键");
-        
-        var mainPanel = new Panel
+        _navPanel = new Panel
+        {
+            Dock = DockStyle.Left,
+            Width = 200,
+            BackColor = Color.FromArgb(28, 28, 28),
+            Padding = new Padding(8, 20, 8, 20)
+        };
+
+        // 标题
+        var titleLabel = new Label
+        {
+            Text = "Rectangle",
+            Font = new Font("Microsoft YaHei UI", 14F, FontStyle.Bold),
+            ForeColor = TextColor,
+            Location = new Point(20, 20),
+            AutoSize = true
+        };
+        _navPanel.Controls.Add(titleLabel);
+
+        // 版本号
+        var versionLabel = new Label
+        {
+            Text = "v1.0.0",
+            Font = new Font("Microsoft YaHei UI", 8F),
+            ForeColor = SecondaryTextColor,
+            Location = new Point(20, 48),
+            AutoSize = true
+        };
+        _navPanel.Controls.Add(versionLabel);
+
+        // 导航按钮
+        var navItems = new[]
+        {
+            ("⌨️", "键盘快捷键"),
+            ("📐", "吸附区域"),
+            ("⚙️", "设置")
+        };
+
+        int y = 90;
+        for (int i = 0; i < navItems.Length; i++)
+        {
+            var (icon, text) = navItems[i];
+            var btn = new NavButton(icon, text, i)
+            {
+                Location = new Point(8, y),
+                Width = 184,
+                Height = 40
+            };
+            btn.Click += NavButton_Click;
+            _navButtons.Add(btn);
+            _navPanel.Controls.Add(btn);
+            y += 44;
+        }
+
+        Controls.Add(_navPanel);
+
+        // 内容区域
+        _contentPanel = new Panel
         {
             Dock = DockStyle.Fill,
-            AutoScroll = true
+            BackColor = BackgroundColor,
+            Padding = new Padding(30, 20, 30, 20)
         };
-        
-        var layoutPanel = new FlowLayoutPanel
+        Controls.Add(_contentPanel);
+    }
+
+    private void NavButton_Click(object? sender, EventArgs e)
+    {
+        if (sender is NavButton btn)
+        {
+            ShowPage(btn.Index);
+        }
+    }
+
+    private void ShowPage(int index)
+    {
+        _selectedNavIndex = index;
+
+        foreach (var btn in _navButtons)
+        {
+            btn.IsSelected = btn.Index == index;
+        }
+
+        _shortcutsPage.Visible = index == 0;
+        _snapAreasPage.Visible = index == 1;
+        _settingsPage.Visible = index == 2;
+    }
+
+    private void CreatePages()
+    {
+        CreateShortcutsPage();
+        CreateSnapAreasPage();
+        CreateSettingsPage();
+    }
+
+    #region Shortcuts Page
+
+    private void CreateShortcutsPage()
+    {
+        _shortcutsPage = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = BackgroundColor
+        };
+
+        var container = new FlowLayoutPanel
         {
             Dock = DockStyle.Top,
+            AutoSize = true,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Padding = new Padding(0, 0, 20, 20)
+        };
+
+        // 页面标题
+        AddPageTitle(container, "键盘快捷键", "配置窗口管理的快捷键");
+
+        // 左右两列布局
+        var columnsPanel = new TableLayoutPanel
+        {
+            AutoSize = true,
+            ColumnCount = 2,
+            RowCount = 1,
+            Margin = new Padding(0, 10, 0, 0)
+        };
+        columnsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 320));
+        columnsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 320));
+
+        // 左列
+        var leftColumn = new FlowLayoutPanel
+        {
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             AutoSize = true,
-            Padding = new Padding(10)
+            Margin = new Padding(0)
         };
+
+        // 右列
+        var rightColumn = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            Margin = new Padding(0)
+        };
+
+        // 半屏操作 - 左列
+        AddShortcutCard(leftColumn, "半屏", new[]
+        {
+            ("LeftHalf", "左半屏", "leftHalfTemplate.png"),
+            ("RightHalf", "右半屏", "rightHalfTemplate.png"),
+            ("CenterHalf", "中间半屏", "halfWidthCenterTemplate.png"),
+            ("TopHalf", "上半屏", "topHalfTemplate.png"),
+            ("BottomHalf", "下半屏", "bottomHalfTemplate.png")
+        });
+
+        // 四角 - 左列
+        AddShortcutCard(leftColumn, "四角", new[]
+        {
+            ("TopLeft", "左上", "topLeftTemplate.png"),
+            ("TopRight", "右上", "topRightTemplate.png"),
+            ("BottomLeft", "左下", "bottomLeftTemplate.png"),
+            ("BottomRight", "右下", "bottomRightTemplate.png")
+        });
+
+        // 三分屏 - 左列
+        AddShortcutCard(leftColumn, "三分屏", new[]
+        {
+            ("FirstThird", "左首 1/3", "firstThirdTemplate.png"),
+            ("CenterThird", "中间 1/3", "centerThirdTemplate.png"),
+            ("LastThird", "右首 1/3", "lastThirdTemplate.png"),
+            ("FirstTwoThirds", "左侧 2/3", "firstTwoThirdsTemplate.png"),
+            ("CenterTwoThirds", "中间 2/3", "centerTwoThirdsTemplate.png"),
+            ("LastTwoThirds", "右侧 2/3", "lastTwoThirdsTemplate.png")
+        });
+
+        // 最大化与缩放 - 右列
+        AddShortcutCard(rightColumn, "最大化", new[]
+        {
+            ("Maximize", "最大化", "maximizeTemplate.png"),
+            ("AlmostMaximize", "接近最大化", "almostMaximizeTemplate.png"),
+            ("MaximizeHeight", "最大化高度", "maximizeHeightTemplate.png"),
+            ("Smaller", "缩小", "makeSmallerTemplate.png"),
+            ("Larger", "放大", "makeLargerTemplate.png"),
+            ("Center", "居中", "centerTemplate.png"),
+            ("Restore", "恢复", "restoreTemplate.png")
+        });
+
+        // 显示器 - 右列
+        AddShortcutCard(rightColumn, "显示器", new[]
+        {
+            ("NextDisplay", "下一个显示器", "nextDisplayTemplate.png"),
+            ("PreviousDisplay", "上一个显示器", "prevDisplayTemplate.png")
+        });
+
+        columnsPanel.Controls.Add(leftColumn, 0, 0);
+        columnsPanel.Controls.Add(rightColumn, 1, 0);
+        container.Controls.Add(columnsPanel);
 
         // 恢复默认按钮
-        var restoreDefaultsBtn = new Button
+        var restoreBtn = new ModernButton("恢复默认快捷键")
         {
-            Text = "恢复默认快捷键",
             Width = 150,
-            Height = 28,
-            Margin = new Padding(0, 0, 0, 10)
+            Margin = new Padding(0, 20, 0, 0)
         };
-        restoreDefaultsBtn.Click += RestoreDefaults_Click;
+        restoreBtn.Click += RestoreDefaults_Click;
+        container.Controls.Add(restoreBtn);
 
-        // 半屏分组
-        AddShortcutGroup(layoutPanel, "半屏操作", new[]
-        {
-            ("LeftHalf", "左半屏"),
-            ("RightHalf", "右半屏"),
-            ("TopHalf", "上半屏"),
-            ("BottomHalf", "下半屏"),
-            ("CenterHalf", "中间半屏")
-        });
-
-        // 四角分组
-        AddShortcutGroup(layoutPanel, "四角操作", new[]
-        {
-            ("TopLeft", "左上角"),
-            ("TopRight", "右上角"),
-            ("BottomLeft", "左下角"),
-            ("BottomRight", "右下角")
-        });
-
-        // 三分之一分组
-        AddShortcutGroup(layoutPanel, "三分之一屏", new[]
-        {
-            ("FirstThird", "左首 1/3"),
-            ("CenterThird", "中间 1/3"),
-            ("LastThird", "右首 1/3"),
-            ("FirstTwoThirds", "左侧 2/3"),
-            ("CenterTwoThirds", "中间 2/3"),
-            ("LastTwoThirds", "右侧 2/3")
-        });
-
-        // 最大化与缩放分组
-        AddShortcutGroup(layoutPanel, "最大化与缩放", new[]
-        {
-            ("Maximize", "最大化"),
-            ("AlmostMaximize", "接近最大化"),
-            ("MaximizeHeight", "最大化高度"),
-            ("Larger", "放大"),
-            ("Smaller", "缩小"),
-            ("Center", "居中"),
-            ("Restore", "恢复")
-        });
-
-        // 显示器分组
-        AddShortcutGroup(layoutPanel, "显示器", new[]
-        {
-            ("NextDisplay", "下一个显示器"),
-            ("PreviousDisplay", "上一个显示器")
-        });
-
-        // 四等分分组
-        AddShortcutGroup(layoutPanel, "四等分", new[]
-        {
-            ("FirstFourth", "左首 1/4"),
-            ("SecondFourth", "左二 1/4"),
-            ("ThirdFourth", "右二 1/4"),
-            ("LastFourth", "右首 1/4"),
-            ("FirstThreeFourths", "左侧 3/4"),
-            ("CenterThreeFourths", "中间 3/4"),
-            ("LastThreeFourths", "右侧 3/4")
-        });
-
-        // 六等分分组
-        AddShortcutGroup(layoutPanel, "六等分", new[]
-        {
-            ("TopLeftSixth", "左上 1/6"),
-            ("TopCenterSixth", "中上 1/6"),
-            ("TopRightSixth", "右上 1/6"),
-            ("BottomLeftSixth", "左下 1/6"),
-            ("BottomCenterSixth", "中下 1/6"),
-            ("BottomRightSixth", "右下 1/6")
-        });
-
-        // 移动到边缘分组
-        AddShortcutGroup(layoutPanel, "移动到边缘", new[]
-        {
-            ("MoveLeft", "向左移动"),
-            ("MoveRight", "向右移动"),
-            ("MoveUp", "向上移动"),
-            ("MoveDown", "向下移动")
-        });
-
-        layoutPanel.Controls.Add(restoreDefaultsBtn);
-        mainPanel.Controls.Add(layoutPanel);
-        _shortcutsTab.Controls.Add(mainPanel);
+        _shortcutsPage.Controls.Add(container);
+        _contentPanel.Controls.Add(_shortcutsPage);
     }
 
-    private void AddShortcutGroup(FlowLayoutPanel parent, string groupName, (string Action, string DisplayName)[] actions)
+    private void AddShortcutCard(FlowLayoutPanel parent, string title, (string Action, string DisplayName, string Icon)[] shortcuts)
     {
-        var groupPanel = new Panel
+        var card = new ModernCard
         {
-            Width = 560,
-            Height = actions.Length * 32 + 30,
-            Margin = new Padding(0, 5, 0, 5)
+            Width = 300,
+            Margin = new Padding(0, 0, 0, 12)
         };
 
-        // 分组标题
-        var groupLabel = new Label
+        var contentPanel = new FlowLayoutPanel
         {
-            Text = groupName,
-            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-            Location = new Point(0, 0),
-            AutoSize = true
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true,
+            Padding = new Padding(0)
         };
-        groupPanel.Controls.Add(groupLabel);
+
+        // 卡片标题
+        var titleLabel = new Label
+        {
+            Text = title,
+            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
+            ForeColor = TextColor,
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 8)
+        };
+        contentPanel.Controls.Add(titleLabel);
 
         // 快捷键行
-        int y = 25;
-        foreach (var (action, displayName) in actions)
+        foreach (var (action, displayName, iconName) in shortcuts)
         {
-            var row = CreateShortcutRow(action, displayName, y);
+            var row = CreateShortcutRowControl(action, displayName, iconName);
             _shortcutRows[action] = row;
-            foreach (var control in row.Controls)
-            {
-                groupPanel.Controls.Add(control);
-            }
-            y += 32;
+            contentPanel.Controls.Add(row.Container);
         }
 
-        parent.Controls.Add(groupPanel);
+        card.SetContent(contentPanel);
+        card.Height = 50 + shortcuts.Length * 36;
+        parent.Controls.Add(card);
     }
 
-    private ShortcutRow CreateShortcutRow(string action, string displayName, int y)
+    private ShortcutRow CreateShortcutRowControl(string action, string displayName, string iconName)
     {
         var row = new ShortcutRow();
 
-        row.CheckBox = new CheckBox
+        row.Container = new Panel
+        {
+            Width = 280,
+            Height = 32,
+            Margin = new Padding(0, 2, 0, 2)
+        };
+
+        // 图标
+        var icon = LoadIcon(iconName);
+        if (icon != null)
+        {
+            var iconBox = new PictureBox
+            {
+                Image = icon,
+                Size = new Size(18, 18),
+                Location = new Point(0, 7),
+                SizeMode = PictureBoxSizeMode.Zoom
+            };
+            row.Container.Controls.Add(iconBox);
+        }
+
+        // 名称
+        row.NameLabel = new Label
         {
             Text = displayName,
-            Location = new Point(10, y),
-            Width = 120,
-            Checked = true
+            ForeColor = TextColor,
+            Location = new Point(24, 7),
+            AutoSize = true
         };
-        row.CheckBox.CheckedChanged += (s, e) => UpdateShortcutConfig(action, row);
+        row.Container.Controls.Add(row.NameLabel);
 
+        // 快捷键输入框
         row.KeyLabel = new Label
         {
-            Location = new Point(140, y + 3),
-            Width = 150,
-            Text = "",
-            BackColor = Color.White,
-            BorderStyle = BorderStyle.FixedSingle,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(3)
+            Width = 100,
+            Height = 24,
+            Location = new Point(130, 4),
+            BackColor = InputBackColor,
+            ForeColor = SecondaryTextColor,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Text = "记录快捷键",
+            Cursor = Cursors.Hand
         };
-
-        row.ChangeButton = new Button
+        row.KeyLabel.Click += (s, e) => ShowShortcutCaptureDialog(action, row);
+        row.KeyLabel.Paint += (s, e) =>
         {
-            Text = "修改",
-            Location = new Point(300, y),
-            Width = 60,
-            Height = 24
+            using var pen = new Pen(BorderColor, 1);
+            var rect = new Rectangle(0, 0, row.KeyLabel.Width - 1, row.KeyLabel.Height - 1);
+            using var path = CreateRoundedRect(rect, 4);
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.DrawPath(pen, path);
         };
-        row.ChangeButton.Click += (s, e) => ShowShortcutCaptureDialog(action, row);
+        row.Container.Controls.Add(row.KeyLabel);
 
-        row.ClearButton = new Button
+        // 清除按钮
+        row.ClearButton = new Label
         {
-            Text = "清除",
-            Location = new Point(370, y),
-            Width = 60,
-            Height = 24
+            Text = "✕",
+            ForeColor = SecondaryTextColor,
+            Location = new Point(238, 7),
+            AutoSize = true,
+            Cursor = Cursors.Hand
         };
         row.ClearButton.Click += (s, e) => ClearShortcut(action, row);
+        row.ClearButton.MouseEnter += (s, e) => row.ClearButton.ForeColor = Color.White;
+        row.ClearButton.MouseLeave += (s, e) => row.ClearButton.ForeColor = SecondaryTextColor;
+        row.Container.Controls.Add(row.ClearButton);
 
-        row.Controls = new Control[] { row.CheckBox, row.KeyLabel, row.ChangeButton, row.ClearButton };
         return row;
     }
 
+    #endregion
+
+    #region Snap Areas Page
+
+    private void CreateSnapAreasPage()
+    {
+        _snapAreasPage = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = BackgroundColor,
+            Visible = false
+        };
+
+        var container = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Padding = new Padding(0, 0, 20, 20)
+        };
+
+        AddPageTitle(container, "吸附区域", "配置窗口拖拽吸附行为");
+
+        // 吸附选项卡片
+        var optionsCard = new ModernCard { Width = 500, Height = 200 };
+        var optionsPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true
+        };
+
+        _dragToSnapCheckBox = new ModernCheckBox("拖移以吸附", "将窗口拖动到屏幕边缘时自动吸附");
+        _dragToSnapCheckBox.CheckedChanged += (s, e) => _config.SnapAreas.DragToSnap = _dragToSnapCheckBox.Checked;
+        optionsPanel.Controls.Add(_dragToSnapCheckBox);
+
+        _restoreSizeCheckBox = new ModernCheckBox("结束吸附时恢复窗口大小", "取消吸附后恢复原始窗口尺寸");
+        _restoreSizeCheckBox.CheckedChanged += (s, e) => _config.SnapAreas.RestoreSizeOnSnapEnd = _restoreSizeCheckBox.Checked;
+        optionsPanel.Controls.Add(_restoreSizeCheckBox);
+
+        _snapAnimationCheckBox = new ModernCheckBox("显示吸附预览动画", "拖动时显示目标位置预览");
+        _snapAnimationCheckBox.CheckedChanged += (s, e) => _config.SnapAreas.SnapAnimation = _snapAnimationCheckBox.Checked;
+        optionsPanel.Controls.Add(_snapAnimationCheckBox);
+
+        optionsCard.SetContent(optionsPanel);
+        container.Controls.Add(optionsCard);
+
+        // 吸附区域示意图
+        var previewCard = new ModernCard { Width = 500, Height = 280, Margin = new Padding(0, 20, 0, 0) };
+        var previewLabel = new Label
+        {
+            Text = "吸附区域示意",
+            Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
+            ForeColor = TextColor,
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 10)
+        };
+
+        var previewPanel = new SnapAreaPreview
+        {
+            Width = 460,
+            Height = 200,
+            Margin = new Padding(0, 10, 0, 0)
+        };
+
+        var previewContainer = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true
+        };
+        previewContainer.Controls.Add(previewLabel);
+        previewContainer.Controls.Add(previewPanel);
+
+        previewCard.SetContent(previewContainer);
+        container.Controls.Add(previewCard);
+
+        _snapAreasPage.Controls.Add(container);
+        _contentPanel.Controls.Add(_snapAreasPage);
+    }
+
+    #endregion
+
+    #region Settings Page
+
+    private void CreateSettingsPage()
+    {
+        _settingsPage = new Panel
+        {
+            Dock = DockStyle.Fill,
+            AutoScroll = true,
+            BackColor = BackgroundColor,
+            Visible = false
+        };
+
+        var container = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            AutoSize = true,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            Padding = new Padding(0, 0, 20, 20)
+        };
+
+        AddPageTitle(container, "设置", "通用设置和偏好选项");
+
+        // 通用设置卡片
+        var generalCard = new ModernCard { Width = 500, Height = 160 };
+        var generalPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true
+        };
+
+        _launchOnLoginCheckBox = new ModernCheckBox("登录时打开", "系统启动时自动运行 Rectangle");
+        _launchOnLoginCheckBox.CheckedChanged += LaunchOnLoginCheckBox_CheckedChanged;
+        generalPanel.Controls.Add(_launchOnLoginCheckBox);
+
+        // 窗口间隙
+        var gapPanel = new Panel { Width = 460, Height = 60 };
+        var gapLabel = new Label
+        {
+            Text = "窗口间隙",
+            ForeColor = TextColor,
+            Location = new Point(0, 5),
+            AutoSize = true
+        };
+        var gapDesc = new Label
+        {
+            Text = "窗口之间的间距",
+            ForeColor = SecondaryTextColor,
+            Font = new Font("Microsoft YaHei UI", 8F),
+            Location = new Point(0, 25),
+            AutoSize = true
+        };
+        _gapSizeSlider = new ModernSlider(0, 30)
+        {
+            Location = new Point(300, 10),
+            Width = 160
+        };
+        _gapSizeSlider.ValueChanged += (s, e) => _config.GapSize = _gapSizeSlider.Value;
+        gapPanel.Controls.Add(gapLabel);
+        gapPanel.Controls.Add(gapDesc);
+        gapPanel.Controls.Add(_gapSizeSlider);
+        generalPanel.Controls.Add(gapPanel);
+
+        generalCard.SetContent(generalPanel);
+        container.Controls.Add(generalCard);
+
+        // 关于卡片
+        var aboutCard = new ModernCard { Width = 500, Height = 120, Margin = new Padding(0, 20, 0, 0) };
+        var aboutPanel = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            FlowDirection = FlowDirection.TopDown,
+            WrapContents = false,
+            AutoSize = true
+        };
+
+        var aboutTitle = new Label
+        {
+            Text = "Rectangle for Windows",
+            Font = new Font("Microsoft YaHei UI", 11F, FontStyle.Bold),
+            ForeColor = TextColor,
+            AutoSize = true
+        };
+        var aboutVersion = new Label
+        {
+            Text = "版本 1.0.0 · 基于 macOS Rectangle 移植",
+            ForeColor = SecondaryTextColor,
+            AutoSize = true,
+            Margin = new Padding(0, 5, 0, 0)
+        };
+        var aboutLink = new LinkLabel
+        {
+            Text = "GitHub: rxhanson/Rectangle",
+            LinkColor = AccentColor,
+            AutoSize = true,
+            Margin = new Padding(0, 10, 0, 0)
+        };
+        aboutLink.Click += (s, e) => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = "https://github.com/rxhanson/Rectangle",
+            UseShellExecute = true
+        });
+
+        aboutPanel.Controls.Add(aboutTitle);
+        aboutPanel.Controls.Add(aboutVersion);
+        aboutPanel.Controls.Add(aboutLink);
+
+        aboutCard.SetContent(aboutPanel);
+        container.Controls.Add(aboutCard);
+
+        _settingsPage.Controls.Add(container);
+        _contentPanel.Controls.Add(_settingsPage);
+    }
+
+    #endregion
+
+    #region Helper Methods
+
+    private void AddPageTitle(FlowLayoutPanel parent, string title, string description)
+    {
+        var titleLabel = new Label
+        {
+            Text = title,
+            Font = new Font("Microsoft YaHei UI", 16F, FontStyle.Bold),
+            ForeColor = TextColor,
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 5)
+        };
+        parent.Controls.Add(titleLabel);
+
+        var descLabel = new Label
+        {
+            Text = description,
+            ForeColor = SecondaryTextColor,
+            AutoSize = true,
+            Margin = new Padding(0, 0, 0, 20)
+        };
+        parent.Controls.Add(descLabel);
+    }
+
+    private Image? LoadIcon(string iconName)
+    {
+        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
+        string resourceName = $"Rectangle.Windows.Assets.WindowPositions.{iconName}";
+        using var stream = assembly.GetManifestResourceStream(resourceName);
+        if (stream != null)
+        {
+            try { return Image.FromStream(stream); }
+            catch { }
+        }
+        return null;
+    }
+
+    private static GraphicsPath CreateRoundedRect(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        var d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+
+    #endregion
+
+    #region Shortcut Methods
+
     private void ShowShortcutCaptureDialog(string action, ShortcutRow row)
     {
-        // 暂时禁用热键响应，避免在设置快捷键时触发功能
         Program.HotkeyManager?.SetCapturingMode(true);
-        
-        var captureForm = new Form
+
+        var dialog = new Form
         {
-            Text = "按下新的快捷键...",
-            Size = new Size(320, 150),
+            Text = "记录快捷键",
+            Size = new Size(350, 180),
             FormBorderStyle = FormBorderStyle.FixedDialog,
             StartPosition = FormStartPosition.CenterParent,
             MaximizeBox = false,
             MinimizeBox = false,
+            BackColor = BackgroundColor,
+            ForeColor = TextColor,
             KeyPreview = true
         };
 
         var label = new Label
         {
-            Text = "请按下新的快捷键组合\n(例如: Ctrl+Alt+Left)\n按 Escape 取消",
-            Dock = DockStyle.Top,
+            Text = "请按下新的快捷键组合\n例如: Ctrl+Alt+←",
+            ForeColor = TextColor,
             TextAlign = ContentAlignment.MiddleCenter,
-            Height = 60
+            Dock = DockStyle.Top,
+            Height = 80,
+            Font = new Font("Microsoft YaHei UI", 10F)
         };
 
-        var cancelButton = new Button
+        var hintLabel = new Label
         {
-            Text = "取消",
-            Dock = DockStyle.Bottom,
+            Text = "按 Escape 取消",
+            ForeColor = SecondaryTextColor,
+            TextAlign = ContentAlignment.MiddleCenter,
+            Dock = DockStyle.Top,
             Height = 30
         };
-        cancelButton.Click += (s, e) => captureForm.Close();
 
-        captureForm.Controls.Add(label);
-        captureForm.Controls.Add(cancelButton);
+        dialog.Controls.Add(hintLabel);
+        dialog.Controls.Add(label);
 
-        // 使用 KeyDown 事件捕获快捷键
-        captureForm.KeyDown += (s, e) =>
+        dialog.KeyDown += (s, e) =>
         {
-            // 阻止所有键的默认行为
             e.Handled = true;
-
-            // Escape 键取消
             if (e.KeyCode == Keys.Escape)
             {
                 Program.HotkeyManager?.SetCapturingMode(false);
-                captureForm.Close();
+                dialog.Close();
                 return;
             }
 
-            // 忽略单独的修饰键（等待完整组合）
-            if (e.KeyCode == Keys.ControlKey || e.KeyCode == Keys.LControlKey || 
+            if (e.KeyCode == Keys.ControlKey || e.KeyCode == Keys.LControlKey ||
                 e.KeyCode == Keys.RControlKey || e.KeyCode == Keys.Menu ||
                 e.KeyCode == Keys.LMenu || e.KeyCode == Keys.RMenu ||
                 e.KeyCode == Keys.ShiftKey || e.KeyCode == Keys.LShiftKey ||
@@ -327,520 +717,112 @@ public class SettingsForm : Form
             }
 
             uint modifiers = 0;
-            if (e.Control) modifiers |= 0x0002; // MOD_CONTROL
-            if (e.Alt) modifiers |= 0x0001;     // MOD_ALT
-            if (e.Shift) modifiers |= 0x0004;   // MOD_SHIFT
+            if (e.Control) modifiers |= 0x0002;
+            if (e.Alt) modifiers |= 0x0001;
+            if (e.Shift) modifiers |= 0x0004;
             int keyCode = (int)e.KeyCode;
 
-            // 必须有至少一个修饰键
             if (modifiers > 0 && keyCode > 0)
             {
-                var shortcutText = FormatShortcut(keyCode, modifiers);
-                row.KeyLabel.Text = shortcutText;
-                
-                // 直接保存快捷键到配置
+                var text = FormatShortcut(keyCode, modifiers);
+                row.KeyLabel.Text = text;
+                row.KeyLabel.ForeColor = TextColor;
+
                 if (!_config.Shortcuts.ContainsKey(action))
-                {
                     _config.Shortcuts[action] = new ShortcutConfig();
-                }
+
                 _config.Shortcuts[action].KeyCode = keyCode;
                 _config.Shortcuts[action].ModifierFlags = modifiers;
-                _config.Shortcuts[action].Enabled = row.CheckBox.Checked;
-                
-                // 立即保存配置并重新注册热键
+                _config.Shortcuts[action].Enabled = true;
+
                 _configService.Save(_config);
                 Program.HotkeyManager?.ReloadFromConfig(_config.Shortcuts);
-                
-                // 恢复热键响应
                 Program.HotkeyManager?.SetCapturingMode(false);
-                captureForm.Close();
+                dialog.Close();
             }
         };
 
-        // 阻止 KeyPress 事件的默认行为
-        captureForm.KeyPress += (s, e) =>
-        {
-            e.Handled = true;
-        };
-        
-        // 窗口关闭时恢复热键响应
-        captureForm.FormClosed += (s, e) =>
-        {
-            Program.HotkeyManager?.SetCapturingMode(false);
-        };
-
-        captureForm.ShowDialog(this);
+        dialog.KeyPress += (s, e) => e.Handled = true;
+        dialog.FormClosed += (s, e) => Program.HotkeyManager?.SetCapturingMode(false);
+        dialog.ShowDialog(this);
     }
 
     private void ClearShortcut(string action, ShortcutRow row)
     {
-        row.KeyLabel.Text = "";
+        row.KeyLabel.Text = "记录快捷键";
+        row.KeyLabel.ForeColor = SecondaryTextColor;
+
         if (_config.Shortcuts.ContainsKey(action))
         {
             _config.Shortcuts[action].KeyCode = 0;
             _config.Shortcuts[action].ModifierFlags = 0;
             _config.Shortcuts[action].Enabled = false;
         }
-        else
-        {
-            _config.Shortcuts[action] = new ShortcutConfig
-            {
-                KeyCode = 0,
-                ModifierFlags = 0,
-                Enabled = false
-            };
-        }
-        
-        // 立即保存配置并重新注册热键
+
         _configService.Save(_config);
         Program.HotkeyManager?.ReloadFromConfig(_config.Shortcuts);
-    }
-
-    private void UpdateShortcutConfig(string action, ShortcutRow row)
-    {
-        if (!_config.Shortcuts.ContainsKey(action))
-        {
-            _config.Shortcuts[action] = new ShortcutConfig();
-        }
-
-        _config.Shortcuts[action].Enabled = row.CheckBox.Checked;
-        
-        // 解析快捷键文本
-        var text = row.KeyLabel.Text;
-        if (!string.IsNullOrEmpty(text))
-        {
-            // 这里需要从文本解析回 KeyCode 和 ModifierFlags
-            // 简化处理：如果已经有值就保持，否则设置默认值
-            if (_config.Shortcuts[action].KeyCode == 0)
-            {
-                var defaults = ConfigService.GetDefaultShortcuts();
-                if (defaults.TryGetValue(action, out var defaultConfig))
-                {
-                    _config.Shortcuts[action].KeyCode = defaultConfig.KeyCode;
-                    _config.Shortcuts[action].ModifierFlags = defaultConfig.ModifierFlags;
-                }
-            }
-        }
     }
 
     private string FormatShortcut(int keyCode, uint modifiers)
     {
         var parts = new List<string>();
-        
+
         if ((modifiers & 0x0002) != 0) parts.Add("Ctrl");
         if ((modifiers & 0x0001) != 0) parts.Add("Alt");
         if ((modifiers & 0x0004) != 0) parts.Add("Shift");
         if ((modifiers & 0x0008) != 0) parts.Add("Win");
 
-        string keyName = ((Keys)keyCode).ToString();
-        
-        // 特殊键名映射
         var keyMappings = new Dictionary<Keys, string>
         {
-            [Keys.Left] = "←",
-            [Keys.Right] = "→",
-            [Keys.Up] = "↑",
-            [Keys.Down] = "↓",
-            [Keys.Enter] = "Enter",
-            [Keys.Back] = "Backspace",
-            [Keys.Delete] = "Delete",
-            [Keys.Space] = "Space"
+            [Keys.Left] = "←", [Keys.Right] = "→",
+            [Keys.Up] = "↑", [Keys.Down] = "↓",
+            [Keys.Enter] = "↵", [Keys.Back] = "⌫",
+            [Keys.Delete] = "Del", [Keys.Space] = "Space",
+            [Keys.OemMinus] = "-", [Keys.Oemplus] = "="
         };
 
-        if (keyMappings.TryGetValue((Keys)keyCode, out var mapped))
-        {
-            keyName = mapped;
-        }
-
-        parts.Add(keyName);
+        var key = (Keys)keyCode;
+        parts.Add(keyMappings.TryGetValue(key, out var mapped) ? mapped : key.ToString());
         return string.Join("+", parts);
     }
 
-    private void InitializeSnapAreasTab()
-    {
-        _snapAreasTab = new TabPage("吸附区域");
-        
-        var layoutPanel = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Padding = new Padding(15),
-            AutoScroll = true
-        };
+    #endregion
 
-        // 拖拽吸附选项
-        var dragToSnapPanel = new Panel { Width = 500, Height = 30 };
-        _dragToSnapCheckBox = new CheckBox
-        {
-            Text = "拖移以吸附",
-            Location = new Point(0, 5),
-            AutoSize = true
-        };
-        _dragToSnapCheckBox.CheckedChanged += DragToSnapCheckBox_CheckedChanged;
-        dragToSnapPanel.Controls.Add(_dragToSnapCheckBox);
-        layoutPanel.Controls.Add(dragToSnapPanel);
-
-        // 恢复窗口大小选项
-        var restorePanel = new Panel { Width = 500, Height = 30 };
-        _restoreSizeCheckBox = new CheckBox
-        {
-            Text = "结束吸附时恢复窗口大小",
-            Location = new Point(0, 5),
-            AutoSize = true
-        };
-        _restoreSizeCheckBox.CheckedChanged += RestoreSizeCheckBox_CheckedChanged;
-        restorePanel.Controls.Add(_restoreSizeCheckBox);
-        layoutPanel.Controls.Add(restorePanel);
-
-        // 触觉反馈选项
-        var hapticPanel = new Panel { Width = 500, Height = 30 };
-        _hapticFeedbackCheckBox = new CheckBox
-        {
-            Text = "吸附时触觉反馈",
-            Location = new Point(0, 5),
-            AutoSize = true
-        };
-        _hapticFeedbackCheckBox.CheckedChanged += HapticFeedbackCheckBox_CheckedChanged;
-        hapticPanel.Controls.Add(_hapticFeedbackCheckBox);
-        layoutPanel.Controls.Add(hapticPanel);
-
-        // 吸附动画选项
-        var animPanel = new Panel { Width = 500, Height = 30 };
-        _snapAnimationCheckBox = new CheckBox
-        {
-            Text = "显示吸附预览动画",
-            Location = new Point(0, 5),
-            AutoSize = true
-        };
-        _snapAnimationCheckBox.CheckedChanged += SnapAnimationCheckBox_CheckedChanged;
-        animPanel.Controls.Add(_snapAnimationCheckBox);
-        layoutPanel.Controls.Add(animPanel);
-
-        // 分隔线
-        var separator = new Label
-        {
-            Text = "",
-            Width = 500,
-            Height = 2,
-            BackColor = Color.LightGray,
-            Margin = new Padding(0, 15, 0, 15)
-        };
-        layoutPanel.Controls.Add(separator);
-
-        // 吸附区域网格标题
-        var gridTitle = new Label
-        {
-            Text = "吸附区域动作配置",
-            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-            AutoSize = true,
-            Margin = new Padding(0, 0, 0, 10)
-        };
-        layoutPanel.Controls.Add(gridTitle);
-
-        // 创建吸附区域网格
-        CreateSnapAreaGrid(layoutPanel);
-
-        _snapAreasTab.Controls.Add(layoutPanel);
-    }
-
-    private void CreateSnapAreaGrid(FlowLayoutPanel parent)
-    {
-        var gridPanel = new TableLayoutPanel
-        {
-            ColumnCount = 3,
-            RowCount = 3,
-            Width = 450,
-            Height = 200,
-            CellBorderStyle = TableLayoutPanelCellBorderStyle.Single,
-            Margin = new Padding(0, 0, 0, 10)
-        };
-
-        // 设置列宽
-        gridPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-        gridPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-        gridPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
-
-        // 设置行高
-        gridPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
-        gridPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
-        gridPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 33.33F));
-
-        // 创建 3x3 网格的下拉框
-        var snapAreaActions = new string[,]
-        {
-            { "TopLeft", "Top", "TopRight" },
-            { "Left", "", "Right" },
-            { "BottomLeft", "Bottom", "BottomRight" }
-        };
-
-        var actionNames = new Dictionary<string, string>
-        {
-            ["LeftHalf"] = "左半屏",
-            ["RightHalf"] = "右半屏",
-            ["TopHalf"] = "上半屏",
-            ["BottomHalf"] = "下半屏",
-            ["TopLeft"] = "左上角",
-            ["TopRight"] = "右上角",
-            ["BottomLeft"] = "左下角",
-            ["BottomRight"] = "右下角",
-            ["Maximize"] = "最大化",
-            ["FirstThird"] = "左 1/3",
-            ["LastThird"] = "右 1/3"
-        };
-
-        for (int row = 0; row < 3; row++)
-        {
-            for (int col = 0; col < 3; col++)
-            {
-                var key = snapAreaActions[row, col];
-                if (string.IsNullOrEmpty(key))
-                {
-                    gridPanel.Controls.Add(new Panel(), col, row);
-                    continue;
-                }
-
-                var combo = new ComboBox
-                {
-                    Dock = DockStyle.Fill,
-                    DropDownStyle = ComboBoxStyle.DropDownList
-                };
-
-                combo.Items.Add("(无)");
-                foreach (var action in actionNames)
-                {
-                    combo.Items.Add(action.Value);
-                }
-                combo.SelectedIndex = 0;
-
-                // 存储区域标识
-                combo.Tag = key;
-
-                gridPanel.Controls.Add(combo, col, row);
-            }
-        }
-
-        parent.Controls.Add(gridPanel);
-    }
-
-    private void InitializeSettingsTab()
-    {
-        _settingsTab = new TabPage("设置");
-        
-        var layoutPanel = new FlowLayoutPanel
-        {
-            Dock = DockStyle.Fill,
-            FlowDirection = FlowDirection.TopDown,
-            WrapContents = false,
-            Padding = new Padding(15)
-        };
-
-        // 间隙大小
-        var gapPanel = new Panel { Width = 500, Height = 60 };
-        var gapLabel = new Label
-        {
-            Text = "窗口间隙大小:",
-            Location = new Point(0, 10),
-            AutoSize = true
-        };
-        
-        _gapSizeSlider = new TrackBar
-        {
-            Location = new Point(0, 35),
-            Width = 200,
-            Minimum = 0,
-            Maximum = 20,
-            Value = 0
-        };
-        _gapSizeSlider.Scroll += GapSizeSlider_Scroll;
-        
-        _gapSizeLabel = new Label
-        {
-            Text = "0 px",
-            Location = new Point(210, 37),
-            AutoSize = true
-        };
-        
-        gapPanel.Controls.Add(gapLabel);
-        gapPanel.Controls.Add(_gapSizeSlider);
-        gapPanel.Controls.Add(_gapSizeLabel);
-        layoutPanel.Controls.Add(gapPanel);
-
-        // 开机启动
-        var launchPanel = new Panel { Width = 500, Height = 30 };
-        _launchOnLoginCheckBox = new CheckBox
-        {
-            Text = "开机启动",
-            Location = new Point(0, 5),
-            AutoSize = true
-        };
-        _launchOnLoginCheckBox.CheckedChanged += LaunchOnLoginCheckBox_CheckedChanged;
-        launchPanel.Controls.Add(_launchOnLoginCheckBox);
-        layoutPanel.Controls.Add(launchPanel);
-
-        // 隐藏托盘图标
-        var trayPanel = new Panel { Width = 500, Height = 30 };
-        _hideTrayIconCheckBox = new CheckBox
-        {
-            Text = "隐藏菜单栏图标",
-            Location = new Point(0, 5),
-            AutoSize = true
-        };
-        _hideTrayIconCheckBox.CheckedChanged += HideTrayIconCheckBox_CheckedChanged;
-        trayPanel.Controls.Add(_hideTrayIconCheckBox);
-        layoutPanel.Controls.Add(trayPanel);
-
-        // 后续执行行为
-        var subsequentPanel = new Panel { Width = 500, Height = 50 };
-        var subsequentLabel = new Label
-        {
-            Text = "重复执行行为:",
-            Location = new Point(0, 10),
-            AutoSize = true
-        };
-        
-        _subsequentExecutionCombo = new ComboBox
-        {
-            Location = new Point(0, 30),
-            Width = 200,
-            DropDownStyle = ComboBoxStyle.DropDownList
-        };
-        _subsequentExecutionCombo.Items.AddRange(new object[] { "循环调整大小", "切换显示器", "无动作" });
-        _subsequentExecutionCombo.SelectedIndex = 0;
-        
-        subsequentPanel.Controls.Add(subsequentLabel);
-        subsequentPanel.Controls.Add(_subsequentExecutionCombo);
-        layoutPanel.Controls.Add(subsequentPanel);
-
-        // 分隔线
-        var separator = new Label
-        {
-            Text = "",
-            Width = 500,
-            Height = 2,
-            BackColor = Color.LightGray,
-            Margin = new Padding(0, 15, 0, 15)
-        };
-        layoutPanel.Controls.Add(separator);
-
-        // 循环尺寸选项标题
-        var cycleTitle = new Label
-        {
-            Text = "循环调整尺寸选项",
-            Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-            AutoSize = true,
-            Margin = new Padding(0, 0, 0, 10)
-        };
-        layoutPanel.Controls.Add(cycleTitle);
-
-        // 循环尺寸复选框
-        var cycleSizes = new[] { "1/2", "1/3", "2/3", "1/4", "3/4" };
-        foreach (var size in cycleSizes)
-        {
-            var cb = new CheckBox
-            {
-                Text = size,
-                AutoSize = true,
-                Margin = new Padding(5)
-            };
-            _cycleSizeCheckBoxes.Add(cb);
-            layoutPanel.Controls.Add(cb);
-        }
-
-        _settingsTab.Controls.Add(layoutPanel);
-    }
+    #region Settings Loading/Saving
 
     private void LoadSettings()
     {
         _config = _configService.Load();
-        
-        // 加载快捷键设置
         var defaults = ConfigService.GetDefaultShortcuts();
-        foreach (var row in _shortcutRows)
+
+        foreach (var (action, row) in _shortcutRows)
         {
-            var action = row.Key;
-            var shortcutConfig = _config.Shortcuts.TryGetValue(action, out var c) ? c : 
-                                  defaults.TryGetValue(action, out var d) ? d : null;
-            
-            if (shortcutConfig != null)
+            var config = _config.Shortcuts.TryGetValue(action, out var c) ? c :
+                         defaults.TryGetValue(action, out var d) ? d : null;
+
+            if (config != null && config.KeyCode > 0 && config.Enabled)
             {
-                row.Value.CheckBox.Checked = shortcutConfig.Enabled;
-                if (shortcutConfig.KeyCode > 0)
-                {
-                    row.Value.KeyLabel.Text = FormatShortcut(shortcutConfig.KeyCode, shortcutConfig.ModifierFlags);
-                }
+                row.KeyLabel.Text = FormatShortcut(config.KeyCode, config.ModifierFlags);
+                row.KeyLabel.ForeColor = TextColor;
             }
         }
-        
-        // 设置选项卡
+
         _gapSizeSlider.Value = _config.GapSize;
-        _gapSizeLabel.Text = $"{_config.GapSize} px";
         _launchOnLoginCheckBox.Checked = _config.LaunchOnLogin;
-        
-        // 吸附区域选项卡
         _dragToSnapCheckBox.Checked = _config.SnapAreas.DragToSnap;
         _restoreSizeCheckBox.Checked = _config.SnapAreas.RestoreSizeOnSnapEnd;
-        _hapticFeedbackCheckBox.Checked = _config.SnapAreas.HapticFeedback;
         _snapAnimationCheckBox.Checked = _config.SnapAreas.SnapAnimation;
-    }
-
-    private void GapSizeSlider_Scroll(object? sender, EventArgs e)
-    {
-        var value = _gapSizeSlider.Value;
-        _gapSizeLabel.Text = $"{value} px";
-        _config.GapSize = value;
     }
 
     private void LaunchOnLoginCheckBox_CheckedChanged(object? sender, EventArgs e)
     {
         _config.LaunchOnLogin = _launchOnLoginCheckBox.Checked;
-        SetLaunchOnLogin(_config.LaunchOnLogin);
-    }
-
-    private void HideTrayIconCheckBox_CheckedChanged(object? sender, EventArgs e)
-    {
-        // TODO: 实现隐藏托盘图标功能
-    }
-
-    private void DragToSnapCheckBox_CheckedChanged(object? sender, EventArgs e)
-    {
-        _config.SnapAreas.DragToSnap = _dragToSnapCheckBox.Checked;
-    }
-
-    private void RestoreSizeCheckBox_CheckedChanged(object? sender, EventArgs e)
-    {
-        _config.SnapAreas.RestoreSizeOnSnapEnd = _restoreSizeCheckBox.Checked;
-    }
-
-    private void HapticFeedbackCheckBox_CheckedChanged(object? sender, EventArgs e)
-    {
-        _config.SnapAreas.HapticFeedback = _hapticFeedbackCheckBox.Checked;
-    }
-
-    private void SnapAnimationCheckBox_CheckedChanged(object? sender, EventArgs e)
-    {
-        _config.SnapAreas.SnapAnimation = _snapAnimationCheckBox.Checked;
-    }
-
-    private void RestoreDefaults_Click(object? sender, EventArgs e)
-    {
-        _config.Shortcuts = ConfigService.GetDefaultShortcuts();
-        _configService.Save(_config);
-        LoadSettings();
-        MessageBox.Show("已恢复默认快捷键", "Rectangle", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        
-        // 通知 HotkeyManager 重新注册
-        Program.HotkeyManager?.ReloadFromConfig(_config.Shortcuts);
-    }
-
-    private void SetLaunchOnLogin(bool enabled)
-    {
         try
         {
             var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
                 @"Software\Microsoft\Windows\CurrentVersion\Run", true);
-            
-            if (enabled)
+
+            if (_config.LaunchOnLogin)
             {
                 var exePath = Environment.ProcessPath ?? Application.ExecutablePath;
                 key?.SetValue("Rectangle", exePath);
@@ -850,36 +832,441 @@ public class SettingsForm : Form
                 key?.DeleteValue("Rectangle", false);
             }
         }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"设置开机启动失败: {ex.Message}", "Rectangle", 
-                MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        }
+        catch { }
+    }
+
+    private void RestoreDefaults_Click(object? sender, EventArgs e)
+    {
+        _config.Shortcuts = ConfigService.GetDefaultShortcuts();
+        _configService.Save(_config);
+        LoadSettings();
+        Program.HotkeyManager?.ReloadFromConfig(_config.Shortcuts);
     }
 
     private void SettingsForm_FormClosed(object? sender, FormClosedEventArgs e)
     {
-        // 保存所有快捷键配置
-        foreach (var row in _shortcutRows)
-        {
-            if (_config.Shortcuts.ContainsKey(row.Key))
-            {
-                _config.Shortcuts[row.Key].Enabled = row.Value.CheckBox.Checked;
-            }
-        }
-        
         _configService.Save(_config);
-        
-        // 通知 HotkeyManager 重新注册
         Program.HotkeyManager?.ReloadFromConfig(_config.Shortcuts);
     }
 
+    #endregion
+
     private class ShortcutRow
     {
-        public CheckBox CheckBox { get; set; } = null!;
+        public Panel Container { get; set; } = null!;
+        public Label NameLabel { get; set; } = null!;
         public Label KeyLabel { get; set; } = null!;
-        public Button ChangeButton { get; set; } = null!;
-        public Button ClearButton { get; set; } = null!;
-        public Control[] Controls { get; set; } = Array.Empty<Control>();
+        public Label ClearButton { get; set; } = null!;
     }
 }
+
+#region Custom Controls
+
+/// <summary>
+/// 导航按钮
+/// </summary>
+internal class NavButton : Control
+{
+    public int Index { get; }
+    public bool IsSelected { get; set; }
+
+    private readonly string _icon;
+    private readonly string _text;
+    private bool _isHovered;
+
+    private static readonly Color NormalColor = Color.Transparent;
+    private static readonly Color HoverColor = Color.FromArgb(45, 45, 45);
+    private static readonly Color SelectedColor = Color.FromArgb(55, 55, 55);
+    private static readonly Color AccentColor = Color.FromArgb(0, 120, 212);
+
+    public NavButton(string icon, string text, int index)
+    {
+        _icon = icon;
+        _text = text;
+        Index = index;
+        Height = 40;
+        Cursor = Cursors.Hand;
+        DoubleBuffered = true;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        var bgColor = IsSelected ? SelectedColor : (_isHovered ? HoverColor : NormalColor);
+        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+
+        using var path = CreateRoundedRect(rect, 6);
+        using var brush = new SolidBrush(bgColor);
+        g.FillPath(brush, path);
+
+        if (IsSelected)
+        {
+            using var accentBrush = new SolidBrush(AccentColor);
+            g.FillRectangle(accentBrush, 0, 8, 3, Height - 16);
+        }
+
+        using var textBrush = new SolidBrush(Color.White);
+        g.DrawString(_icon, new Font("Segoe UI Emoji", 11F), textBrush, 12, 10);
+        g.DrawString(_text, new Font("Microsoft YaHei UI", 9F), textBrush, 38, 11);
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _isHovered = true;
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _isHovered = false;
+        Invalidate();
+    }
+
+    private static GraphicsPath CreateRoundedRect(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        var d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+}
+
+/// <summary>
+/// 现代卡片
+/// </summary>
+internal class ModernCard : Panel
+{
+    private static readonly Color CardColor = Color.FromArgb(45, 45, 45);
+    private static readonly Color BorderColor = Color.FromArgb(60, 60, 60);
+
+    public ModernCard()
+    {
+        DoubleBuffered = true;
+        Padding = new Padding(16);
+    }
+
+    public void SetContent(Control content)
+    {
+        content.Dock = DockStyle.Fill;
+        Controls.Add(content);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+        using var path = CreateRoundedRect(rect, 8);
+        using var brush = new SolidBrush(CardColor);
+        using var pen = new Pen(BorderColor, 1);
+
+        g.FillPath(brush, path);
+        g.DrawPath(pen, path);
+    }
+
+    private static GraphicsPath CreateRoundedRect(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        var d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+}
+
+/// <summary>
+/// 现代复选框
+/// </summary>
+internal class ModernCheckBox : Panel
+{
+    public bool Checked { get; set; }
+    public event EventHandler? CheckedChanged;
+
+    private readonly Label _titleLabel;
+    private readonly Label _descLabel;
+    private readonly Panel _checkBox;
+
+    private static readonly Color CheckedColor = Color.FromArgb(0, 120, 212);
+    private static readonly Color UncheckedColor = Color.FromArgb(60, 60, 60);
+
+    public ModernCheckBox(string title, string description)
+    {
+        Width = 460;
+        Height = 50;
+        Cursor = Cursors.Hand;
+
+        _titleLabel = new Label
+        {
+            Text = title,
+            ForeColor = Color.White,
+            Location = new Point(0, 5),
+            AutoSize = true
+        };
+        Controls.Add(_titleLabel);
+
+        _descLabel = new Label
+        {
+            Text = description,
+            ForeColor = Color.FromArgb(150, 150, 150),
+            Font = new Font("Microsoft YaHei UI", 8F),
+            Location = new Point(0, 25),
+            AutoSize = true
+        };
+        Controls.Add(_descLabel);
+
+        _checkBox = new Panel
+        {
+            Size = new Size(44, 22),
+            Location = new Point(416, 14)
+        };
+        _checkBox.Paint += CheckBox_Paint;
+        _checkBox.Click += Toggle;
+        Controls.Add(_checkBox);
+
+        _titleLabel.Click += Toggle;
+        _descLabel.Click += Toggle;
+        Click += Toggle;
+    }
+
+    private void Toggle(object? sender, EventArgs e)
+    {
+        Checked = !Checked;
+        _checkBox.Invalidate();
+        CheckedChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void CheckBox_Paint(object? sender, PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        var rect = new Rectangle(0, 0, 43, 21);
+        using var path = CreateRoundedRect(rect, 10);
+
+        var bgColor = Checked ? CheckedColor : UncheckedColor;
+        using var brush = new SolidBrush(bgColor);
+        g.FillPath(brush, path);
+
+        var circleX = Checked ? 24 : 3;
+        using var circleBrush = new SolidBrush(Color.White);
+        g.FillEllipse(circleBrush, circleX, 3, 16, 16);
+    }
+
+    private static GraphicsPath CreateRoundedRect(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        var d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+}
+
+/// <summary>
+/// 现代滑块
+/// </summary>
+internal class ModernSlider : Control
+{
+    public int Value { get; set; }
+    public int Minimum { get; }
+    public int Maximum { get; }
+    public event EventHandler? ValueChanged;
+
+    private bool _isDragging;
+    private static readonly Color TrackColor = Color.FromArgb(60, 60, 60);
+    private static readonly Color FillColor = Color.FromArgb(0, 120, 212);
+    private static readonly Color ThumbColor = Color.White;
+
+    public ModernSlider(int min, int max)
+    {
+        Minimum = min;
+        Maximum = max;
+        Height = 30;
+        DoubleBuffered = true;
+        Cursor = Cursors.Hand;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        var trackY = Height / 2 - 2;
+        var trackRect = new Rectangle(8, trackY, Width - 16, 4);
+        using var trackBrush = new SolidBrush(TrackColor);
+        g.FillRectangle(trackBrush, trackRect);
+
+        var ratio = (float)(Value - Minimum) / (Maximum - Minimum);
+        var fillWidth = (int)((Width - 16) * ratio);
+        using var fillBrush = new SolidBrush(FillColor);
+        g.FillRectangle(fillBrush, 8, trackY, fillWidth, 4);
+
+        var thumbX = 8 + fillWidth - 8;
+        using var thumbBrush = new SolidBrush(ThumbColor);
+        g.FillEllipse(thumbBrush, thumbX, Height / 2 - 8, 16, 16);
+
+        using var valueBrush = new SolidBrush(Color.FromArgb(150, 150, 150));
+        g.DrawString($"{Value} px", Font, valueBrush, Width - 45, 7);
+    }
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        _isDragging = true;
+        UpdateValue(e.X);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        if (_isDragging)
+            UpdateValue(e.X);
+    }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        _isDragging = false;
+    }
+
+    private void UpdateValue(int x)
+    {
+        var ratio = Math.Clamp((float)(x - 8) / (Width - 16), 0, 1);
+        var newValue = (int)(Minimum + ratio * (Maximum - Minimum));
+        if (newValue != Value)
+        {
+            Value = newValue;
+            Invalidate();
+            ValueChanged?.Invoke(this, EventArgs.Empty);
+        }
+    }
+}
+
+/// <summary>
+/// 现代按钮
+/// </summary>
+internal class ModernButton : Control
+{
+    private bool _isHovered;
+    private static readonly Color NormalColor = Color.FromArgb(55, 55, 55);
+    private static readonly Color HoverColor = Color.FromArgb(65, 65, 65);
+    private static readonly Color BorderColor = Color.FromArgb(80, 80, 80);
+
+    public ModernButton(string text)
+    {
+        Text = text;
+        Height = 32;
+        Cursor = Cursors.Hand;
+        DoubleBuffered = true;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+        using var path = CreateRoundedRect(rect, 6);
+
+        var bgColor = _isHovered ? HoverColor : NormalColor;
+        using var brush = new SolidBrush(bgColor);
+        using var pen = new Pen(BorderColor, 1);
+
+        g.FillPath(brush, path);
+        g.DrawPath(pen, path);
+
+        using var textBrush = new SolidBrush(Color.White);
+        var textSize = g.MeasureString(Text, Font);
+        g.DrawString(Text, Font, textBrush,
+            (Width - textSize.Width) / 2,
+            (Height - textSize.Height) / 2);
+    }
+
+    protected override void OnMouseEnter(EventArgs e)
+    {
+        _isHovered = true;
+        Invalidate();
+    }
+
+    protected override void OnMouseLeave(EventArgs e)
+    {
+        _isHovered = false;
+        Invalidate();
+    }
+
+    private static GraphicsPath CreateRoundedRect(Rectangle rect, int radius)
+    {
+        var path = new GraphicsPath();
+        var d = radius * 2;
+        path.AddArc(rect.X, rect.Y, d, d, 180, 90);
+        path.AddArc(rect.Right - d, rect.Y, d, d, 270, 90);
+        path.AddArc(rect.Right - d, rect.Bottom - d, d, d, 0, 90);
+        path.AddArc(rect.X, rect.Bottom - d, d, d, 90, 90);
+        path.CloseFigure();
+        return path;
+    }
+}
+
+/// <summary>
+/// 吸附区域预览
+/// </summary>
+internal class SnapAreaPreview : Control
+{
+    private static readonly Color ScreenColor = Color.FromArgb(35, 35, 35);
+    private static readonly Color BorderColor = Color.FromArgb(80, 80, 80);
+    private static readonly Color ZoneColor = Color.FromArgb(0, 120, 212);
+
+    public SnapAreaPreview()
+    {
+        DoubleBuffered = true;
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+
+        // 屏幕背景
+        var screenRect = new Rectangle(20, 20, Width - 40, Height - 40);
+        using var screenBrush = new SolidBrush(ScreenColor);
+        using var screenPen = new Pen(BorderColor, 2);
+        g.FillRectangle(screenBrush, screenRect);
+        g.DrawRectangle(screenPen, screenRect);
+
+        // 吸附区域标注
+        var zones = new[]
+        {
+            (new Rectangle(20, 20, 30, 40), "左上"),
+            (new Rectangle(Width / 2 - 15, 20, 30, 30), "上"),
+            (new Rectangle(Width - 70, 20, 30, 40), "右上"),
+            (new Rectangle(20, Height / 2 - 15, 30, 30), "左"),
+            (new Rectangle(Width - 70, Height / 2 - 15, 30, 30), "右"),
+            (new Rectangle(20, Height - 80, 30, 40), "左下"),
+            (new Rectangle(Width / 2 - 15, Height - 70, 30, 30), "下"),
+            (new Rectangle(Width - 70, Height - 80, 30, 40), "右下")
+        };
+
+        using var zoneBrush = new SolidBrush(Color.FromArgb(40, ZoneColor));
+        using var zonePen = new Pen(Color.FromArgb(100, ZoneColor), 1);
+        using var textBrush = new SolidBrush(Color.FromArgb(120, 120, 120));
+        var font = new Font("Microsoft YaHei UI", 7F);
+
+        foreach (var (rect, label) in zones)
+        {
+            g.FillRectangle(zoneBrush, rect);
+            g.DrawRectangle(zonePen, rect);
+        }
+    }
+}
+
+#endregion
