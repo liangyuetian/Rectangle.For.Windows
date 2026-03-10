@@ -24,7 +24,7 @@ public static class MenuIconGenerator
         using var brush = new SolidBrush(Color.FromArgb(80, IconColor));
         using var accentBrush = new SolidBrush(Color.FromArgb(120, AccentColor));
 
-        var rect = new Rectangle(1, 1, IconSize - 3, IconSize - 3);
+        var rect = new System.Drawing.Rectangle(1, 1, IconSize - 3, IconSize - 3);
 
         switch (action)
         {

@@ -93,6 +93,10 @@ internal static class Program
         // 支持左键点击打开菜单
         _notifyIcon.MouseClick += NotifyIcon_MouseClick;
         
+        // 菜单打开时暂停窗口跟踪，菜单关闭时恢复
+        _contextMenu.Opened += (s, e) => _lastActiveWindowService?.PauseTracking();
+        _contextMenu.Closed += (s, e) => _lastActiveWindowService?.ResumeTracking();
+        
         // 定时更新"忽略 [应用名]"菜单项
         _updateTimer = new System.Windows.Forms.Timer { Interval = 500 };
         _updateTimer.Tick += (s, e) => UpdateIgnoreMenuItem();
@@ -154,7 +158,7 @@ internal static class Program
                 var hIcon = bmp.GetHicon();
                 var icon = System.Drawing.Icon.FromHandle(hIcon);
                 var clonedIcon = (System.Drawing.Icon)icon.Clone();
-                PInvoke.DestroyIcon((Windows.Win32.UI.WindowsAndMessaging.HICON)hIcon);
+                PInvoke.DestroyIcon((global::Windows.Win32.UI.WindowsAndMessaging.HICON)hIcon);
                 return clonedIcon;
             }
             catch (Exception ex)
@@ -186,7 +190,7 @@ internal static class Program
             var hIcon = bmp.GetHicon();
             var icon = System.Drawing.Icon.FromHandle(hIcon);
             var clonedIcon = (System.Drawing.Icon)icon.Clone();
-            PInvoke.DestroyIcon((Windows.Win32.UI.WindowsAndMessaging.HICON)hIcon);
+            PInvoke.DestroyIcon((global::Windows.Win32.UI.WindowsAndMessaging.HICON)hIcon);
             return clonedIcon;
         }
         catch (Exception ex)
@@ -221,7 +225,7 @@ internal static class Program
 
     private static System.Drawing.Image? GetMenuIcon(WindowAction action)
     {
-        return Views.MenuIconGenerator.GenerateIcon(action);
+        return MenuIconGenerator.GenerateIcon(action);
     }
 
     private static void NotifyIcon_MouseClick(object? sender, MouseEventArgs e)
@@ -319,19 +323,6 @@ internal static class Program
             mergedShortcuts[kvp.Key] = kvp.Value;
         }
 
-        // 忽略 [应用名] - 动态菜单项
-        _ignoreAppMenuItem = new ToolStripMenuItem("忽略 [无有效窗口]") { Enabled = false };
-        _ignoreAppMenuItem.Click += (s, e) =>
-        {
-            if (_ignoreAppMenuItem.Tag is string processName && !string.IsNullOrEmpty(processName))
-            {
-                ToggleIgnoreApp(processName);
-            }
-        };
-        _ignoreAppMenuItem.ForeColor = System.Drawing.Color.White;
-        menu.Items.Add(_ignoreAppMenuItem);
-        menu.Items.Add(new ToolStripSeparator());
-
         // 半屏
         AddMenuItem(menu, "左半屏", GetShortcutText(mergedShortcuts, "LeftHalf"), WindowAction.LeftHalf);
         AddMenuItem(menu, "右半屏", GetShortcutText(mergedShortcuts, "RightHalf"), WindowAction.RightHalf);
@@ -371,15 +362,22 @@ internal static class Program
         AddMenuItem(menu, "上一个显示器", GetShortcutText(mergedShortcuts, "PreviousDisplay"), WindowAction.PreviousDisplay);
         menu.Items.Add(new ToolStripSeparator());
 
+        // 忽略 [应用名] - 动态菜单项（放在偏好设置上方）
+        _ignoreAppMenuItem = new ToolStripMenuItem("忽略 [无有效窗口]") { Enabled = false };
+        _ignoreAppMenuItem.Click += (s, e) =>
+        {
+            if (_ignoreAppMenuItem.Tag is string processName && !string.IsNullOrEmpty(processName))
+            {
+                ToggleIgnoreApp(processName);
+            }
+        };
+        // 颜色由渲染器根据主题自动设置
+        menu.Items.Add(_ignoreAppMenuItem);
+
         // 设置与退出
-        var settingsItem = new ToolStripMenuItem("偏好设置...", null, (s, e) => OpenSettings());
-        settingsItem.ForeColor = System.Drawing.Color.White;
-        menu.Items.Add(settingsItem);
+        menu.Items.Add(new ToolStripMenuItem("偏好设置...", null, (s, e) => OpenSettings()));
         menu.Items.Add(new ToolStripSeparator());
-        
-        var exitItem = new ToolStripMenuItem("退出 Rectangle", null, (s, e) => Application.Exit());
-        exitItem.ForeColor = System.Drawing.Color.White;
-        menu.Items.Add(exitItem);
+        menu.Items.Add(new ToolStripMenuItem("退出 Rectangle", null, (s, e) => Application.Exit()));
 
         return menu;
     }
@@ -393,7 +391,7 @@ internal static class Program
         {
             item.ShortcutKeyDisplayString = shortcut;
         }
-        item.ForeColor = System.Drawing.Color.White;
+        // 颜色由渲染器根据主题自动设置
         menu.Items.Add(item);
     }
 
