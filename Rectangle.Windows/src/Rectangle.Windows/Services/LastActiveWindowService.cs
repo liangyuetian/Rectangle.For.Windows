@@ -16,6 +16,7 @@ public class LastActiveWindowService : IDisposable
     private nint _lastValidWindowHwnd;
     private bool _disposed;
     private readonly object _lock = new();
+    private bool _isPaused = false;
 
     // Win32 事件钩子 - 使用 SafeHandle
     private UnhookWinEventSafeHandle? _hook;
@@ -27,6 +28,30 @@ public class LastActiveWindowService : IDisposable
     {
         _lastValidWindowHwnd = 0;
         StartTracking();
+    }
+
+    /// <summary>
+    /// 暂停窗口跟踪（在显示托盘菜单时使用）
+    /// </summary>
+    public void PauseTracking()
+    {
+        lock (_lock)
+        {
+            _isPaused = true;
+            Console.WriteLine("[LastActiveWindowService] 暂停窗口跟踪");
+        }
+    }
+
+    /// <summary>
+    /// 恢复窗口跟踪
+    /// </summary>
+    public void ResumeTracking()
+    {
+        lock (_lock)
+        {
+            _isPaused = false;
+            Console.WriteLine("[LastActiveWindowService] 恢复窗口跟踪");
+        }
     }
 
     private void StartTracking()
@@ -56,6 +81,13 @@ public class LastActiveWindowService : IDisposable
 
     private void OnForegroundWindowChanged(HWINEVENTHOOK hWinEventHook, uint eventType, HWND hwnd, int idObject, int idChild, uint idEventThread, uint dwmsEventTime)
     {
+        // 如果暂停跟踪，直接返回
+        if (_isPaused)
+        {
+            Console.WriteLine($"[LastActiveWindowService] 跟踪已暂停，忽略窗口变化: {hwnd.Value}");
+            return;
+        }
+
         // 只关心窗口本身（idObject == 0, idChild == 0）
         if (idObject != 0 || idChild != 0) return;
 
@@ -178,7 +210,7 @@ public class LastActiveWindowService : IDisposable
     {
         if (string.IsNullOrEmpty(className)) return false;
 
-        // 已知的系统窗口类
+        // 已知的系统窗口类（注意：CabinetWClass 是资源管理器文件夹窗口，不应排除）
         string[] systemClasses = {
             "Shell_TrayWnd",           // 任务栏
             "Shell_SecondaryTrayWnd",  // 第二显示器任务栏
@@ -187,7 +219,7 @@ public class LastActiveWindowService : IDisposable
             "SysPager",                // 分页器
             "TrayNotifyWnd",           // 托盘通知区域
             "Button",                  // 按钮（开始按钮等）
-            "Progman",                 // 程序管理器
+            "Progman",                 // 程序管理器（桌面）
             "WorkerW",                 // 桌面壁纸窗口
             "IME",                     // 输入法
             "MSCTFIME UI",            // 输入法 UI
@@ -195,7 +227,8 @@ public class LastActiveWindowService : IDisposable
             "tooltips_class32",        // 工具提示
             "#32768",                  // 菜单
             "#32769",                  // 桌面
-            "#32770",                  // 对话框（需要进一步判断）
+            // "#32770" - 对话框，不排除，有些是有效的应用窗口
+            // 注意：CabinetWClass 和 ExplorerWClass 是资源管理器文件夹窗口，不应排除
         };
 
         foreach (var sysClass in systemClasses)
@@ -235,8 +268,9 @@ public class LastActiveWindowService : IDisposable
         if (string.IsNullOrEmpty(processName)) return false;
 
         // 已知的系统进程（这些进程的窗口不应被记录）
+        // 注意：explorer 已从排除列表移除，因为资源管理器文件夹窗口是有效的应用窗口
+        // 通过 IsSystemWindowClass 排除任务栏和桌面等系统窗口
         string[] systemProcesses = {
-            "explorer",       // Windows 资源管理器（任务栏、桌面等）
             "ShellExperienceHost",
             "SearchApp",
             "SearchHost",

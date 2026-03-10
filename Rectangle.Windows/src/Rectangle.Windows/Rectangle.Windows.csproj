@@ -10,6 +10,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <UseRidGraph>true</UseRidGraph>
     
+    <!-- 应用图标 -->
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
+    
     <!-- 发布优化：默认框架依赖模式，需要 .NET 9 Runtime -->
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>false</SelfContained>
@@ -34,6 +37,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Assets\**\*.png" />
+    <EmbeddedResource Include="Assets\AppIcon.ico" />
   </ItemGroup>
 
 </Project>

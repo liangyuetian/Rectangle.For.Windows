@@ -1,6 +1,7 @@
 using Rectangle.Windows.Core;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Rectangle.Windows.Services;
 
@@ -161,6 +162,9 @@ public class WindowManager
         // 只在第一次调整时保存原始位置，Restore 会恢复到这个位置
         _history.SaveIfNotExists(hwnd, x, y, w, h);
 
+        // 标记此窗口由程序调整（用于窗口位置监听时排除记录）
+        _history.MarkAsProgramAdjusted(hwnd);
+
         // 执行其他操作时，清除最大化状态
         _maximizedWindows.Remove(hwnd);
 
@@ -176,12 +180,26 @@ public class WindowManager
 
     private nint GetTargetWindow()
     {
+        // 获取当前前台窗口
+        var foregroundHwnd = _win32.GetForegroundWindowHandle();
+        
+        // 检查前台窗口是否在忽略列表中
+        if (foregroundHwnd != 0)
+        {
+            var processName = _win32.GetProcessNameFromWindow(foregroundHwnd);
+            if (!string.IsNullOrEmpty(processName) && IsIgnoredApp(processName))
+            {
+                Console.WriteLine($"[WindowManager] 前台窗口 {processName} 在忽略列表中，不执行操作");
+                return 0; // 返回 0 表示不执行操作
+            }
+        }
+        
         // 如果有 LastActiveWindowService，使用它获取目标窗口
         if (_lastActiveService != null)
         {
             return _lastActiveService.GetTargetWindow();
         }
-        return _win32.GetForegroundWindowHandle();
+        return foregroundHwnd;
     }
 
     private void ExecuteMaximizeToggle(nint? targetHwnd = null)
@@ -218,6 +236,9 @@ public class WindowManager
             // 保存当前位置
             var (x, y, w, h) = _win32.GetWindowRect(hwnd);
             _history.Save(hwnd, x, y, w, h);
+
+            // 标记此窗口由程序调整
+            _history.MarkAsProgramAdjusted(hwnd);
 
             // 最大化
             var workArea = _win32.GetWorkAreaFromWindow(hwnd);
@@ -262,6 +283,9 @@ public class WindowManager
 
         _history.SaveIfNotExists(hwnd, x, y, w, h);
 
+        // 标记此窗口由程序调整
+        _history.MarkAsProgramAdjusted(hwnd);
+
         // 将窗口移动到下一个显示器居中
         var newX = nextWorkArea.Value.Left + (nextWorkArea.Value.Width - w) / 2;
         var newY = nextWorkArea.Value.Top + (nextWorkArea.Value.Height - h) / 2;
@@ -285,6 +309,9 @@ public class WindowManager
         }
 
         _history.SaveIfNotExists(hwnd, x, y, w, h);
+
+        // 标记此窗口由程序调整
+        _history.MarkAsProgramAdjusted(hwnd);
 
         // 将窗口移动到上一个显示器居中
         var newX = prevWorkArea.Value.Left + (prevWorkArea.Value.Width - w) / 2;

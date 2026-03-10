@@ -27,7 +27,7 @@ dotnet test src/Rectangle.Windows.Tests/Rectangle.Windows.Tests.csproj
 
 ## 打包发布
 cd ./Rectangle.Windows/src/Rectangle.Window
-dotnet publish -c Release # 用户需要.net9，~24M
+dotnet publish -c Release -o publish # 用户需要.net9，~24M
 dotnet publish -c Release -r win-x64 --self-contained true # 用户不需要安装.net9 ~54M,启用压缩后
 
 ### 方式一：压缩单文件（推荐，约 54MB）
