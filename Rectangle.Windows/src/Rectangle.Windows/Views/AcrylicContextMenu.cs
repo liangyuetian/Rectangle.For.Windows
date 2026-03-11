@@ -13,7 +13,7 @@ namespace Rectangle.Windows.Views;
 public class AcrylicContextMenu : ContextMenuStrip
 {
     private const int CS_DROPSHADOW = 0x00020000;
-    
+
     // DWM API for Windows 11 Mica/Acrylic
     [DllImport("dwmapi.dll")]
     private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
@@ -50,10 +50,10 @@ public class AcrylicContextMenu : ContextMenuStrip
     {
         // 检测系统主题
         UpdateTheme();
-        
+
         // 监听系统主题变化
         SystemEvents.UserPreferenceChanged += SystemEvents_UserPreferenceChanged;
-        
+
         var renderer = new AcrylicMenuRenderer(_isDarkTheme);
         Renderer = renderer;
         ShowImageMargin = true;
@@ -101,25 +101,25 @@ public class AcrylicContextMenu : ContextMenuStrip
     private void ApplyTheme()
     {
         if (IsDisposed) return;
-        
+
         var newRenderer = new AcrylicMenuRenderer(_isDarkTheme);
         Renderer = newRenderer;
         BackColor = _isDarkTheme ? Color.FromArgb(240, 32, 32, 32) : Color.FromArgb(240, 243, 243, 243);
         ForeColor = _isDarkTheme ? Color.White : Color.FromArgb(30, 30, 30);
-        
+
         // 更新菜单项颜色
         foreach (ToolStripItem item in Items)
         {
             UpdateItemColor(item);
         }
-        
+
         Invalidate();
     }
 
     private void UpdateItemColor(ToolStripItem item)
     {
         item.ForeColor = _isDarkTheme ? Color.White : Color.FromArgb(30, 30, 30);
-        
+
         if (item is ToolStripMenuItem menuItem)
         {
             foreach (ToolStripItem subItem in menuItem.DropDownItems)
@@ -178,7 +178,7 @@ public class AcrylicContextMenu : ContextMenuStrip
     private void EnableAcrylicBlur()
     {
         // 根据主题设置颜色
-        int gradientColor = _isDarkTheme 
+        int gradientColor = _isDarkTheme
             ? unchecked((int)0x99000000)  // 深色主题：半透明黑色
             : unchecked((int)0x99FFFFFF); // 浅色主题：半透明白色
 
@@ -257,7 +257,7 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
     {
         using var brush = new SolidBrush(BackgroundColor);
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        
+
         var rect = new System.Drawing.Rectangle(0, 0, e.ToolStrip.Width, e.ToolStrip.Height);
         using var path = CreateRoundedRectangle(rect, 8);
         e.Graphics.FillPath(brush, path);
@@ -267,7 +267,7 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
     {
         using var pen = new Pen(BorderColor, 1);
         e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-        
+
         var rect = new System.Drawing.Rectangle(0, 0, e.ToolStrip.Width - 1, e.ToolStrip.Height - 1);
         using var path = CreateRoundedRectangle(rect, 8);
         e.Graphics.DrawPath(pen, path);
@@ -293,22 +293,26 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
     {
         var g = e.Graphics;
         g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
-        
+
         var textColor = e.Item.Enabled ? TextColor : DisabledColor;
         var item = e.Item;
-        
-        // 计算文本区域（左侧，排除图标区域）
-        int iconWidth = 24; // 图标区域宽度
+
+        // 计算文本区域
         int leftPadding = 8;
         int rightPadding = 12;
-        int shortcutWidth = 140; // 增加快捷键区域宽度
-        
+        int shortcutWidth = 140; // 快捷键区域宽度
+
+        // 判断是否有图标，如果没有则减少左边距
+        bool hasImage = item.Image != null;
+        int iconWidth = hasImage ? 24 : 0;
+        int textLeft = hasImage ? iconWidth + leftPadding : leftPadding;
+
         var textRect = new System.Drawing.Rectangle(
-            iconWidth + leftPadding,
+            textLeft,
             2,
-            item.Width - iconWidth - leftPadding - rightPadding - shortcutWidth,
+            item.Width - textLeft - rightPadding - shortcutWidth,
             item.Height - 4);
-        
+
         // 绘制菜单项文本
         using var textBrush = new SolidBrush(textColor);
         using var format = new StringFormat
@@ -318,9 +322,13 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
             Trimming = StringTrimming.EllipsisCharacter,
             FormatFlags = StringFormatFlags.NoWrap
         };
-        
-        g.DrawString(item.Text, e.TextFont, textBrush, textRect, format);
-        
+
+        Font font = e.TextFont
+            ?? SystemFonts.MenuFont
+            ?? new Font("Microsoft YaHei UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
+     
+        g.DrawString(item.Text, font, textBrush, textRect, format);
+
         // 绘制快捷键文本（如果有）
         if (e.Item is ToolStripMenuItem menuItem && !string.IsNullOrEmpty(menuItem.ShortcutKeyDisplayString))
         {
@@ -330,7 +338,7 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
                 2,
                 shortcutWidth,
                 item.Height - 4);
-            
+
             using var shortcutBrush = new SolidBrush(ShortcutColor);
             using var shortcutFormat = new StringFormat
             {
@@ -338,8 +346,8 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
                 LineAlignment = StringAlignment.Center,
                 FormatFlags = StringFormatFlags.NoWrap
             };
-            
-            g.DrawString(menuItem.ShortcutKeyDisplayString, e.TextFont, shortcutBrush, shortcutRect, shortcutFormat);
+
+            g.DrawString(menuItem.ShortcutKeyDisplayString, font, shortcutBrush, shortcutRect, shortcutFormat);
         }
     }
 
@@ -356,7 +364,7 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
         if (e.Image != null)
         {
             var rect = e.ImageRectangle;
-            
+
             if (!e.Item.Enabled)
             {
                 using var disabledImage = CreateDisabledImage(e.Image);
@@ -386,33 +394,37 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
 
     private Image TintImageForLightTheme(Image original)
     {
-        // 为浅色主题将白色图标转换为深色
+        if (original is null)
+            throw new ArgumentNullException(nameof(original));
+
         var result = new Bitmap(original.Width, original.Height);
         using var g = Graphics.FromImage(result);
         using var attr = new System.Drawing.Imaging.ImageAttributes();
-        
+
         var matrix = new System.Drawing.Imaging.ColorMatrix(new float[][]
         {
-            new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
-            new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
-            new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
-            new float[] { 0, 0, 0, 1, 0 },
-            new float[] { 0, 0, 0, 0, 1 }
+        new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
+        new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
+        new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
+        new float[] { 0, 0, 0, 1, 0 },
+        new float[] { 0, 0, 0, 0, 1 }
         });
-        
+
         attr.SetColorMatrix(matrix);
-        g.DrawImage(original, new System.Drawing.Rectangle(0, 0, original.Width, original.Height),
+
+        var destRect = new System.Drawing.Rectangle(0, 0, original.Width, original.Height);
+        g.DrawImage(original, destRect,
             0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attr);
-        
+
         return result;
     }
 
-    private static Image CreateDisabledImage(Image original)
+    private static new Image CreateDisabledImage(Image original)
     {
         var result = new Bitmap(original.Width, original.Height);
         using var g = Graphics.FromImage(result);
         using var attr = new System.Drawing.Imaging.ImageAttributes();
-        
+
         var matrix = new System.Drawing.Imaging.ColorMatrix(new float[][]
         {
             new float[] { 0.3f, 0.3f, 0.3f, 0, 0 },
@@ -421,11 +433,11 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
             new float[] { 0, 0, 0, 0.5f, 0 },
             new float[] { 0, 0, 0, 0, 1 }
         });
-        
+
         attr.SetColorMatrix(matrix);
         g.DrawImage(original, new System.Drawing.Rectangle(0, 0, original.Width, original.Height),
             0, 0, original.Width, original.Height, GraphicsUnit.Pixel, attr);
-        
+
         return result;
     }
 
@@ -433,13 +445,13 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
     {
         var path = new GraphicsPath();
         var diameter = radius * 2;
-        
+
         path.AddArc(rect.X, rect.Y, diameter, diameter, 180, 90);
         path.AddArc(rect.Right - diameter, rect.Y, diameter, diameter, 270, 90);
         path.AddArc(rect.Right - diameter, rect.Bottom - diameter, diameter, diameter, 0, 90);
         path.AddArc(rect.X, rect.Bottom - diameter, diameter, diameter, 90, 90);
         path.CloseFigure();
-        
+
         return path;
     }
 }

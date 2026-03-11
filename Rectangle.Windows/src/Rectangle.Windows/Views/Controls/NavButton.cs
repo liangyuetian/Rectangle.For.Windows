@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -13,6 +14,7 @@ public class NavButton : Control
     public int Index { get; }
 
     private bool _isSelected;
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool IsSelected
     {
         get => _isSelected;
@@ -53,7 +55,7 @@ public class NavButton : Control
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
         var bgColor = _isSelected ? SelectedColor : (_isHovered ? HoverColor : NormalColor);
-        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+        var rect = new System.Drawing.Rectangle(0, 0, Width - 1, Height - 1);
 
         using var path = SettingsTheme.CreateRoundedRect(rect, 6);
         using var brush = new SolidBrush(bgColor);

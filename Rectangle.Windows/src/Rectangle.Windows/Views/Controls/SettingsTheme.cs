@@ -18,7 +18,7 @@ public static class SettingsTheme
     public static readonly Color InputBackColor = Color.FromArgb(38, 38, 38);
     public static readonly Color NavBackgroundColor = Color.FromArgb(28, 28, 28);
 
-    public static GraphicsPath CreateRoundedRect(Rectangle rect, int radius)
+    public static GraphicsPath CreateRoundedRect(System.Drawing.Rectangle rect, int radius)
     {
         var path = new GraphicsPath();
         var d = radius * 2;
