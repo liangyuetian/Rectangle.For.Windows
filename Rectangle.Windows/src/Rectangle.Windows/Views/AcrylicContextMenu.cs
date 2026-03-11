@@ -321,7 +321,7 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
         var item = e.Item;
 
         // 计算文本区域
-        int leftPadding = 8;
+        int leftPadding = 16;
         int rightPadding = 12;
         int shortcutWidth = 140; // 快捷键区域宽度
 
