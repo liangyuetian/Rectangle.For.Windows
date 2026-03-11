@@ -24,7 +24,7 @@ public class SnapAreaPreview : Control
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
         // 屏幕背景
-        var screenRect = new Rectangle(20, 20, Width - 40, Height - 40);
+        var screenRect = new System.Drawing.Rectangle(20, 20, Width - 40, Height - 40);
         using var screenBrush = new SolidBrush(ScreenColor);
         using var screenPen = new Pen(BorderColor, 2);
         g.FillRectangle(screenBrush, screenRect);
@@ -33,14 +33,14 @@ public class SnapAreaPreview : Control
         // 吸附区域标注
         var zones = new[]
         {
-            (new Rectangle(20, 20, 30, 40), "左上"),
-            (new Rectangle(Width / 2 - 15, 20, 30, 30), "上"),
-            (new Rectangle(Width - 70, 20, 30, 40), "右上"),
-            (new Rectangle(20, Height / 2 - 15, 30, 30), "左"),
-            (new Rectangle(Width - 70, Height / 2 - 15, 30, 30), "右"),
-            (new Rectangle(20, Height - 80, 30, 40), "左下"),
-            (new Rectangle(Width / 2 - 15, Height - 70, 30, 30), "下"),
-            (new Rectangle(Width - 70, Height - 80, 30, 40), "右下")
+            (new System.Drawing.Rectangle(20, 20, 30, 40), "左上"),
+            (new System.Drawing.Rectangle(Width / 2 - 15, 20, 30, 30), "上"),
+            (new System.Drawing.Rectangle(Width - 70, 20, 30, 40), "右上"),
+            (new System.Drawing.Rectangle(20, Height / 2 - 15, 30, 30), "左"),
+            (new System.Drawing.Rectangle(Width - 70, Height / 2 - 15, 30, 30), "右"),
+            (new System.Drawing.Rectangle(20, Height - 80, 30, 40), "左下"),
+            (new System.Drawing.Rectangle(Width / 2 - 15, Height - 70, 30, 30), "下"),
+            (new System.Drawing.Rectangle(Width - 70, Height - 80, 30, 40), "右下")
         };
 
         using var zoneBrush = new SolidBrush(Color.FromArgb(40, ZoneColor));

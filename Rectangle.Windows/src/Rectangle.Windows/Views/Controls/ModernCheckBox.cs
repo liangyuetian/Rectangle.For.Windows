@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -10,6 +11,7 @@ namespace Rectangle.Windows.Views.Controls;
 /// </summary>
 public class ModernCheckBox : Panel
 {
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public bool Checked { get; set; }
     public event EventHandler? CheckedChanged;
 
@@ -71,7 +73,7 @@ public class ModernCheckBox : Panel
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        var rect = new Rectangle(0, 0, 43, 21);
+        var rect = new System.Drawing.Rectangle(0, 0, 43, 21);
         using var path = SettingsTheme.CreateRoundedRect(rect, 10);
 
         var bgColor = Checked ? CheckedColor : UncheckedColor;

@@ -28,7 +28,7 @@ public class ModernButton : Control
         var g = e.Graphics;
         g.SmoothingMode = SmoothingMode.AntiAlias;
 
-        var rect = new Rectangle(0, 0, Width - 1, Height - 1);
+        var rect = new System.Drawing.Rectangle(0, 0, Width - 1, Height - 1);
         using var path = SettingsTheme.CreateRoundedRect(rect, 6);
 
         var bgColor = _isHovered ? HoverColor : NormalColor;
