@@ -62,6 +62,29 @@ public class AcrylicContextMenu : ContextMenuStrip
         ForeColor = _isDarkTheme ? Color.White : Color.FromArgb(30, 30, 30);
         Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular);
         Padding = new Padding(4, 8, 4, 8);
+
+        // 防止 Alt 键关闭菜单
+        PreviewKeyDown += OnPreviewKeyDown;
+    }
+
+    private void OnPreviewKeyDown(object? sender, PreviewKeyDownEventArgs e)
+    {
+        // 拦截 Alt 键，防止菜单关闭
+        if (e.KeyCode == Keys.Alt)
+        {
+            e.IsInputKey = true;
+        }
+    }
+
+    protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+    {
+        // 拦截 Alt 键或 Alt+其他键的组合，防止菜单关闭
+        if ((keyData & Keys.Alt) == Keys.Alt)
+        {
+            // 不处理这个按键，但返回 true 表示已处理，阻止默认行为
+            return true;
+        }
+        return base.ProcessCmdKey(ref msg, keyData);
     }
 
     private void SystemEvents_UserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
