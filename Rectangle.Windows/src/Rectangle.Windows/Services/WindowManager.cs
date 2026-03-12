@@ -1,4 +1,5 @@
 using Rectangle.Windows.Core;
+using Rectangle.Windows.Core.Calculators;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,6 +11,8 @@ public class WindowManager
     private readonly Win32WindowService _win32;
     private readonly CalculatorFactory _factory;
     private readonly WindowHistory _history;
+    private readonly ScreenDetectionService _screenDetection;
+    private readonly WindowTypeService _windowType;
     private readonly HashSet<nint> _maximizedWindows = new();
     private LastActiveWindowService? _lastActiveService;
     private ConfigService? _configService;
@@ -20,6 +23,8 @@ public class WindowManager
         _win32 = win32;
         _factory = factory;
         _history = history;
+        _screenDetection = new ScreenDetectionService(win32);
+        _windowType = new WindowTypeService(win32);
     }
 
     public void SetLastActiveWindowService(LastActiveWindowService service)
@@ -148,19 +153,51 @@ public class WindowManager
             return;
         }
 
+        // 检查窗口类型
+        if (_windowType.IsModalDialog(hwnd))
+        {
+            Console.WriteLine($"[WindowManager] {processName} 是模态对话框，跳过操作");
+            return;
+        }
+
         var (x, y, w, h) = _win32.GetWindowRect(hwnd);
-        var workArea = _win32.GetWorkAreaFromWindow(hwnd);
         
+        // 根据配置获取目标屏幕（光标位置或窗口位置）
+        var workArea = _screenDetection.GetTargetWorkArea(hwnd, _configService);
+
         // 应用窗口间隙
         workArea = ApplyGap(workArea);
         
         var current = new WindowRect(x, y, w, h);
 
-        var calculator = _factory.GetCalculator(action);
+        // 检测窗口是否被用户手动移动
+        bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
+        
+        if (windowMovedExternally)
+        {
+            // 用户手动移动了窗口，清除程序操作记录
+            _history.RemoveLastAction(hwnd);
+            Console.WriteLine($"[WindowManager] 检测到窗口被用户手动移动: {processName}");
+        }
+
+        // 处理重复执行模式（循环尺寸）
+        var actualAction = GetActualAction(hwnd, action, windowMovedExternally);
+        if (actualAction != action)
+        {
+            Console.WriteLine($"[WindowManager] 循环尺寸: {action} → {actualAction}");
+        }
+
+        var calculator = _factory.GetCalculator(actualAction);
         if (calculator == null) return;
 
-        // 只在第一次调整时保存原始位置，Restore 会恢复到这个位置
-        _history.SaveIfNotExists(hwnd, x, y, w, h);
+        // 保存或更新恢复点：
+        // 1. 如果没有恢复点，保存当前位置
+        // 2. 如果窗口被用户手动移动，更新恢复点
+        if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
+        {
+            _history.SaveRestoreRect(hwnd, x, y, w, h);
+            Console.WriteLine($"[WindowManager] 保存恢复点: ({x}, {y}, {w}, {h})");
+        }
 
         // 标记此窗口由程序调整（用于窗口位置监听时排除记录）
         _history.MarkAsProgramAdjusted(hwnd);
@@ -168,14 +205,153 @@ public class WindowManager
         // 执行其他操作时，清除最大化状态
         _maximizedWindows.Remove(hwnd);
 
-        var target = calculator.Calculate(workArea, current, action);
+        var target = calculator.Calculate(workArea, current, actualAction);
         
         // 为相邻窗口应用间隙
-        target = ApplyWindowGap(target, workArea, action);
+        target = ApplyWindowGap(target, workArea, actualAction);
+        
+        // 对固定尺寸窗口特殊处理：只移动，不调整大小
+        if (!_windowType.IsResizable(hwnd))
+        {
+            Console.WriteLine($"[WindowManager] {processName} 是固定尺寸窗口，只移动不调整大小");
+            target = HandleFixedSizeWindow(current, target, workArea, actualAction);
+        }
+        
+        // 应用最小窗口尺寸限制
+        target = target.ApplyMinimumSize(_configService);
+        
+        // 确保窗口在屏幕工作区内
+        target = target.ClampToWorkArea(workArea);
         
         _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
 
-        Console.WriteLine($"{GetActionDisplayName(action)} 了 {processName}");
+        // 记录程序操作信息（包括操作类型、次数、时间）
+        // 注意：记录的是原始 action，而不是 actualAction，这样才能正确计数
+        _history.RecordAction(hwnd, action, target.X, target.Y, target.Width, target.Height);
+
+        // 根据配置移动光标到窗口中心
+        MoveCursorIfEnabled(hwnd, action);
+
+        Console.WriteLine($"{GetActionDisplayName(actualAction)} 了 {processName}");
+    }
+
+    /// <summary>
+    /// 根据重复执行模式获取实际应该执行的操作
+    /// </summary>
+    private WindowAction GetActualAction(nint hwnd, WindowAction requestedAction, bool windowMovedExternally)
+    {
+        // 如果窗口被用户手动移动，重置循环
+        if (windowMovedExternally)
+        {
+            return requestedAction;
+        }
+
+        // 获取配置的重复执行模式
+        var config = _configService?.Load();
+        var mode = config?.SubsequentExecutionMode ?? SubsequentExecutionMode.None;
+
+        // 如果模式是 None 或不支持循环，直接返回原操作
+        if (mode != SubsequentExecutionMode.CycleSize || 
+            !RepeatedExecutionsCalculator.SupportsCycle(requestedAction))
+        {
+            return requestedAction;
+        }
+
+        // 获取最后操作信息
+        if (!_history.TryGetLastAction(hwnd, out var lastAction))
+        {
+            // 第一次执行，返回原操作
+            return requestedAction;
+        }
+
+        // 检查是否是同一个操作或同一循环组中的操作
+        if (lastAction.Action == requestedAction || 
+            RepeatedExecutionsCalculator.InSameCycleGroup(lastAction.Action, requestedAction))
+        {
+            // 获取下一个循环操作
+            // 使用 lastAction.Count + 1 因为这是即将执行的次数
+            return RepeatedExecutionsCalculator.GetNextCycleAction(requestedAction, lastAction.Count + 1);
+        }
+
+        // 不同的操作，返回原操作
+        return requestedAction;
+    }
+
+    /// <summary>
+    /// 根据配置移动光标
+    /// </summary>
+    private void MoveCursorIfEnabled(nint hwnd, WindowAction action)
+    {
+        if (_configService == null) return;
+        
+        var config = _configService.Load();
+        
+        // 检查是否启用了光标移动
+        bool shouldMoveCursor = config.MoveCursor;
+        
+        // 对于跨显示器操作，检查 MoveCursorAcrossDisplays
+        if ((action == WindowAction.NextDisplay || action == WindowAction.PreviousDisplay) 
+            && !config.MoveCursorAcrossDisplays)
+        {
+            shouldMoveCursor = false;
+        }
+        
+        if (shouldMoveCursor)
+        {
+            _win32.MoveCursorToWindowCenter(hwnd);
+            Console.WriteLine($"[WindowManager] 光标已移动到窗口中心");
+        }
+    }
+
+    /// <summary>
+    /// 处理固定尺寸窗口：只移动位置，保持原有尺寸
+    /// </summary>
+    private WindowRect HandleFixedSizeWindow(WindowRect current, WindowRect target, WorkArea workArea, WindowAction action)
+    {
+        // 根据操作类型决定如何移动固定尺寸窗口
+        switch (action)
+        {
+            case WindowAction.LeftHalf:
+            case WindowAction.FirstThird:
+            case WindowAction.FirstFourth:
+                // 左对齐
+                return new WindowRect(workArea.Left, target.Y, current.Width, current.Height);
+                
+            case WindowAction.RightHalf:
+            case WindowAction.LastThird:
+            case WindowAction.LastFourth:
+                // 右对齐
+                return new WindowRect(workArea.Right - current.Width, target.Y, current.Width, current.Height);
+                
+            case WindowAction.Center:
+            case WindowAction.CenterHalf:
+            case WindowAction.CenterThird:
+                // 居中
+                var centerX = workArea.Left + (workArea.Width - current.Width) / 2;
+                var centerY = workArea.Top + (workArea.Height - current.Height) / 2;
+                return new WindowRect(centerX, centerY, current.Width, current.Height);
+                
+            case WindowAction.TopHalf:
+                // 顶部对齐
+                return new WindowRect(target.X, workArea.Top, current.Width, current.Height);
+                
+            case WindowAction.BottomHalf:
+                // 底部对齐
+                return new WindowRect(target.X, workArea.Bottom - current.Height, current.Width, current.Height);
+                
+            case WindowAction.MoveLeft:
+            case WindowAction.MoveRight:
+            case WindowAction.MoveUp:
+            case WindowAction.MoveDown:
+                // 移动操作保持原有尺寸
+                return new WindowRect(target.X, target.Y, current.Width, current.Height);
+                
+            default:
+                // 其他操作：居中放置
+                var defaultCenterX = workArea.Left + (workArea.Width - current.Width) / 2;
+                var defaultCenterY = workArea.Top + (workArea.Height - current.Height) / 2;
+                return new WindowRect(defaultCenterX, defaultCenterY, current.Width, current.Height);
+        }
     }
 
     private nint GetTargetWindow()
@@ -223,30 +399,42 @@ public class WindowManager
         // 如果当前窗口已最大化，则恢复
         if (_maximizedWindows.Contains(hwnd))
         {
-            if (_history.TryGet(hwnd, out var rect))
+            if (_history.TryGetRestoreRect(hwnd, out var rect))
             {
                 _win32.SetWindowRect(hwnd, rect.X, rect.Y, rect.W, rect.H);
-                _history.Remove(hwnd);
+                _history.RemoveLastAction(hwnd);
             }
             _maximizedWindows.Remove(hwnd);
             Console.WriteLine($"恢复了 {processName}");
         }
         else
         {
-            // 保存当前位置
+            // 保存当前位置到恢复点
             var (x, y, w, h) = _win32.GetWindowRect(hwnd);
-            _history.Save(hwnd, x, y, w, h);
+            
+            // 检测窗口是否被用户手动移动
+            bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
+            
+            if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
+            {
+                _history.SaveRestoreRect(hwnd, x, y, w, h);
+                Console.WriteLine($"[WindowManager] 最大化前保存恢复点: ({x}, {y}, {w}, {h})");
+            }
 
             // 标记此窗口由程序调整
             _history.MarkAsProgramAdjusted(hwnd);
 
             // 最大化
-            var workArea = _win32.GetWorkAreaFromWindow(hwnd);
+            var workArea = _screenDetection.GetTargetWorkArea(hwnd, _configService);
             var calculator = _factory.GetCalculator(WindowAction.Maximize);
             if (calculator != null)
             {
                 var target = calculator.Calculate(workArea, default, WindowAction.Maximize);
                 _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
+                
+                // 记录程序操作信息
+                _history.RecordAction(hwnd, WindowAction.Maximize, target.X, target.Y, target.Width, target.Height);
+                
                 _maximizedWindows.Add(hwnd);
                 Console.WriteLine($"最大化了 {processName}");
             }
@@ -256,14 +444,29 @@ public class WindowManager
     private void ExecuteRestore(nint? targetHwnd = null)
     {
         var hwnd = targetHwnd ?? GetTargetWindow();
-        if (hwnd == 0) { System.Media.SystemSounds.Beep.Play(); return; }
-        if (!_history.TryGet(hwnd, out var rect))
-        { System.Media.SystemSounds.Beep.Play(); return; }
+        if (hwnd == 0) 
+        { 
+            System.Media.SystemSounds.Beep.Play(); 
+            return; 
+        }
         
+        if (!_history.TryGetRestoreRect(hwnd, out var rect))
+        { 
+            Console.WriteLine("[WindowManager] 没有可恢复的窗口位置");
+            System.Media.SystemSounds.Beep.Play(); 
+            return; 
+        }
+
         var processName = _win32.GetProcessNameFromWindow(hwnd);
         _win32.SetWindowRect(hwnd, rect.X, rect.Y, rect.W, rect.H);
-        _history.Remove(hwnd);
-        Console.WriteLine($"恢复了 {processName}");
+        
+        // 清除程序最后操作记录（但保留恢复点，以便再次使用）
+        _history.RemoveLastAction(hwnd);
+        
+        // 清除最大化状态
+        _maximizedWindows.Remove(hwnd);
+        
+        Console.WriteLine($"恢复了 {processName} 到 ({rect.X}, {rect.Y}, {rect.W}, {rect.H})");
     }
 
     private void ExecuteNextDisplay(nint? targetHwnd = null)
@@ -281,7 +484,13 @@ public class WindowManager
             return;
         }
 
-        _history.SaveIfNotExists(hwnd, x, y, w, h);
+        // 检测窗口是否被用户手动移动
+        bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
+        
+        if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
+        {
+            _history.SaveRestoreRect(hwnd, x, y, w, h);
+        }
 
         // 标记此窗口由程序调整
         _history.MarkAsProgramAdjusted(hwnd);
@@ -290,6 +499,10 @@ public class WindowManager
         var newX = nextWorkArea.Value.Left + (nextWorkArea.Value.Width - w) / 2;
         var newY = nextWorkArea.Value.Top + (nextWorkArea.Value.Height - h) / 2;
         _win32.SetWindowRect(hwnd, newX, newY, w, h);
+        
+        // 记录程序操作信息
+        _history.RecordAction(hwnd, WindowAction.NextDisplay, newX, newY, w, h);
+        
         Console.WriteLine($"将 {processName} 移动到下一个显示器");
     }
 
@@ -308,7 +521,13 @@ public class WindowManager
             return;
         }
 
-        _history.SaveIfNotExists(hwnd, x, y, w, h);
+        // 检测窗口是否被用户手动移动
+        bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
+        
+        if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
+        {
+            _history.SaveRestoreRect(hwnd, x, y, w, h);
+        }
 
         // 标记此窗口由程序调整
         _history.MarkAsProgramAdjusted(hwnd);
@@ -317,6 +536,10 @@ public class WindowManager
         var newX = prevWorkArea.Value.Left + (prevWorkArea.Value.Width - w) / 2;
         var newY = prevWorkArea.Value.Top + (prevWorkArea.Value.Height - h) / 2;
         _win32.SetWindowRect(hwnd, newX, newY, w, h);
+        
+        // 记录程序操作信息
+        _history.RecordAction(hwnd, WindowAction.PreviousDisplay, newX, newY, w, h);
+        
         Console.WriteLine($"将 {processName} 移动到上一个显示器");
     }
 

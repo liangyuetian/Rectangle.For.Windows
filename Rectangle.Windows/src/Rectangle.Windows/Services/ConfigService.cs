@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
+using Rectangle.Windows.Core;
 
 namespace Rectangle.Windows.Services;
 
@@ -115,11 +116,70 @@ public class ConfigService
 
 public class AppConfig
 {
+    // === 基础配置 ===
+    
     public int GapSize { get; set; } = 0;
     public bool LaunchOnLogin { get; set; } = false;
     public List<string> IgnoredApps { get; set; } = GetDefaultIgnoredApps();
     public Dictionary<string, ShortcutConfig> Shortcuts { get; set; } = new();
     public SnapAreaConfig SnapAreas { get; set; } = new();
+    
+    /// <summary>
+    /// 重复执行模式：连续按同一快捷键时的行为
+    /// </summary>
+    public SubsequentExecutionMode SubsequentExecutionMode { get; set; } = SubsequentExecutionMode.CycleSize;
+
+    // === 高级配置 ===
+    
+    /// <summary>
+    /// 接近最大化的高度比例（0.5 - 1.0）
+    /// </summary>
+    public float AlmostMaximizeHeight { get; set; } = 0.9f;
+    
+    /// <summary>
+    /// 接近最大化的宽度比例（0.5 - 1.0）
+    /// </summary>
+    public float AlmostMaximizeWidth { get; set; } = 0.9f;
+    
+    /// <summary>
+    /// 最小窗口宽度（像素），0 表示无限制
+    /// </summary>
+    public float MinimumWindowWidth { get; set; } = 0;
+    
+    /// <summary>
+    /// 最小窗口高度（像素），0 表示无限制
+    /// </summary>
+    public float MinimumWindowHeight { get; set; } = 0;
+    
+    /// <summary>
+    /// 放大/缩小的步长（像素）
+    /// </summary>
+    public float SizeOffset { get; set; } = 30;
+    
+    /// <summary>
+    /// 移动窗口时是否居中（而不是保持位置）
+    /// </summary>
+    public bool CenteredDirectionalMove { get; set; } = false;
+    
+    /// <summary>
+    /// 移动窗口时是否调整大小
+    /// </summary>
+    public bool ResizeOnDirectionalMove { get; set; } = false;
+    
+    /// <summary>
+    /// 使用光标位置检测屏幕（而不是窗口位置）
+    /// </summary>
+    public bool UseCursorScreenDetection { get; set; } = false;
+    
+    /// <summary>
+    /// 移动窗口后将光标移动到窗口中心
+    /// </summary>
+    public bool MoveCursor { get; set; } = false;
+    
+    /// <summary>
+    /// 跨显示器移动窗口后将光标也移动过去
+    /// </summary>
+    public bool MoveCursorAcrossDisplays { get; set; } = false;
 
     private static List<string> GetDefaultIgnoredApps()
     {

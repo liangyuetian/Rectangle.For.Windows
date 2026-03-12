@@ -1,34 +1,149 @@
+using System;
 using System.Collections.Generic;
 
 namespace Rectangle.Windows.Core;
 
+/// <summary>
+/// 记录程序对窗口的操作信息
+/// </summary>
+public struct RectangleAction
+{
+    /// <summary>
+    /// 执行的操作类型
+    /// </summary>
+    public WindowAction Action { get; set; }
+    
+    /// <summary>
+    /// 连续执行同一操作的次数
+    /// </summary>
+    public int Count { get; set; }
+    
+    /// <summary>
+    /// 最后一次执行的时间
+    /// </summary>
+    public DateTime LastExecutionTime { get; set; }
+    
+    /// <summary>
+    /// 操作后的窗口位置
+    /// </summary>
+    public (int X, int Y, int W, int H) Rect { get; set; }
+}
+
 public class WindowHistory
 {
-    private readonly Dictionary<nint, (int X, int Y, int W, int H)> _history = new();
+    /// <summary>
+    /// 保存用户原始窗口位置（用于恢复）
+    /// </summary>
+    private readonly Dictionary<nint, (int X, int Y, int W, int H)> _restoreRects = new();
+    
+    /// <summary>
+    /// 记录程序最后一次对窗口的操作信息（用于重复执行检测）
+    /// </summary>
+    private readonly Dictionary<nint, RectangleAction> _lastActions = new();
     
     /// <summary>
     /// 记录哪些窗口是由程序调整的（这些窗口的位置变化不应该被记录）
     /// </summary>
     private readonly HashSet<nint> _programAdjustedWindows = new();
+    
+    /// <summary>
+    /// 重复执行的超时时间（秒）
+    /// </summary>
+    private const double RepeatTimeoutSeconds = 2.0;
 
     /// <summary>
-    /// 保存窗口位置（总是覆盖）
+    /// 保存窗口位置到恢复点（总是覆盖）
     /// </summary>
-    public void Save(nint hwnd, int x, int y, int w, int h)
+    public void SaveRestoreRect(nint hwnd, int x, int y, int w, int h)
     {
-        _history[hwnd] = (x, y, w, h);
+        _restoreRects[hwnd] = (x, y, w, h);
     }
 
     /// <summary>
-    /// 只在窗口还没有历史记录时保存原始位置。
+    /// 只在窗口还没有恢复点时保存原始位置。
     /// 这样 Restore 会恢复到第一次使用快捷键前的位置。
     /// </summary>
-    public void SaveIfNotExists(nint hwnd, int x, int y, int w, int h)
+    public void SaveRestoreRectIfNotExists(nint hwnd, int x, int y, int w, int h)
     {
-        if (!_history.ContainsKey(hwnd))
+        if (!_restoreRects.ContainsKey(hwnd))
         {
-            _history[hwnd] = (x, y, w, h);
+            _restoreRects[hwnd] = (x, y, w, h);
         }
+    }
+
+    /// <summary>
+    /// 记录程序对窗口的操作
+    /// </summary>
+    public void RecordAction(nint hwnd, WindowAction action, int x, int y, int w, int h)
+    {
+        var now = DateTime.Now;
+        
+        if (_lastActions.TryGetValue(hwnd, out var lastAction))
+        {
+            // 检查是否是重复执行同一操作
+            var timeSinceLastExecution = (now - lastAction.LastExecutionTime).TotalSeconds;
+            
+            if (lastAction.Action == action && timeSinceLastExecution <= RepeatTimeoutSeconds)
+            {
+                // 增加计数
+                _lastActions[hwnd] = new RectangleAction
+                {
+                    Action = action,
+                    Count = lastAction.Count + 1,
+                    LastExecutionTime = now,
+                    Rect = (x, y, w, h)
+                };
+            }
+            else
+            {
+                // 新的操作或超时，重置计数
+                _lastActions[hwnd] = new RectangleAction
+                {
+                    Action = action,
+                    Count = 1,
+                    LastExecutionTime = now,
+                    Rect = (x, y, w, h)
+                };
+            }
+        }
+        else
+        {
+            // 第一次操作
+            _lastActions[hwnd] = new RectangleAction
+            {
+                Action = action,
+                Count = 1,
+                LastExecutionTime = now,
+                Rect = (x, y, w, h)
+            };
+        }
+    }
+
+    /// <summary>
+    /// 获取窗口的最后操作信息
+    /// </summary>
+    public bool TryGetLastAction(nint hwnd, out RectangleAction action)
+    {
+        return _lastActions.TryGetValue(hwnd, out action);
+    }
+
+    /// <summary>
+    /// 检测窗口是否被用户手动移动（与程序最后操作的位置不同）
+    /// </summary>
+    public bool IsWindowMovedExternally(nint hwnd, int x, int y, int w, int h)
+    {
+        if (!_lastActions.TryGetValue(hwnd, out var lastAction))
+        {
+            return false; // 没有记录，说明是第一次操作
+        }
+        
+        var lastRect = lastAction.Rect;
+        
+        // 允许 2 像素的误差（有些应用会微调窗口位置）
+        return Math.Abs(lastRect.X - x) > 2 
+            || Math.Abs(lastRect.Y - y) > 2 
+            || Math.Abs(lastRect.W - w) > 2 
+            || Math.Abs(lastRect.H - h) > 2;
     }
 
     /// <summary>
@@ -42,7 +157,7 @@ public class WindowHistory
             return;
         }
         
-        _history[hwnd] = (x, y, w, h);
+        _restoreRects[hwnd] = (x, y, w, h);
     }
 
     /// <summary>
@@ -69,22 +184,42 @@ public class WindowHistory
         return _programAdjustedWindows.Contains(hwnd);
     }
 
-    public bool TryGet(nint hwnd, out (int X, int Y, int W, int H) rect) => _history.TryGetValue(hwnd, out rect);
+    /// <summary>
+    /// 获取恢复点位置
+    /// </summary>
+    public bool TryGetRestoreRect(nint hwnd, out (int X, int Y, int W, int H) rect) 
+        => _restoreRects.TryGetValue(hwnd, out rect);
 
-    public void Remove(nint hwnd)
+    /// <summary>
+    /// 清除程序最后操作记录（恢复后调用）
+    /// </summary>
+    public void RemoveLastAction(nint hwnd)
     {
-        _history.Remove(hwnd);
+        _lastActions.Remove(hwnd);
+    }
+
+    /// <summary>
+    /// 完全移除窗口的所有记录（窗口关闭时调用）
+    /// </summary>
+    public void RemoveWindow(nint hwnd)
+    {
+        _restoreRects.Remove(hwnd);
+        _lastActions.Remove(hwnd);
         _programAdjustedWindows.Remove(hwnd);
     }
     
-    public bool Contains(nint hwnd) => _history.ContainsKey(hwnd);
+    /// <summary>
+    /// 检查窗口是否有恢复点
+    /// </summary>
+    public bool HasRestoreRect(nint hwnd) => _restoreRects.ContainsKey(hwnd);
     
     /// <summary>
     /// 清除所有历史记录
     /// </summary>
     public void Clear()
     {
-        _history.Clear();
+        _restoreRects.Clear();
+        _lastActions.Clear();
         _programAdjustedWindows.Clear();
     }
 }
