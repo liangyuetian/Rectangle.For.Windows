@@ -1,5 +1,6 @@
 using Rectangle.Windows.Core.Calculators;
 using Rectangle.Windows.Services;
+using Rectangle.Windows.Services.Calculators;
 using System.Collections.Generic;
 
 namespace Rectangle.Windows.Core;
@@ -108,6 +109,9 @@ public class CalculatorFactory
             [WindowAction.MoveRight] = new MoveRightCalculator(),
             [WindowAction.MoveUp] = new MoveUpCalculator(),
             [WindowAction.MoveDown] = new MoveDownCalculator(),
+            // Todo 模式
+            [WindowAction.LeftTodo] = new LeftTodoCalculator(configService!),
+            [WindowAction.RightTodo] = new RightTodoCalculator(configService!),
         };
     }
 
