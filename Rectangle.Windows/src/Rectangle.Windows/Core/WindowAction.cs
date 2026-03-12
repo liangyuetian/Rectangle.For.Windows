@@ -35,6 +35,38 @@ public enum WindowAction
     BottomLeftSixth,
     BottomCenterSixth,
     BottomRightSixth,
+    // 九等分（子菜单）
+    TopLeftNinth,
+    TopCenterNinth,
+    TopRightNinth,
+    MiddleLeftNinth,
+    MiddleCenterNinth,
+    MiddleRightNinth,
+    BottomLeftNinth,
+    BottomCenterNinth,
+    BottomRightNinth,
+    // 八等分（子菜单）
+    TopLeftEighth,
+    TopCenterLeftEighth,
+    TopCenterRightEighth,
+    TopRightEighth,
+    BottomLeftEighth,
+    BottomCenterLeftEighth,
+    BottomCenterRightEighth,
+    BottomRightEighth,
+    // 角落三分之一
+    TopLeftThird,
+    TopRightThird,
+    BottomLeftThird,
+    BottomRightThird,
+    // 垂直三分之一
+    TopVerticalThird,
+    MiddleVerticalThird,
+    BottomVerticalThird,
+    TopVerticalTwoThirds,
+    BottomVerticalTwoThirds,
+    // 居中显著
+    CenterProminently,
     // 移动到边缘（子菜单）
     MoveLeft,
     MoveRight,
