@@ -96,17 +96,18 @@
 
 **目标**：补充 macOS 版本的重要配置项
 
-#### 任务 1.2.1: 扩展 AppConfig
-- [ ] 添加 `AlmostMaximizeHeight` (float, 默认 0.9)
-- [ ] 添加 `AlmostMaximizeWidth` (float, 默认 0.9)
-- [ ] 添加 `MinimumWindowWidth` (float, 默认 0)
-- [ ] 添加 `MinimumWindowHeight` (float, 默认 0)
-- [ ] 添加 `SizeOffset` (float, 默认 30) - 放大缩小步长
-- [ ] 添加 `CenteredDirectionalMove` (bool, 默认 false)
-- [ ] 添加 `ResizeOnDirectionalMove` (bool, 默认 false)
-- [ ] 添加 `UseCursorScreenDetection` (bool, 默认 false)
-- [ ] 添加 `MoveCursor` (bool, 默认 false) - 移动窗口后移动光标
-- [ ] 添加 `MoveCursorAcrossDisplays` (bool, 默认 false)
+#### 任务 1.2.1: 扩展 AppConfig ✅
+- [x] 添加 `AlmostMaximizeHeight` (float, 默认 0.9)
+- [x] 添加 `AlmostMaximizeWidth` (float, 默认 0.9)
+- [x] 添加 `MinimumWindowWidth` (float, 默认 0)
+- [x] 添加 `MinimumWindowHeight` (float, 默认 0)
+- [x] 添加 `SizeOffset` (float, 默认 30) - 放大缩小步长
+- [x] 添加 `CenteredDirectionalMove` (bool, 默认 false)
+- [x] 添加 `ResizeOnDirectionalMove` (bool, 默认 false)
+- [x] 添加 `UseCursorScreenDetection` (bool, 默认 false)
+- [x] 添加 `MoveCursor` (bool, 默认 false) - 移动窗口后移动光标
+- [x] 添加 `MoveCursorAcrossDisplays` (bool, 默认 false)
+- **提交**: `6a34a87` - feat: 添加高级配置选项
 
 #### 任务 1.2.2: 实现接近最大化配置
 - [ ] 修改 `AlmostMaximizeCalculator` 使用配置的比例
@@ -689,10 +690,11 @@
 
 ## 📊 当前进度
 
-- **总体完成度**: ~62%
-- **Phase 1 进度**: 0.8/3 (27%) - 任务 1.1 进行中
-  - ✅ 任务 1.1.1-1.1.4 已完成
-  - 🔄 任务 1.1.5 进行中
+- **总体完成度**: ~63%
+- **Phase 1 进度**: 1.2/3 (40%) - 任务 1.2 进行中
+  - ✅ 任务 1.1 基本完成（UI 部分跳过）
+  - ✅ 任务 1.2.1 已完成
+  - 🔄 任务 1.2.2-1.2.6 待完成
 - **Phase 2 进度**: 0/5 (0%)
 - **Phase 3 进度**: 0/3 (0%)
 - **Phase 4 进度**: 0/3 (0%)
@@ -701,7 +703,7 @@
 - **Phase 7 进度**: 0/3 (0%)
 
 **最后更新**: 2026-03-12
-**最新提交**: `c6328f8` - feat: 实现循环尺寸功能
+**最新提交**: `6a34a87` - feat: 添加高级配置选项
 
 ---
 
