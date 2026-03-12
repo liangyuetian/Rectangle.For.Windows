@@ -196,18 +196,17 @@
 - [x] 添加 `GetCursorPos()` 和 `GetWindowUnderCursor()` 辅助方法
 - **提交**: `a5655d2` - feat: 实现全局鼠标钩子服务
 
-#### 任务 2.1.2: 拖拽状态管理
-- [ ] 创建 `DragState.cs`
-  ```csharp
-  public class DragState
-  {
-      public bool IsDragging { get; set; }
-      public nint DraggedWindow { get; set; }
-      public Point InitialMousePos { get; set; }
-      public WindowRect InitialWindowRect { get; set; }
-      public DateTime DragStartTime { get; set; }
-  }
-  ```
+#### 任务 2.1.2: 拖拽状态管理 ✅
+- [x] 创建 `DragState.cs`
+- [x] 实现拖拽状态属性（IsDragging, DraggedWindow 等）
+- [x] 实现 `Reset()` 方法重置状态
+- [x] 实现 `GetDragOffset()` 计算偏移量
+- [x] 实现 `GetDragDurationMs()` 计算持续时间
+- [x] 实现 `GetDragDistance()` 计算拖拽距离
+- [x] 实现 `CalculateNewRect()` 计算新位置
+- [x] 创建 `SnapArea` 类定义吸附区域
+- [x] 创建 `MouseButton` 和 `SnapAreaType` 枚举
+- **提交**: `1b3350d` - feat: 实现拖拽状态管理
 
 #### 任务 2.1.3: 创建 SnappingManager
 - [ ] 创建 `SnappingManager.cs`
