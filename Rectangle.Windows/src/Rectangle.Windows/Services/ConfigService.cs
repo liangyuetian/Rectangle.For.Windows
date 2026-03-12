@@ -218,6 +218,48 @@ public class AppConfig
     /// </summary>
     public bool UnsnapRestore { get; set; } = true;
 
+    // === 拖拽吸附配置 ===
+
+    /// <summary>
+    /// 是否启用拖拽吸附
+    /// </summary>
+    public bool DragToSnap { get; set; } = true;
+
+    /// <summary>
+    /// 屏幕上边缘吸附区域大小（像素）
+    /// </summary>
+    public int SnapEdgeMarginTop { get; set; } = 5;
+
+    /// <summary>
+    /// 屏幕下边缘吸附区域大小（像素）
+    /// </summary>
+    public int SnapEdgeMarginBottom { get; set; } = 5;
+
+    /// <summary>
+    /// 屏幕左边缘吸附区域大小（像素）
+    /// </summary>
+    public int SnapEdgeMarginLeft { get; set; } = 5;
+
+    /// <summary>
+    /// 屏幕右边缘吸附区域大小（像素）
+    /// </summary>
+    public int SnapEdgeMarginRight { get; set; } = 5;
+
+    /// <summary>
+    /// 角落吸附区域大小（像素）
+    /// </summary>
+    public int CornerSnapAreaSize { get; set; } = 20;
+
+    /// <summary>
+    /// 吸附所需的修饰键（Ctrl=2, Alt=1, Shift=4, Win=8，0=无需修饰键）
+    /// </summary>
+    public int SnapModifiers { get; set; } = 0;
+
+    /// <summary>
+    /// 吸附时是否触发触觉反馈
+    /// </summary>
+    public bool HapticFeedbackOnSnap { get; set; } = false;
+
     private static List<string> GetDefaultIgnoredApps()
     {
         return new List<string>
