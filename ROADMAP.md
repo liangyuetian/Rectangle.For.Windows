@@ -253,62 +253,69 @@
 
 ---
 
-### 2.3 预览窗口（Footprint）⏳
+### 2.3 预览窗口（Footprint）✅
 
-#### 任务 2.3.1: 创建预览窗口
-- [ ] 创建 `FootprintWindow.cs`（WinForms）
-- [ ] 半透明窗口（Alpha = 0.3）
-- [ ] 边框高亮（2px）
-- [ ] 无标题栏、无任务栏图标
-- [ ] 始终置顶（TopMost）
+#### 任务 2.3.1: 创建预览窗口 ✅
+- [x] 创建 `FootprintWindow.cs`（WinForms）
+- [x] 半透明窗口（Alpha = 0.3）
+- [x] 边框高亮（2px）
+- [x] 无标题栏、无任务栏图标
+- [x] 始终置顶（TopMost）
+- **提交**: `41ebb61` - feat: 创建拖拽吸附预览窗口 FootprintWindow
 
-#### 任务 2.3.2: 预览窗口样式配置
-- [ ] 添加 `FootprintAlpha` 配置（默认 0.3）
-- [ ] 添加 `FootprintBorderWidth` 配置（默认 2）
-- [ ] 添加 `FootprintColor` 配置（默认蓝色）
-- [ ] 支持自定义颜色
+#### 任务 2.3.2: 预览窗口样式配置 ✅
+- [x] 添加 `FootprintAlpha` 配置（默认 0.3）
+- [x] 添加 `FootprintBorderWidth` 配置（默认 2）
+- [x] 添加 `FootprintColor` 配置（默认蓝色）
+- [x] 支持自定义颜色
+- **提交**: `1b14ac7` - feat: 添加拖拽吸附预览窗口配置项
 
-#### 任务 2.3.3: 预览窗口动画
-- [ ] 实现淡入淡出效果
-- [ ] 实现尺寸变化动画
-- [ ] 添加 `FootprintFade` 配置开关
-- [ ] 添加 `FootprintAnimationDuration` 配置
+#### 任务 2.3.3: 预览窗口动画 ✅
+- [x] 实现淡入淡出效果
+- [x] 实现尺寸变化动画
+- [x] 添加 `FootprintFade` 配置开关
+- [x] 添加 `FootprintAnimationDuration` 配置
+- **提交**: `ab74f87` - feat: 实现预览窗口淡入淡出动画
 
 **预计工作量**：6-8 小时
 
 ---
 
-### 2.4 吸附执行
+### 2.4 吸附执行 ✅
 
-#### 任务 2.4.1: Unsnap 恢复功能
-- [ ] 检测窗口是否被程序调整过
-- [ ] 拖拽开始时保存原始尺寸
-- [ ] 拖拽结束时恢复原始尺寸（如果配置启用）
-- [ ] 添加 `UnsnapRestore` 配置选项
+#### 任务 2.4.1: Unsnap 恢复功能 ✅
+- [x] 检测窗口是否被程序调整过
+- [x] 拖拽开始时保存原始尺寸
+- [x] 拖拽结束时恢复原始尺寸（如果配置启用）
+- [x] 添加 `UnsnapRestore` 配置选项
+- **提交**: `3ab3e82` - feat: 实现 Unsnap 恢复功能
 
-#### 任务 2.4.2: 吸附执行逻辑
-- [ ] 鼠标释放时检测吸附区域
-- [ ] 执行对应的 WindowAction
-- [ ] 更新窗口历史记录
-- [ ] 触发触觉反馈（如果支持）
+#### 任务 2.4.2: 吸附执行逻辑 ✅
+- [x] 鼠标释放时检测吸附区域
+- [x] 执行对应的 WindowAction
+- [x] 更新窗口历史记录
+- [x] 触发触觉反馈（如果支持）
+- **提交**: `e8b5602` - feat: 完善吸附执行逻辑
 
-#### 任务 2.4.3: 集成到 WindowManager
-- [ ] 添加 `ExecuteSnapAction()` 方法
-- [ ] 标记为拖拽触发（不更新恢复点）
-- [ ] 处理多显示器情况
+#### 任务 2.4.3: 集成到 WindowManager ✅
+- [x] 添加 `ExecuteSnapAction()` 方法
+- [x] 标记为拖拽触发（不更新恢复点）
+- [x] 处理多显示器情况
+- **提交**: `b300451` - feat: 集成 SnappingManager 到主程序
 
 **预计工作量**：4-6 小时
 
 ---
 
-### 2.5 配置和优化
+### 2.5 配置和优化 ⏳
 
-#### 任务 2.5.1: 吸附配置
-- [ ] `DragToSnap` (bool, 默认 true) - 启用拖拽吸附
-- [ ] `SnapEdgeMarginTop/Bottom/Left/Right` (float, 默认 5)
-- [ ] `CornerSnapAreaSize` (float, 默认 20)
-- [ ] `SnapModifiers` (int) - 需要按住的修饰键
-- [ ] `HapticFeedbackOnSnap` (bool) - 触觉反馈
+#### 任务 2.5.1: 吸附配置 ✅
+- [x] `DragToSnap` (bool, 默认 true) - 启用拖拽吸附
+- [x] `SnapEdgeMarginTop/Bottom/Left/Right` (float, 默认 5)
+- [x] `CornerSnapAreaSize` (float, 默认 20)
+- [x] `SnapModifiers` (int) - 需要按住的修饰键
+- [x] `HapticFeedbackOnSnap` (bool) - 触觉反馈
+- **提交**: `076a848` - feat: 添加拖拽吸附配置项
 
 #### 任务 2.5.2: 性能优化
 - [ ] 限制预览窗口更新频率（60fps）
@@ -719,12 +726,17 @@
 
 ## 📊 当前进度
 
-- **总体完成度**: ~68%
+- **总体完成度**: ~75%
 - **Phase 1 进度**: 3/3 (100%) - ✅ Phase 1 全部完成！
   - ✅ 任务 1.1: 重复执行模式（含循环尺寸）
   - ✅ 任务 1.2: 高级配置选项（5/6 完成，UI 跳过）
   - ✅ 任务 1.3: 窗口类型检测
-- **Phase 2 进度**: 0/5 (0%)
+- **Phase 2 进度**: 4/5 (80%) - ⏳ Phase 2 进行中
+  - ✅ 任务 2.1: 基础架构（全局鼠标钩子、拖拽状态管理、SnappingManager）
+  - ✅ 任务 2.2: 吸附区域检测
+  - ✅ 任务 2.3: 预览窗口
+  - ✅ 任务 2.4: 吸附执行
+  - ⏳ 任务 2.5: 配置和优化（1/3 完成）
 - **Phase 3 进度**: 0/3 (0%)
 - **Phase 4 进度**: 0/3 (0%)
 - **Phase 5 进度**: 0/3 (0%)
@@ -732,7 +744,7 @@
 - **Phase 7 进度**: 0/3 (0%)
 
 **最后更新**: 2026-03-12
-**最新提交**: `dd66f06` - feat: 实现光标移动功能
+**最新提交**: `076a848` - feat: 添加拖拽吸附配置项
 
 ---
 
