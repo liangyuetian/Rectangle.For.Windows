@@ -187,11 +187,14 @@
 
 ### 2.1 基础架构
 
-#### 任务 2.1.1: 全局鼠标钩子
-- [ ] 创建 `MouseHookService.cs`
-- [ ] 实现 `SetWindowsHookEx` 鼠标钩子
-- [ ] 监听 `WM_LBUTTONDOWN`, `WM_MOUSEMOVE`, `WM_LBUTTONUP`
-- [ ] 实现线程安全的事件通知
+#### 任务 2.1.1: 全局鼠标钩子 ✅
+- [x] 创建 `MouseHookService.cs`
+- [x] 实现 `SetWindowsHookEx` 鼠标钩子（WH_MOUSE_LL）
+- [x] 监听 `WM_LBUTTONDOWN`, `WM_MOUSEMOVE`, `WM_LBUTTONUP`
+- [x] 实现 `MouseDown`, `MouseUp`, `MouseMove` 事件
+- [x] 实现线程安全的事件通知
+- [x] 添加 `GetCursorPos()` 和 `GetWindowUnderCursor()` 辅助方法
+- **提交**: `a5655d2` - feat: 实现全局鼠标钩子服务
 
 #### 任务 2.1.2: 拖拽状态管理
 - [ ] 创建 `DragState.cs`
