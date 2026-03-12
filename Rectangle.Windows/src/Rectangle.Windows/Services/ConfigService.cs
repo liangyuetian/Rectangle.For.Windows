@@ -181,6 +181,28 @@ public class AppConfig
     /// </summary>
     public bool MoveCursorAcrossDisplays { get; set; } = false;
 
+    // === 拖拽吸附预览窗口配置 ===
+
+    /// <summary>
+    /// 预览窗口透明度（0.1 - 1.0）
+    /// </summary>
+    public float FootprintAlpha { get; set; } = 0.3f;
+
+    /// <summary>
+    /// 预览窗口边框宽度（像素）
+    /// </summary>
+    public int FootprintBorderWidth { get; set; } = 2;
+
+    /// <summary>
+    /// 预览窗口填充颜色（ARGB 格式）
+    /// </summary>
+    public int FootprintColor { get; set; } = -16711614; // ARGB(0, 120, 212) 蓝色
+
+    /// <summary>
+    /// 预览窗口边框颜色（ARGB 格式）
+    /// </summary>
+    public int FootprintBorderColor { get; set; } = -16711614; // ARGB(0, 120, 212) 蓝色
+
     private static List<string> GetDefaultIgnoredApps()
     {
         return new List<string>
