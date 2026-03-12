@@ -159,8 +159,24 @@ public class WindowManager
         var calculator = _factory.GetCalculator(action);
         if (calculator == null) return;
 
-        // 只在第一次调整时保存原始位置，Restore 会恢复到这个位置
-        _history.SaveIfNotExists(hwnd, x, y, w, h);
+        // 检测窗口是否被用户手动移动
+        bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
+        
+        if (windowMovedExternally)
+        {
+            // 用户手动移动了窗口，清除程序操作记录
+            _history.RemoveLastRectangleAction(hwnd);
+            Console.WriteLine($"[WindowManager] 检测到窗口被用户手动移动: {processName}");
+        }
+
+        // 保存或更新恢复点：
+        // 1. 如果没有恢复点，保存当前位置
+        // 2. 如果窗口被用户手动移动，更新恢复点
+        if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
+        {
+            _history.SaveRestoreRect(hwnd, x, y, w, h);
+            Console.WriteLine($"[WindowManager] 保存恢复点: ({x}, {y}, {w}, {h})");
+        }
 
         // 标记此窗口由程序调整（用于窗口位置监听时排除记录）
         _history.MarkAsProgramAdjusted(hwnd);
@@ -174,6 +190,9 @@ public class WindowManager
         target = ApplyWindowGap(target, workArea, action);
         
         _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
+
+        // 记录程序最后一次操作的位置（用于检测用户手动移动）
+        _history.SaveLastRectangleAction(hwnd, target.X, target.Y, target.Width, target.Height);
 
         Console.WriteLine($"{GetActionDisplayName(action)} 了 {processName}");
     }
@@ -223,19 +242,27 @@ public class WindowManager
         // 如果当前窗口已最大化，则恢复
         if (_maximizedWindows.Contains(hwnd))
         {
-            if (_history.TryGet(hwnd, out var rect))
+            if (_history.TryGetRestoreRect(hwnd, out var rect))
             {
                 _win32.SetWindowRect(hwnd, rect.X, rect.Y, rect.W, rect.H);
-                _history.Remove(hwnd);
+                _history.RemoveLastRectangleAction(hwnd);
             }
             _maximizedWindows.Remove(hwnd);
             Console.WriteLine($"恢复了 {processName}");
         }
         else
         {
-            // 保存当前位置
+            // 保存当前位置到恢复点
             var (x, y, w, h) = _win32.GetWindowRect(hwnd);
-            _history.Save(hwnd, x, y, w, h);
+            
+            // 检测窗口是否被用户手动移动
+            bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
+            
+            if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
+            {
+                _history.SaveRestoreRect(hwnd, x, y, w, h);
+                Console.WriteLine($"[WindowManager] 最大化前保存恢复点: ({x}, {y}, {w}, {h})");
+            }
 
             // 标记此窗口由程序调整
             _history.MarkAsProgramAdjusted(hwnd);
@@ -247,6 +274,10 @@ public class WindowManager
             {
                 var target = calculator.Calculate(workArea, default, WindowAction.Maximize);
                 _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
+                
+                // 记录程序最后一次操作的位置
+                _history.SaveLastRectangleAction(hwnd, target.X, target.Y, target.Width, target.Height);
+                
                 _maximizedWindows.Add(hwnd);
                 Console.WriteLine($"最大化了 {processName}");
             }
@@ -256,14 +287,29 @@ public class WindowManager
     private void ExecuteRestore(nint? targetHwnd = null)
     {
         var hwnd = targetHwnd ?? GetTargetWindow();
-        if (hwnd == 0) { System.Media.SystemSounds.Beep.Play(); return; }
-        if (!_history.TryGet(hwnd, out var rect))
-        { System.Media.SystemSounds.Beep.Play(); return; }
+        if (hwnd == 0) 
+        { 
+            System.Media.SystemSounds.Beep.Play(); 
+            return; 
+        }
         
+        if (!_history.TryGetRestoreRect(hwnd, out var rect))
+        { 
+            Console.WriteLine("[WindowManager] 没有可恢复的窗口位置");
+            System.Media.SystemSounds.Beep.Play(); 
+            return; 
+        }
+
         var processName = _win32.GetProcessNameFromWindow(hwnd);
         _win32.SetWindowRect(hwnd, rect.X, rect.Y, rect.W, rect.H);
-        _history.Remove(hwnd);
-        Console.WriteLine($"恢复了 {processName}");
+        
+        // 清除程序最后操作记录（但保留恢复点，以便再次使用）
+        _history.RemoveLastRectangleAction(hwnd);
+        
+        // 清除最大化状态
+        _maximizedWindows.Remove(hwnd);
+        
+        Console.WriteLine($"恢复了 {processName} 到 ({rect.X}, {rect.Y}, {rect.W}, {rect.H})");
     }
 
     private void ExecuteNextDisplay(nint? targetHwnd = null)
@@ -281,7 +327,13 @@ public class WindowManager
             return;
         }
 
-        _history.SaveIfNotExists(hwnd, x, y, w, h);
+        // 检测窗口是否被用户手动移动
+        bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
+        
+        if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
+        {
+            _history.SaveRestoreRect(hwnd, x, y, w, h);
+        }
 
         // 标记此窗口由程序调整
         _history.MarkAsProgramAdjusted(hwnd);
@@ -290,6 +342,10 @@ public class WindowManager
         var newX = nextWorkArea.Value.Left + (nextWorkArea.Value.Width - w) / 2;
         var newY = nextWorkArea.Value.Top + (nextWorkArea.Value.Height - h) / 2;
         _win32.SetWindowRect(hwnd, newX, newY, w, h);
+        
+        // 记录程序最后一次操作的位置
+        _history.SaveLastRectangleAction(hwnd, newX, newY, w, h);
+        
         Console.WriteLine($"将 {processName} 移动到下一个显示器");
     }
 
@@ -308,7 +364,13 @@ public class WindowManager
             return;
         }
 
-        _history.SaveIfNotExists(hwnd, x, y, w, h);
+        // 检测窗口是否被用户手动移动
+        bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
+        
+        if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
+        {
+            _history.SaveRestoreRect(hwnd, x, y, w, h);
+        }
 
         // 标记此窗口由程序调整
         _history.MarkAsProgramAdjusted(hwnd);
@@ -317,6 +379,10 @@ public class WindowManager
         var newX = prevWorkArea.Value.Left + (prevWorkArea.Value.Width - w) / 2;
         var newY = prevWorkArea.Value.Top + (prevWorkArea.Value.Height - h) / 2;
         _win32.SetWindowRect(hwnd, newX, newY, w, h);
+        
+        // 记录程序最后一次操作的位置
+        _history.SaveLastRectangleAction(hwnd, newX, newY, w, h);
+        
         Console.WriteLine($"将 {processName} 移动到上一个显示器");
     }
 
