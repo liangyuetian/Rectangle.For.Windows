@@ -208,12 +208,18 @@
 - [x] 创建 `MouseButton` 和 `SnapAreaType` 枚举
 - **提交**: `1b3350d` - feat: 实现拖拽状态管理
 
-#### 任务 2.1.3: 创建 SnappingManager
-- [ ] 创建 `SnappingManager.cs`
-- [ ] 实现 `StartDrag()` 方法
-- [ ] 实现 `UpdateDrag()` 方法
-- [ ] 实现 `EndDrag()` 方法
-- [ ] 实现 `CancelDrag()` 方法
+#### 任务 2.1.3: 创建 SnappingManager ✅
+- [x] 创建 `SnappingManager.cs`
+- [x] 实现 `Enable()` / `Disable()` 方法
+- [x] 实现 `OnMouseDown()` 开始拖拽
+- [x] 实现 `OnMouseMove()` 更新拖拽
+- [x] 实现 `OnMouseUp()` 结束拖拽
+- [x] 实现 `CalculateSnapArea()` 计算吸附区域
+- [x] 实现 `CheckScreenEdges()` 边缘检测
+- [x] 实现 `CheckScreenCorners()` 角落检测
+- [x] 实现 `ExecuteSnap()` 执行吸附
+- [x] 添加 `SnapTriggered`, `DragStarted`, `DragEnded` 事件
+- **提交**: `762101f` - feat: 创建 SnappingManager
 
 **预计工作量**：6-8 小时
 
@@ -714,20 +720,15 @@
 
 ## 📊 当前进度
 
-- **总体完成度**: ~68%
+- **总体完成度**: ~72%
 - **Phase 1 进度**: 3/3 (100%) - ✅ Phase 1 全部完成！
-  - ✅ 任务 1.1: 重复执行模式（含循环尺寸）
-  - ✅ 任务 1.2: 高级配置选项（5/6 完成，UI 跳过）
-  - ✅ 任务 1.3: 窗口类型检测
-- **Phase 2 进度**: 0/5 (0%)
-- **Phase 3 进度**: 0/3 (0%)
-- **Phase 4 进度**: 0/3 (0%)
-- **Phase 5 进度**: 0/3 (0%)
-- **Phase 6 进度**: 0/1 (0%)
-- **Phase 7 进度**: 0/3 (0%)
+- **Phase 2 进度**: 0.6/5 (12%) - Phase 2.1 基础架构完成！
+  - ✅ 任务 2.1.1: 全局鼠标钩子
+  - ✅ 任务 2.1.2: 拖拽状态管理
+  - ✅ 任务 2.1.3: SnappingManager
 
 **最后更新**: 2026-03-12
-**最新提交**: `dd66f06` - feat: 实现光标移动功能
+**最新提交**: `762101f` - feat: 创建 SnappingManager
 
 ---
 
