@@ -11,6 +11,7 @@ public class WindowManager
     private readonly Win32WindowService _win32;
     private readonly CalculatorFactory _factory;
     private readonly WindowHistory _history;
+    private readonly ScreenDetectionService _screenDetection;
     private readonly HashSet<nint> _maximizedWindows = new();
     private LastActiveWindowService? _lastActiveService;
     private ConfigService? _configService;
@@ -21,6 +22,7 @@ public class WindowManager
         _win32 = win32;
         _factory = factory;
         _history = history;
+        _screenDetection = new ScreenDetectionService(win32);
     }
 
     public void SetLastActiveWindowService(LastActiveWindowService service)
@@ -150,8 +152,10 @@ public class WindowManager
         }
 
         var (x, y, w, h) = _win32.GetWindowRect(hwnd);
-        var workArea = _win32.GetWorkAreaFromWindow(hwnd);
         
+        // 根据配置获取目标屏幕（光标位置或窗口位置）
+        var workArea = _screenDetection.GetTargetWorkArea(hwnd, _configService);
+
         // 应用窗口间隙
         workArea = ApplyGap(workArea);
         
@@ -325,7 +329,7 @@ public class WindowManager
             _history.MarkAsProgramAdjusted(hwnd);
 
             // 最大化
-            var workArea = _win32.GetWorkAreaFromWindow(hwnd);
+            var workArea = _screenDetection.GetTargetWorkArea(hwnd, _configService);
             var calculator = _factory.GetCalculator(WindowAction.Maximize);
             if (calculator != null)
             {
