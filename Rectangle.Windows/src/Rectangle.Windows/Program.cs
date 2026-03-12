@@ -19,6 +19,7 @@ internal static class Program
     private static HotkeyManager? _hotkeyManager;
     private static SnapDetectionService? _snapDetectionService;
     private static SnapPreviewWindow? _snapPreviewWindow;
+    private static SnappingManager? _snappingManager;
     private static LastActiveWindowService? _lastActiveWindowService;
     private static ToolStripMenuItem? _ignoreAppMenuItem;
     private static System.Windows.Forms.Timer? _updateTimer;
@@ -116,6 +117,18 @@ internal static class Program
         _snapDetectionService.SnapPreviewRequested += OnSnapPreviewRequested;
         _snapDetectionService.SnapPreviewHidden += OnSnapPreviewHidden;
 
+        // 创建 SnappingManager（拖拽吸附管理器）
+        _snappingManager = new SnappingManager(win32, _configService, history);
+        _snappingManager.SetWindowManager(_windowManager);
+
+        // 订阅 SnappingManager 事件
+        _snappingManager.DragStarted += OnDragStarted;
+        _snappingManager.DragEnded += OnDragEnded;
+        _snappingManager.SnapTriggered += OnSnapTriggered;
+
+        // 启用拖拽吸附
+        _snappingManager.Enable();
+
         // 运行应用
         Application.Run();
         
@@ -123,6 +136,7 @@ internal static class Program
         CleanupTrayIcon();
         _updateTimer?.Stop();
         _updateTimer?.Dispose();
+        _snappingManager?.Dispose();
         _snapPreviewWindow?.Dispose();
         _snapDetectionService?.Dispose();
         _hotkeyManager?.Dispose();
@@ -554,6 +568,24 @@ internal static class Program
     private static void OnSnapPreviewHidden()
     {
         _snapPreviewWindow?.HidePreview();
+    }
+
+    // SnappingManager 事件处理
+    private static void OnDragStarted(object? sender, EventArgs e)
+    {
+        Console.WriteLine("[Program] 拖拽开始");
+    }
+
+    private static void OnDragEnded(object? sender, EventArgs e)
+    {
+        Console.WriteLine("[Program] 拖拽结束");
+        // 隐藏预览窗口
+        FootprintWindow.Instance.HideImmediate();
+    }
+
+    private static void OnSnapTriggered(object? sender, SnapEventArgs e)
+    {
+        Console.WriteLine($"[Program] 吸附触发: {e.Action}");
     }
 
     // 隐藏窗口类，用于接收 WM_HOTKEY 消息
