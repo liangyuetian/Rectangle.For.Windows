@@ -67,6 +67,22 @@ public enum WindowAction
     BottomVerticalTwoThirds,
     // 居中显著
     CenterProminently,
+    // 双倍/减半尺寸
+    DoubleHeightUp,
+    DoubleHeightDown,
+    DoubleWidthLeft,
+    DoubleWidthRight,
+    HalveHeightUp,
+    HalveHeightDown,
+    HalveWidthLeft,
+    HalveWidthRight,
+    // 单独调整宽度/高度
+    LargerWidth,
+    SmallerWidth,
+    LargerHeight,
+    SmallerHeight,
+    // 指定尺寸
+    Specified,
     // 移动到边缘（子菜单）
     MoveLeft,
     MoveRight,
