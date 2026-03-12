@@ -25,8 +25,12 @@ public class SnappingManager : IDisposable
 
     // 配置
     private bool _isEnabled = true;
-    private int _edgeMargin = 5;  // 边缘吸附区域大小（像素）
-    private int _cornerSize = 20; // 角落吸附区域大小（像素）
+    private int _edgeMarginTop = 5;
+    private int _edgeMarginBottom = 5;
+    private int _edgeMarginLeft = 5;
+    private int _edgeMarginRight = 5;
+    private int _cornerSize = 20;
+    private int _snapModifiers = 0;
 
     // 事件
     public event EventHandler<SnapEventArgs>? SnapTriggered;
@@ -61,16 +65,24 @@ public class SnappingManager : IDisposable
     public bool Enable()
     {
         if (_isEnabled) return true;
-        
+
         LoadConfig();
-        
+
+        // 检查是否启用了拖拽吸附
+        var config = _configService?.Load();
+        if (config?.DragToSnap == false)
+        {
+            Console.WriteLine("[SnappingManager] 拖拽吸附已禁用（配置）");
+            return false;
+        }
+
         if (_mouseHook.InstallHook())
         {
             _isEnabled = true;
             Console.WriteLine("[SnappingManager] 拖拽吸附已启用");
             return true;
         }
-        
+
         return false;
     }
 
@@ -93,10 +105,14 @@ public class SnappingManager : IDisposable
     private void LoadConfig()
     {
         var config = _configService?.Load();
-        if (config?.SnapAreas != null)
-        {
-            // 可以在这里加载更多配置
-        }
+        if (config == null) return;
+
+        _edgeMarginTop = config.SnapEdgeMarginTop;
+        _edgeMarginBottom = config.SnapEdgeMarginBottom;
+        _edgeMarginLeft = config.SnapEdgeMarginLeft;
+        _edgeMarginRight = config.SnapEdgeMarginRight;
+        _cornerSize = config.CornerSnapAreaSize;
+        _snapModifiers = config.SnapModifiers;
     }
 
     /// <summary>
@@ -254,13 +270,13 @@ public class SnappingManager : IDisposable
     private SnapArea? CheckScreenEdges(Point cursorPos, WorkArea? workArea)
     {
         if (workArea == null) return null;
-        
+
         // 左边缘
-        if (cursorPos.X >= workArea.Value.Left && cursorPos.X <= workArea.Value.Left + _edgeMargin)
+        if (cursorPos.X >= workArea.Value.Left && cursorPos.X <= workArea.Value.Left + _edgeMarginLeft)
         {
             return new SnapArea
             {
-                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Top, _edgeMargin, workArea.Value.Height),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Top, _edgeMarginLeft, workArea.Value.Height),
                 Action = WindowAction.LeftHalf,
                 Type = SnapAreaType.Edge,
                 Name = "Left Edge"
@@ -268,11 +284,11 @@ public class SnappingManager : IDisposable
         }
 
         // 右边缘
-        if (cursorPos.X >= workArea.Value.Right - _edgeMargin && cursorPos.X <= workArea.Value.Right)
+        if (cursorPos.X >= workArea.Value.Right - _edgeMarginRight && cursorPos.X <= workArea.Value.Right)
         {
             return new SnapArea
             {
-                Bounds = new System.Drawing.Rectangle(workArea.Value.Right - _edgeMargin, workArea.Value.Top, _edgeMargin, workArea.Value.Height),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Right - _edgeMarginRight, workArea.Value.Top, _edgeMarginRight, workArea.Value.Height),
                 Action = WindowAction.RightHalf,
                 Type = SnapAreaType.Edge,
                 Name = "Right Edge"
@@ -280,23 +296,23 @@ public class SnappingManager : IDisposable
         }
 
         // 上边缘
-        if (cursorPos.Y >= workArea.Value.Top && cursorPos.Y <= workArea.Value.Top + _edgeMargin)
+        if (cursorPos.Y >= workArea.Value.Top && cursorPos.Y <= workArea.Value.Top + _edgeMarginTop)
         {
             return new SnapArea
             {
-                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Top, workArea.Value.Width, _edgeMargin),
-                Action = WindowAction.TopHalf,
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Top, workArea.Value.Width, _edgeMarginTop),
+                Action = WindowAction.Maximize,
                 Type = SnapAreaType.Edge,
                 Name = "Top Edge"
             };
         }
 
         // 下边缘
-        if (cursorPos.Y >= workArea.Value.Bottom - _edgeMargin && cursorPos.Y <= workArea.Value.Bottom)
+        if (cursorPos.Y >= workArea.Value.Bottom - _edgeMarginBottom && cursorPos.Y <= workArea.Value.Bottom)
         {
             return new SnapArea
             {
-                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Bottom - _edgeMargin, workArea.Value.Width, _edgeMargin),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Bottom - _edgeMarginBottom, workArea.Value.Width, _edgeMarginBottom),
                 Action = WindowAction.BottomHalf,
                 Type = SnapAreaType.Edge,
                 Name = "Bottom Edge"
