@@ -21,12 +21,13 @@ public class SnappingManager : IDisposable
     private readonly ConfigService _configService;
     private readonly DragState _dragState;
     private readonly WindowHistory _history;
-    
+    private WindowManager? _windowManager;
+
     // 配置
     private bool _isEnabled = true;
     private int _edgeMargin = 5;  // 边缘吸附区域大小（像素）
     private int _cornerSize = 20; // 角落吸附区域大小（像素）
-    
+
     // 事件
     public event EventHandler<SnapEventArgs>? SnapTriggered;
     public event EventHandler? DragStarted;
@@ -39,11 +40,19 @@ public class SnappingManager : IDisposable
         _history = history;
         _mouseHook = new MouseHookService();
         _dragState = new DragState();
-        
+
         // 订阅鼠标事件
         _mouseHook.MouseDown += OnMouseDown;
         _mouseHook.MouseUp += OnMouseUp;
         _mouseHook.MouseMove += OnMouseMove;
+    }
+
+    /// <summary>
+    /// 设置 WindowManager 实例（用于执行吸附操作）
+    /// </summary>
+    public void SetWindowManager(WindowManager windowManager)
+    {
+        _windowManager = windowManager;
     }
 
     /// <summary>
@@ -396,22 +405,33 @@ public class SnappingManager : IDisposable
         if (_dragState.OriginalRect.HasValue)
         {
             var orig = _dragState.OriginalRect.Value;
-            _history.SaveRestoreRect(hwnd, 
-                orig.X, 
-                orig.Y, 
-                orig.Width, 
+            _history.SaveRestoreRect(hwnd,
+                orig.X,
+                orig.Y,
+                orig.Width,
                 orig.Height);
         }
 
-        // 触发吸附事件
-        SnapTriggered?.Invoke(this, new SnapEventArgs
-        {
-            WindowHandle = hwnd,
-            Action = snapArea.Action,
-            SnapArea = snapArea
-        });
+        // 标记窗口为由程序调整
+        _history.MarkAsProgramAdjusted(hwnd);
 
-        Console.WriteLine($"[SnappingManager] 执行吸附: {snapArea.Name} -> {snapArea.Action}");
+        // 执行窗口操作
+        if (_windowManager != null)
+        {
+            _windowManager.Execute(snapArea.Action, hwnd);
+            Console.WriteLine($"[SnappingManager] 执行吸附: {snapArea.Name} -> {snapArea.Action}");
+        }
+        else
+        {
+            // 如果没有 WindowManager，触发事件让外部处理
+            SnapTriggered?.Invoke(this, new SnapEventArgs
+            {
+                WindowHandle = hwnd,
+                Action = snapArea.Action,
+                SnapArea = snapArea
+            });
+            Console.WriteLine($"[SnappingManager] 触发吸附事件: {snapArea.Name} -> {snapArea.Action}");
+        }
     }
 
     // P/Invoke for IsWindowVisible
