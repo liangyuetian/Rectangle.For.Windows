@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Rectangle.Windows.Core;
 
@@ -50,6 +51,26 @@ public class WindowHistory
     /// 重复执行的超时时间（秒）
     /// </summary>
     private const double RepeatTimeoutSeconds = 2.0;
+
+    /// <summary>
+    /// 最大历史记录数量
+    /// </summary>
+    private const int MaxHistoryCount = 100;
+
+    /// <summary>
+    /// 历史记录的过期时间（分钟）
+    /// </summary>
+    private const int HistoryExpirationMinutes = 60;
+
+    /// <summary>
+    /// 最后清理时间
+    /// </summary>
+    private DateTime _lastCleanupTime = DateTime.MinValue;
+
+    /// <summary>
+    /// 清理间隔（分钟）
+    /// </summary>
+    private const int CleanupIntervalMinutes = 5;
 
     /// <summary>
     /// 保存窗口位置到恢复点（总是覆盖）
@@ -221,5 +242,58 @@ public class WindowHistory
         _restoreRects.Clear();
         _lastActions.Clear();
         _programAdjustedWindows.Clear();
+    }
+
+    /// <summary>
+    /// 清理过期和超量的历史记录
+    /// </summary>
+    public void CleanupIfNeeded()
+    {
+        var now = DateTime.Now;
+
+        // 检查是否需要清理
+        if ((now - _lastCleanupTime).TotalMinutes < CleanupIntervalMinutes)
+            return;
+
+        _lastCleanupTime = now;
+
+        // 清理过期的操作记录
+        var expiredKeys = new List<nint>();
+        foreach (var kvp in _lastActions)
+        {
+            if ((now - kvp.Value.LastExecutionTime).TotalMinutes > HistoryExpirationMinutes)
+            {
+                expiredKeys.Add(kvp.Key);
+            }
+        }
+
+        foreach (var key in expiredKeys)
+        {
+            _lastActions.Remove(key);
+        }
+
+        // 如果记录数量超过限制，清理最旧的
+        if (_restoreRects.Count > MaxHistoryCount)
+        {
+            var keysToRemove = _lastActions
+                .OrderBy(x => x.Value.LastExecutionTime)
+                .Take(_restoreRects.Count - MaxHistoryCount)
+                .Select(x => x.Key)
+                .ToList();
+
+            foreach (var key in keysToRemove)
+            {
+                _restoreRects.Remove(key);
+                _lastActions.Remove(key);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 获取历史记录统计信息
+    /// </summary>
+    public (int RestoreRects, int LastActions, int ProgramAdjusted) GetStatistics()
+    {
+        return (_restoreRects.Count, _lastActions.Count, _programAdjustedWindows.Count);
     }
 }
