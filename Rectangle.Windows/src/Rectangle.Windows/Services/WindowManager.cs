@@ -1,4 +1,5 @@
 using Rectangle.Windows.Core;
+using Rectangle.Windows.Core.Calculators;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -156,9 +157,6 @@ public class WindowManager
         
         var current = new WindowRect(x, y, w, h);
 
-        var calculator = _factory.GetCalculator(action);
-        if (calculator == null) return;
-
         // 检测窗口是否被用户手动移动
         bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
         
@@ -168,6 +166,16 @@ public class WindowManager
             _history.RemoveLastAction(hwnd);
             Console.WriteLine($"[WindowManager] 检测到窗口被用户手动移动: {processName}");
         }
+
+        // 处理重复执行模式（循环尺寸）
+        var actualAction = GetActualAction(hwnd, action, windowMovedExternally);
+        if (actualAction != action)
+        {
+            Console.WriteLine($"[WindowManager] 循环尺寸: {action} → {actualAction}");
+        }
+
+        var calculator = _factory.GetCalculator(actualAction);
+        if (calculator == null) return;
 
         // 保存或更新恢复点：
         // 1. 如果没有恢复点，保存当前位置
@@ -184,17 +192,60 @@ public class WindowManager
         // 执行其他操作时，清除最大化状态
         _maximizedWindows.Remove(hwnd);
 
-        var target = calculator.Calculate(workArea, current, action);
+        var target = calculator.Calculate(workArea, current, actualAction);
         
         // 为相邻窗口应用间隙
-        target = ApplyWindowGap(target, workArea, action);
+        target = ApplyWindowGap(target, workArea, actualAction);
         
         _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
 
         // 记录程序操作信息（包括操作类型、次数、时间）
+        // 注意：记录的是原始 action，而不是 actualAction，这样才能正确计数
         _history.RecordAction(hwnd, action, target.X, target.Y, target.Width, target.Height);
 
-        Console.WriteLine($"{GetActionDisplayName(action)} 了 {processName}");
+        Console.WriteLine($"{GetActionDisplayName(actualAction)} 了 {processName}");
+    }
+
+    /// <summary>
+    /// 根据重复执行模式获取实际应该执行的操作
+    /// </summary>
+    private WindowAction GetActualAction(nint hwnd, WindowAction requestedAction, bool windowMovedExternally)
+    {
+        // 如果窗口被用户手动移动，重置循环
+        if (windowMovedExternally)
+        {
+            return requestedAction;
+        }
+
+        // 获取配置的重复执行模式
+        var config = _configService?.Load();
+        var mode = config?.SubsequentExecutionMode ?? SubsequentExecutionMode.None;
+
+        // 如果模式是 None 或不支持循环，直接返回原操作
+        if (mode != SubsequentExecutionMode.CycleSize || 
+            !RepeatedExecutionsCalculator.SupportsCycle(requestedAction))
+        {
+            return requestedAction;
+        }
+
+        // 获取最后操作信息
+        if (!_history.TryGetLastAction(hwnd, out var lastAction))
+        {
+            // 第一次执行，返回原操作
+            return requestedAction;
+        }
+
+        // 检查是否是同一个操作或同一循环组中的操作
+        if (lastAction.Action == requestedAction || 
+            RepeatedExecutionsCalculator.InSameCycleGroup(lastAction.Action, requestedAction))
+        {
+            // 获取下一个循环操作
+            // 使用 lastAction.Count + 1 因为这是即将执行的次数
+            return RepeatedExecutionsCalculator.GetNextCycleAction(requestedAction, lastAction.Count + 1);
+        }
+
+        // 不同的操作，返回原操作
+        return requestedAction;
     }
 
     private nint GetTargetWindow()
