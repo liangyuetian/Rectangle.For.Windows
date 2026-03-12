@@ -1,3 +1,4 @@
+using System;
 using Rectangle.Windows.Core;
 using Rectangle.Windows.Services;
 

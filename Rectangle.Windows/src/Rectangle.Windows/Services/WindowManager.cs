@@ -264,9 +264,8 @@ public class WindowManager
             return requestedAction;
         }
 
-        // 检查是否是同一个操作或同一循环组中的操作
-        if (lastAction.Action == requestedAction || 
-            RepeatedExecutionsCalculator.InSameCycleGroup(lastAction.Action, requestedAction))
+        // 检查是否是同一个操作（只有连续按同一快捷键才触发循环）
+        if (lastAction.Action == requestedAction)
         {
             // 获取下一个循环操作
             // 使用 lastAction.Count + 1 因为这是即将执行的次数
