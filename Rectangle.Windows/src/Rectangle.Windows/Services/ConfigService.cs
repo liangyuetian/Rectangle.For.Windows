@@ -260,6 +260,18 @@ public class AppConfig
     /// </summary>
     public bool HapticFeedbackOnSnap { get; set; } = false;
 
+    // === 指定尺寸配置 ===
+
+    /// <summary>
+    /// 指定窗口宽度（像素）
+    /// </summary>
+    public int SpecifiedWidth { get; set; } = 1680;
+
+    /// <summary>
+    /// 指定窗口高度（像素）
+    /// </summary>
+    public int SpecifiedHeight { get; set; } = 1050;
+
     private static List<string> GetDefaultIgnoredApps()
     {
         return new List<string>
