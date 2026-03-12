@@ -67,10 +67,10 @@ internal static class Program
 
         // 创建服务
         var win32 = new Win32WindowService();
-        var factory = new CalculatorFactory();
+        _configService = new ConfigService();
+        var factory = new CalculatorFactory(_configService);
         var history = new WindowHistory();
         _windowManager = new WindowManager(win32, factory, history);
-        _configService = new ConfigService();
         
         // 创建活跃窗口跟踪服务
         _lastActiveWindowService = new LastActiveWindowService();

@@ -9,6 +9,14 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Rectangle.Windows.Services;
 
+// P/Invoke for SetCursorPos
+public partial class Win32WindowService
+{
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetCursorPos(int x, int y);
+}
+
 public unsafe class Win32WindowService
 {
     public nint GetForegroundWindowHandle()
@@ -26,20 +34,51 @@ public unsafe class Win32WindowService
     {
         Console.WriteLine($"[SetWindowRect] 尝试移动窗口 hwnd={hwnd} 到 ({x}, {y}, {width}, {height})");
         
+        // 验证窗口句柄是否有效
+        if (hwnd == 0)
+        {
+            Console.WriteLine("[SetWindowRect] 错误：窗口句柄为 0");
+            return false;
+        }
+
+        var hWnd = (HWND)hwnd;
+        
+        // 检查窗口是否存在
+        if (!PInvoke.IsWindow(hWnd))
+        {
+            Console.WriteLine($"[SetWindowRect] 错误：窗口句柄无效或窗口已关闭 hwnd={hwnd}");
+            return false;
+        }
+
+        // 检查窗口是否可见
+        if (!PInvoke.IsWindowVisible(hWnd))
+        {
+            Console.WriteLine($"[SetWindowRect] 警告：窗口不可见 hwnd={hwnd}");
+        }
+        
         // 先确保窗口处于正常状态（非最大化/最小化）
-        var style = (uint)GetWindowLong((HWND)hwnd, -16); // GWL_STYLE = -16
+        var style = (uint)GetWindowLong(hWnd, -16); // GWL_STYLE = -16
         
         // WS_MAXIMIZE = 0x01000000, 如果窗口已最大化，先还原
         if ((style & 0x01000000) != 0)
         {
             Console.WriteLine("[SetWindowRect] 窗口已最大化，先还原");
-            PInvoke.ShowWindow((HWND)hwnd, (SHOW_WINDOW_CMD)9); // SW_RESTORE = 9
+            PInvoke.ShowWindow(hWnd, (SHOW_WINDOW_CMD)9); // SW_RESTORE = 9
+            System.Threading.Thread.Sleep(50); // 等待窗口还原完成
+        }
+
+        // WS_MINIMIZE = 0x20000000, 如果窗口已最小化，先还原
+        if ((style & 0x20000000) != 0)
+        {
+            Console.WriteLine("[SetWindowRect] 窗口已最小化，先还原");
+            PInvoke.ShowWindow(hWnd, (SHOW_WINDOW_CMD)9); // SW_RESTORE = 9
+            System.Threading.Thread.Sleep(50); // 等待窗口还原完成
         }
 
         // SWP_FRAMECHANGED: 强制更新窗口框架（对 Electron 应用很重要）
         // SWP_ASYNCWINDOWPOS: 异步设置，避免某些应用阻塞
         var result = PInvoke.SetWindowPos(
-            (HWND)hwnd, 
+            hWnd, 
             HWND.Null, 
             x, y, width, height, 
             SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED | SET_WINDOW_POS_FLAGS.SWP_ASYNCWINDOWPOS);
@@ -48,13 +87,23 @@ public unsafe class Win32WindowService
         
         if (!result)
         {
+            // 获取错误码
+            var errorCode = Marshal.GetLastWin32Error();
+            Console.WriteLine($"[SetWindowRect] SetWindowPos 失败，错误码: {errorCode}");
+            
             // 如果失败，尝试不带 SWP_ASYNCWINDOWPOS 再试一次
             result = PInvoke.SetWindowPos(
-                (HWND)hwnd, 
+                hWnd, 
                 HWND.Null, 
                 x, y, width, height, 
                 SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED);
             Console.WriteLine($"[SetWindowRect] 重试结果: {result}");
+            
+            if (!result)
+            {
+                errorCode = Marshal.GetLastWin32Error();
+                Console.WriteLine($"[SetWindowRect] 重试失败，错误码: {errorCode}");
+            }
         }
         
         return result;
@@ -183,5 +232,25 @@ public unsafe class Win32WindowService
             Console.WriteLine($"[Win32WindowService] 获取进程名失败: {ex.Message}");
             return "未知";
         }
+    }
+
+    /// <summary>
+    /// 将光标移动到指定位置
+    /// </summary>
+    public bool SetCursorPos(int x, int y)
+    {
+        return Win32WindowService.SetCursorPos(x, y);
+    }
+
+    /// <summary>
+    /// 将光标移动到窗口中心
+    /// </summary>
+    public bool MoveCursorToWindowCenter(nint hwnd)
+    {
+        var (x, y, w, h) = GetWindowRect(hwnd);
+        var centerX = x + w / 2;
+        var centerY = y + h / 2;
+        
+        return SetCursorPos(centerX, centerY);
     }
 }
