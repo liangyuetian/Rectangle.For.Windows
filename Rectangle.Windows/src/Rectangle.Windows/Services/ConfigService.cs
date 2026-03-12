@@ -213,6 +213,11 @@ public class AppConfig
     /// </summary>
     public int FootprintAnimationDuration { get; set; } = 150;
 
+    /// <summary>
+    /// 是否启用 Unsnap 恢复功能（拖拽已吸附窗口时恢复原始尺寸）
+    /// </summary>
+    public bool UnsnapRestore { get; set; } = true;
+
     private static List<string> GetDefaultIgnoredApps()
     {
         return new List<string>

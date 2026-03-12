@@ -109,7 +109,7 @@ public class SnappingManager : IDisposable
 
         // 获取窗口矩形
         var (x, y, w, h) = _win32.GetWindowRect(hwnd);
-        
+
         // 开始拖拽
         _dragState.Reset();
         _dragState.IsDragging = true;
@@ -118,10 +118,27 @@ public class SnappingManager : IDisposable
         _dragState.InitialWindowRect = new WindowRect(x, y, w, h);
         _dragState.DragStartTime = DateTime.Now;
         _dragState.DragButton = MouseButton.Left;
-        _dragState.OriginalRect = new WindowRect(x, y, w, h);
-        
+
+        // Unsnap 恢复：检测窗口是否被程序调整过
+        // 如果是，从历史记录获取原始尺寸保存到 OriginalRect
+        var config = _configService?.Load();
+        if (config?.UnsnapRestore == true && _history.IsProgramAdjusted(hwnd))
+        {
+            if (_history.TryGetRestoreRect(hwnd, out var restoreRect))
+            {
+                _dragState.OriginalRect = new WindowRect(
+                    restoreRect.X, restoreRect.Y, restoreRect.W, restoreRect.H);
+                Console.WriteLine($"[SnappingManager] Unsnap: 检测到已吸附窗口，保存原始位置 ({restoreRect.X}, {restoreRect.Y}, {restoreRect.W}, {restoreRect.H})");
+            }
+        }
+        else
+        {
+            // 保存当前位置作为原始位置
+            _dragState.OriginalRect = new WindowRect(x, y, w, h);
+        }
+
         DragStarted?.Invoke(this, EventArgs.Empty);
-        
+
         Console.WriteLine($"[SnappingManager] 开始拖拽窗口: {hwnd}");
     }
 
@@ -160,20 +177,45 @@ public class SnappingManager : IDisposable
     {
         if (!_dragState.IsDragging) return;
 
+        var hwnd = _dragState.DraggedWindow;
+
         // 检查是否是有效拖拽（持续时间 > 100ms 或距离 > 10px）
-        bool isValidDrag = _dragState.GetDragDurationMs() > 100 || 
+        bool isValidDrag = _dragState.GetDragDurationMs() > 100 ||
                           _dragState.GetDragDistance() > 10;
+
+        var config = _configService?.Load();
 
         if (isValidDrag && _dragState.CurrentSnapArea != null)
         {
             // 执行吸附
             ExecuteSnap(_dragState.CurrentSnapArea);
         }
+        else if (isValidDrag && config?.UnsnapRestore == true && _dragState.OriginalRect.HasValue)
+        {
+            // Unsnap 恢复：拖拽结束但未吸附，恢复原始尺寸
+            var originalRect = _dragState.OriginalRect.Value;
+
+            // 检查窗口当前位置是否与原始位置不同（说明用户确实拖拽了）
+            var (currentX, currentY, currentW, currentH) = _win32.GetWindowRect(hwnd);
+            bool positionChanged = Math.Abs(currentX - originalRect.X) > 5 ||
+                                   Math.Abs(currentY - originalRect.Y) > 5;
+
+            if (positionChanged)
+            {
+                // 恢复窗口到原始尺寸
+                _win32.SetWindowRect(hwnd, originalRect.X, originalRect.Y, originalRect.Width, originalRect.Height);
+
+                // 清除程序调整标记
+                _history.ClearProgramAdjustedMark(hwnd);
+
+                Console.WriteLine($"[SnappingManager] Unsnap 恢复: 恢复窗口到原始位置 ({originalRect.X}, {originalRect.Y}, {originalRect.Width}, {originalRect.Height})");
+            }
+        }
 
         DragEnded?.Invoke(this, EventArgs.Empty);
-        
-        Console.WriteLine($"[SnappingManager] 结束拖拽窗口: {_dragState.DraggedWindow}");
-        
+
+        Console.WriteLine($"[SnappingManager] 结束拖拽窗口: {hwnd}");
+
         _dragState.Reset();
     }
 
