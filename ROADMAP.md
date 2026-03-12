@@ -418,57 +418,62 @@
 
 ---
 
-## 🎯 Phase 4: 高级窗口操作（优先级：🟡 中）
+## 🎯 Phase 4: 高级窗口操作 ✅
 
-### 4.1 双倍/减半尺寸
+### 4.1 双倍/减半尺寸 ✅
 
-#### 任务 4.1.1: 创建尺寸调整计算器
-- [ ] `DoubleHeightUpCalculator.cs`
-- [ ] `DoubleHeightDownCalculator.cs`
-- [ ] `DoubleWidthLeftCalculator.cs`
-- [ ] `DoubleWidthRightCalculator.cs`
-- [ ] `HalveHeightUpCalculator.cs`
-- [ ] `HalveHeightDownCalculator.cs`
-- [ ] `HalveWidthLeftCalculator.cs`
-- [ ] `HalveWidthRightCalculator.cs`
+#### 任务 4.1.1: 创建尺寸调整计算器 ✅
+- [x] `DoubleHeightUpCalculator.cs`
+- [x] `DoubleHeightDownCalculator.cs`
+- [x] `DoubleWidthLeftCalculator.cs`
+- [x] `DoubleWidthRightCalculator.cs`
+- [x] `HalveHeightUpCalculator.cs`
+- [x] `HalveHeightDownCalculator.cs`
+- [x] `HalveWidthLeftCalculator.cs`
+- [x] `HalveWidthRightCalculator.cs`
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
-#### 任务 4.1.2: 实现逻辑
-- [ ] 保持窗口一边固定，另一边扩展/收缩
-- [ ] 处理屏幕边界限制
-- [ ] 应用最小/最大尺寸限制
+#### 任务 4.1.2: 实现逻辑 ✅
+- [x] 保持窗口一边固定，另一边扩展/收缩
+- [x] 处理屏幕边界限制
+- [x] 应用最小/最大尺寸限制
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
 **预计工作量**：4-6 小时
 
 ---
 
-### 4.2 单独调整宽度/高度
+### 4.2 单独调整宽度/高度 ✅
 
-#### 任务 4.2.1: 创建单维度调整计算器
-- [ ] `LargerWidthCalculator.cs`
-- [ ] `SmallerWidthCalculator.cs`
-- [ ] `LargerHeightCalculator.cs`
-- [ ] `SmallerHeightCalculator.cs`
+#### 任务 4.2.1: 创建单维度调整计算器 ✅
+- [x] `LargerWidthCalculator.cs`
+- [x] `SmallerWidthCalculator.cs`
+- [x] `LargerHeightCalculator.cs`
+- [x] `SmallerHeightCalculator.cs`
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
-#### 任务 4.2.2: 实现逻辑
-- [ ] 使用 `SizeOffset` 配置
-- [ ] 保持窗口居中或保持位置
-- [ ] 处理边界情况
+#### 任务 4.2.2: 实现逻辑 ✅
+- [x] 使用 `SizeOffset` 配置
+- [x] 保持窗口居中或保持位置
+- [x] 处理边界情况
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
 **预计工作量**：3-4 小时
 
 ---
 
-### 4.3 指定尺寸
+### 4.3 指定尺寸 ✅
 
-#### 任务 4.3.1: 创建指定尺寸功能
-- [ ] `SpecifiedCalculator.cs`
-- [ ] 添加 `SpecifiedWidth` 配置（默认 1680）
-- [ ] 添加 `SpecifiedHeight` 配置（默认 1050）
-- [ ] 居中窗口
+#### 任务 4.3.1: 创建指定尺寸功能 ✅
+- [x] `SpecifiedCalculator.cs`
+- [x] 添加 `SpecifiedWidth` 配置（默认 1680）
+- [x] 添加 `SpecifiedHeight` 配置（默认 1050）
+- [x] 居中窗口
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
-#### 任务 4.3.2: 设置界面
-- [ ] 添加指定尺寸输入框
-- [ ] 添加快捷键配置
+#### 任务 4.3.2: 设置界面 ⏸️
+- [ ] ~~添加指定尺寸输入框~~ (跳过 UI 任务)
+- [ ] ~~添加快捷键配置~~
 
 **预计工作量**：2-3 小时
 
@@ -734,7 +739,7 @@
 
 ## 📊 当前进度
 
-- **总体完成度**: ~85%
+- **总体完成度**: ~88%
 - **Phase 1 进度**: 3/3 (100%) - ✅ Phase 1 全部完成！
   - ✅ 任务 1.1: 重复执行模式（含循环尺寸）
   - ✅ 任务 1.2: 高级配置选项（5/6 完成，UI 跳过）
@@ -749,13 +754,16 @@
   - ✅ 任务 3.1: 九等分布局
   - ✅ 任务 3.2: 八等分布局
   - ✅ 任务 3.3: 其他高级布局
-- **Phase 4 进度**: 0/3 (0%)
+- **Phase 4 进度**: 3/3 (100%) - ✅ Phase 4 全部完成！
+  - ✅ 任务 4.1: 双倍/减半尺寸
+  - ✅ 任务 4.2: 单独调整宽度/高度
+  - ✅ 任务 4.3: 指定尺寸
 - **Phase 5 进度**: 0/3 (0%)
 - **Phase 6 进度**: 0/1 (0%)
 - **Phase 7 进度**: 0/3 (0%)
 
 **最后更新**: 2026-03-12
-**最新提交**: `4cf1ecc` - feat: 添加高级布局的循环执行支持
+**最新提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
 ---
 
