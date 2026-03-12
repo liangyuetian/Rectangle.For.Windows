@@ -98,5 +98,11 @@ public enum WindowAction
     Restore,
     // 显示器
     NextDisplay,
-    PreviousDisplay
+    PreviousDisplay,
+    // 多窗口管理
+    TileAll,
+    CascadeAll,
+    ReverseAll,
+    TileActiveApp,
+    CascadeActiveApp
 }
