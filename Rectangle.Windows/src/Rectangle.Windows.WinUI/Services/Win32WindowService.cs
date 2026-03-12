@@ -29,16 +29,48 @@ public unsafe class Win32WindowService
     {
         Console.WriteLine($"[SetWindowRect] 尝试移动窗口 hwnd={hwnd} 到 ({x}, {y}, {width}, {height})");
         
+        // 验证窗口句柄是否有效
+        if (hwnd == 0)
+        {
+            Console.WriteLine("[SetWindowRect] 错误：窗口句柄为 0");
+            return false;
+        }
+
+        var hWnd = (HWND)hwnd;
+        
+        // 检查窗口是否存在
+        if (!PInvoke.IsWindow(hWnd))
+        {
+            Console.WriteLine($"[SetWindowRect] 错误：窗口句柄无效或窗口已关闭 hwnd={hwnd}");
+            return false;
+        }
+
+        // 检查窗口是否可见
+        if (!PInvoke.IsWindowVisible(hWnd))
+        {
+            Console.WriteLine($"[SetWindowRect] 警告：窗口不可见 hwnd={hwnd}");
+        }
+        
         var style = (uint)GetWindowLongPtr((nint)hwnd, -16);
         
+        // WS_MAXIMIZE = 0x01000000, 如果窗口已最大化，先还原
         if ((style & 0x01000000) != 0)
         {
             Console.WriteLine("[SetWindowRect] 窗口已最大化，先还原");
-            PInvoke.ShowWindow((HWND)hwnd, SHOW_WINDOW_CMD.SW_RESTORE);
+            PInvoke.ShowWindow(hWnd, SHOW_WINDOW_CMD.SW_RESTORE);
+            System.Threading.Thread.Sleep(50); // 等待窗口还原完成
+        }
+
+        // WS_MINIMIZE = 0x20000000, 如果窗口已最小化，先还原
+        if ((style & 0x20000000) != 0)
+        {
+            Console.WriteLine("[SetWindowRect] 窗口已最小化，先还原");
+            PInvoke.ShowWindow(hWnd, SHOW_WINDOW_CMD.SW_RESTORE);
+            System.Threading.Thread.Sleep(50); // 等待窗口还原完成
         }
 
         var result = PInvoke.SetWindowPos(
-            (HWND)hwnd, 
+            hWnd, 
             HWND.Null, 
             x, y, width, height, 
             SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED | SET_WINDOW_POS_FLAGS.SWP_ASYNCWINDOWPOS);
@@ -47,12 +79,22 @@ public unsafe class Win32WindowService
         
         if (!result)
         {
+            // 获取错误码
+            var errorCode = Marshal.GetLastWin32Error();
+            Console.WriteLine($"[SetWindowRect] SetWindowPos 失败，错误码: {errorCode}");
+            
             result = PInvoke.SetWindowPos(
-                (HWND)hwnd, 
+                hWnd, 
                 HWND.Null, 
                 x, y, width, height, 
                 SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED);
             Console.WriteLine($"[SetWindowRect] 重试结果: {result}");
+            
+            if (!result)
+            {
+                errorCode = Marshal.GetLastWin32Error();
+                Console.WriteLine($"[SetWindowRect] 重试失败，错误码: {errorCode}");
+            }
         }
         
         return result;
