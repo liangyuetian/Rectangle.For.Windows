@@ -38,8 +38,8 @@
 
 **实现步骤**：
 
-#### 任务 1.1.1: 创建重复执行模式枚举
-- [ ] 创建 `SubsequentExecutionMode.cs`
+#### 任务 1.1.1: 创建重复执行模式枚举 ✅
+- [x] 创建 `SubsequentExecutionMode.cs`
   ```csharp
   public enum SubsequentExecutionMode
   {
@@ -49,9 +49,10 @@
       Resize          // 调整大小
   }
   ```
+- **提交**: `6978b7f` - feat: 添加重复执行模式基础架构
 
-#### 任务 1.1.2: 扩展 WindowHistory 记录操作次数
-- [ ] 在 `WindowHistory.cs` 中添加 `RectangleAction` 结构
+#### 任务 1.1.2: 扩展 WindowHistory 记录操作次数 ✅
+- [x] 在 `WindowHistory.cs` 中添加 `RectangleAction` 结构
   ```csharp
   public struct RectangleAction
   {
@@ -60,23 +61,32 @@
       public DateTime LastExecutionTime;
   }
   ```
-- [ ] 添加 `GetLastAction(nint hwnd)` 方法
-- [ ] 添加 `IncrementActionCount(nint hwnd, WindowAction action)` 方法
+- [x] 添加 `TryGetLastAction(nint hwnd)` 方法
+- [x] 添加 `RecordAction(nint hwnd, WindowAction action)` 方法
+- [x] 实现自动计数和超时重置逻辑
+- **提交**: `6978b7f` - feat: 添加重复执行模式基础架构
 
-#### 任务 1.1.3: 实现循环尺寸计算器
-- [ ] 创建 `RepeatedExecutionsCalculation.cs`
-- [ ] 实现三分之一循环：1/3 → 2/3 → 1/3
-- [ ] 实现半屏循环：左半 → 右半 → 左半
-- [ ] 实现四等分循环
+#### 任务 1.1.3: 实现循环尺寸计算器 ✅
+- [x] 创建 `RepeatedExecutionsCalculator.cs`
+- [x] 实现三分之一循环：FirstThird → CenterThird → LastThird
+- [x] 实现三分之二循环：FirstTwoThirds → CenterTwoThirds → LastTwoThirds
+- [x] 实现左右半屏循环：LeftHalf → RightHalf
+- [x] 实现上下半屏循环：TopHalf → BottomHalf
+- [x] 实现四等分循环：FirstFourth → ... → LastFourth
+- [x] 实现四分之三循环：FirstThreeFourths → ... → LastThreeFourths
+- **提交**: `c6328f8` - feat: 实现循环尺寸功能
 
-#### 任务 1.1.4: 集成到 WindowManager
-- [ ] 在 `WindowManager.Execute()` 中检测重复执行
-- [ ] 根据配置选择执行模式
-- [ ] 添加超时机制（2秒内算重复执行）
+#### 任务 1.1.4: 集成到 WindowManager ✅
+- [x] 在 `WindowManager.Execute()` 中检测重复执行
+- [x] 添加 `GetActualAction()` 方法处理循环逻辑
+- [x] 根据配置选择执行模式
+- [x] 实现超时机制（2秒内算重复执行）
+- [x] 支持同一循环组内任意操作触发循环
+- **提交**: `c6328f8` - feat: 实现循环尺寸功能
 
-#### 任务 1.1.5: 添加配置选项
-- [ ] 在 `AppConfig` 中添加 `SubsequentExecutionMode` 配置
-- [ ] 在设置界面添加选项
+#### 任务 1.1.5: 添加配置选项 ⏸️
+- [x] 在 `AppConfig` 中添加 `SubsequentExecutionMode` 配置
+- [ ] ~~在设置界面添加选项~~ (暂时跳过 UI 任务)
 
 **预计工作量**：4-6 小时
 
@@ -679,8 +689,10 @@
 
 ## 📊 当前进度
 
-- **总体完成度**: ~60%
-- **Phase 1 进度**: 0/3 (0%)
+- **总体完成度**: ~62%
+- **Phase 1 进度**: 0.8/3 (27%) - 任务 1.1 进行中
+  - ✅ 任务 1.1.1-1.1.4 已完成
+  - 🔄 任务 1.1.5 进行中
 - **Phase 2 进度**: 0/5 (0%)
 - **Phase 3 进度**: 0/3 (0%)
 - **Phase 4 进度**: 0/3 (0%)
@@ -689,6 +701,7 @@
 - **Phase 7 进度**: 0/3 (0%)
 
 **最后更新**: 2026-03-12
+**最新提交**: `c6328f8` - feat: 实现循环尺寸功能
 
 ---
 
