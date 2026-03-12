@@ -32,6 +32,11 @@ public class SnappingManager : IDisposable
     private int _cornerSize = 20;
     private int _snapModifiers = 0;
 
+    // 性能优化：帧率限制
+    private DateTime _lastUpdateTime = DateTime.MinValue;
+    private readonly int _updateIntervalMs = 16; // ~60fps
+    private SnapArea? _lastSnapArea;
+
     // 事件
     public event EventHandler<SnapEventArgs>? SnapTriggered;
     public event EventHandler? DragStarted;
@@ -174,6 +179,13 @@ public class SnappingManager : IDisposable
     {
         if (!_dragState.IsDragging) return;
 
+        // 帧率限制：检查是否应该更新
+        var now = DateTime.Now;
+        var elapsed = (now - _lastUpdateTime).TotalMilliseconds;
+        if (elapsed < _updateIntervalMs)
+            return;
+        _lastUpdateTime = now;
+
         _dragState.CurrentMousePos = e.Point;
 
         // 检查拖拽距离，如果太小可能是点击而不是拖拽
@@ -182,17 +194,79 @@ public class SnappingManager : IDisposable
 
         // 计算吸附区域
         var snapArea = CalculateSnapArea(e.Point);
-        
+
+        // 检测吸附区域是否变化
+        bool snapAreaChanged = !SnapAreaEquals(snapArea, _lastSnapArea);
+
         if (snapArea != null)
         {
-            // 显示吸附预览（后续实现）
             _dragState.CurrentSnapArea = snapArea;
-            Console.WriteLine($"[SnappingManager] 检测到吸附区域: {snapArea.Name}");
+
+            // 显示预览窗口
+            if (snapAreaChanged)
+            {
+                ShowSnapPreview(snapArea);
+                Console.WriteLine($"[SnappingManager] 检测到吸附区域: {snapArea.Name}");
+            }
         }
         else
         {
             _dragState.CurrentSnapArea = null;
+
+            // 隐藏预览窗口
+            if (_lastSnapArea != null)
+            {
+                Views.FootprintWindow.Instance.Hide();
+            }
         }
+
+        _lastSnapArea = snapArea;
+    }
+
+    /// <summary>
+    /// 显示吸附预览窗口
+    /// </summary>
+    private void ShowSnapPreview(SnapArea snapArea)
+    {
+        if (_windowManager == null) return;
+
+        var hwnd = _dragState.DraggedWindow;
+        if (hwnd == 0) return;
+
+        // 获取目标工作区
+        var workArea = GetWorkAreaFromPoint(_dragState.CurrentMousePos);
+        if (!workArea.HasValue) return;
+
+        // 计算预览窗口位置
+        var calculator = new CalculatorFactory(_configService).GetCalculator(snapArea.Action);
+        if (calculator == null) return;
+
+        var previewRect = calculator.Calculate(workArea.Value, default, snapArea.Action);
+
+        // 显示预览
+        var footprint = Views.FootprintWindow.Instance;
+        var config = _configService?.Load();
+
+        // 配置预览窗口
+        footprint.Configure(
+            alpha: config?.FootprintAlpha ?? 0.3f,
+            borderWidth: config?.FootprintBorderWidth ?? 2,
+            enableFade: config?.FootprintFade ?? true,
+            animationDuration: config?.FootprintAnimationDuration ?? 150
+        );
+
+        // 转换 WindowRect 到 System.Drawing.Rectangle
+        footprint.ShowPreview(previewRect.X, previewRect.Y, previewRect.Width, previewRect.Height);
+    }
+
+    /// <summary>
+    /// 比较两个吸附区域是否相同
+    /// </summary>
+    private static bool SnapAreaEquals(SnapArea? a, SnapArea? b)
+    {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.Action == b.Action && a.Type == b.Type;
     }
 
     /// <summary>
