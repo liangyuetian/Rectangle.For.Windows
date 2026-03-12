@@ -115,9 +115,12 @@
 - [x] 重构 CalculatorFactory 支持依赖注入
 - **提交**: `7f017e3` - feat: 实现接近最大化配置
 
-#### 任务 1.2.3: 实现最小窗口尺寸限制
-- [ ] 在所有 Calculator 中应用最小尺寸限制
-- [ ] 创建 `ApplyMinimumSize()` 辅助方法
+#### 任务 1.2.3: 实现最小窗口尺寸限制 ✅
+- [x] 创建 `WindowRectExtensions.cs` 扩展方法
+- [x] 实现 `ApplyMinimumSize()` 应用最小尺寸限制
+- [x] 实现 `ClampToWorkArea()` 确保窗口在屏幕内
+- [x] 在 WindowManager 中集成应用
+- **提交**: `fb789ec` - feat: 实现最小窗口尺寸限制
 
 #### 任务 1.2.4: 实现光标位置检测
 - [ ] 创建 `ScreenDetection.cs`
