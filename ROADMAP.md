@@ -208,21 +208,22 @@
 - [x] 创建 `MouseButton` 和 `SnapAreaType` 枚举
 - **提交**: `1b3350d` - feat: 实现拖拽状态管理
 
-#### 任务 2.1.3: 创建 SnappingManager
-- [ ] 创建 `SnappingManager.cs`
-- [ ] 实现 `StartDrag()` 方法
-- [ ] 实现 `UpdateDrag()` 方法
-- [ ] 实现 `EndDrag()` 方法
-- [ ] 实现 `CancelDrag()` 方法
+#### 任务 2.1.3: 创建 SnappingManager ✅
+- [x] 创建 `SnappingManager.cs`
+- [x] 实现 `StartDrag()` 方法（通过 OnMouseDown）
+- [x] 实现 `UpdateDrag()` 方法（通过 OnMouseMove）
+- [x] 实现 `EndDrag()` 方法（通过 OnMouseUp）
+- [x] 实现 `CancelDrag()` 方法（通过 _dragState.Reset()）
+- **提交**: `762101f` - feat: 创建 SnappingManager（Phase 2.1.3）
 
 **预计工作量**：6-8 小时
 
 ---
 
-### 2.2 吸附区域检测
+### 2.2 吸附区域检测 ✅
 
-#### 任务 2.2.1: 定义吸附区域
-- [ ] 创建 `SnapArea.cs`
+#### 任务 2.2.1: 定义吸附区域 ✅
+- [x] 创建 `SnapArea` 类（在 DragState.cs 中）
   ```csharp
   public class SnapArea
   {
@@ -231,27 +232,31 @@
       public SnapAreaType Type { get; set; }  // Edge, Corner
   }
   ```
+- **提交**: `1b3350d` - feat: 实现拖拽状态管理
 
-#### 任务 2.2.2: 实现吸附区域计算
-- [ ] 创建 `SnapAreaCalculator.cs`
-- [ ] 计算屏幕边缘吸附区域（上、下、左、右）
-- [ ] 计算屏幕角落吸附区域（四个角）
-- [ ] 支持多显示器
-- [ ] 可配置吸附区域大小（默认 5 像素）
+#### 任务 2.2.2: 实现吸附区域计算 ✅
+- [x] 在 `SnappingManager.cs` 中实现吸附区域计算
+- [x] 计算屏幕边缘吸附区域（上、下、左、右）
+- [x] 计算屏幕角落吸附区域（四个角）
+- [x] 支持多显示器（通过 GetWorkAreaFromPoint）
+- [x] 可配置吸附区域大小（默认 5 像素）
+- **提交**: `762101f` - feat: 创建 SnappingManager
 
-#### 任务 2.2.3: 光标位置检测
-- [ ] 实现 `GetSnapAreaAtCursor()` 方法
-- [ ] 实时检测光标是否在吸附区域内
-- [ ] 返回对应的 WindowAction
+#### 任务 2.2.3: 光标位置检测 ✅
+- [x] 实现 `CalculateSnapArea()` 方法
+- [x] 实现 `GetWorkAreaFromPoint()` 方法
+- [x] 实时检测光标是否在吸附区域内
+- [x] 返回对应的 WindowAction
+- **提交**: `762101f` - feat: 创建 SnappingManager
 
 **预计工作量**：4-6 小时
 
 ---
 
-### 2.3 预览窗口（Footprint）
+### 2.3 预览窗口（Footprint）⏳
 
 #### 任务 2.3.1: 创建预览窗口
-- [ ] 创建 `FootprintWindow.cs`（WinForms 或 WPF）
+- [ ] 创建 `FootprintWindow.cs`（WinForms）
 - [ ] 半透明窗口（Alpha = 0.3）
 - [ ] 边框高亮（2px）
 - [ ] 无标题栏、无任务栏图标

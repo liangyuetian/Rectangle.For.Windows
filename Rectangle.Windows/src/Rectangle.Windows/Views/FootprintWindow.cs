@@ -15,6 +15,13 @@ public class FootprintWindow : Form
     private static FootprintWindow? _instance;
     private static readonly object _lock = new();
 
+    private Timer? _fadeTimer;
+    private float _currentAlpha;
+    private float _targetAlpha;
+    private bool _isFadingIn;
+    private int _animationDuration = 150; // 默认动画时长（毫秒）
+    private bool _enableFade = true;
+
     /// <summary>
     /// 预览窗口的透明度（0.0 - 1.0）
     /// </summary>
@@ -38,6 +45,26 @@ public class FootprintWindow : Form
     /// </summary>
     [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
     public Color BorderColor { get; set; } = Color.FromArgb(0, 120, 212);
+
+    /// <summary>
+    /// 是否启用淡入淡出动画
+    /// </summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public bool EnableFade
+    {
+        get => _enableFade;
+        set => _enableFade = value;
+    }
+
+    /// <summary>
+    /// 动画时长（毫秒）
+    /// </summary>
+    [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
+    public int AnimationDuration
+    {
+        get => _animationDuration;
+        set => _animationDuration = Math.Max(50, Math.Min(500, value));
+    }
 
     /// <summary>
     /// 获取单例实例
@@ -117,7 +144,15 @@ public class FootprintWindow : Form
 
         if (!Visible)
         {
-            Show();
+            if (_enableFade)
+            {
+                StartFadeIn();
+            }
+            else
+            {
+                _currentAlpha = Alpha;
+                base.Show();
+            }
         }
 
         Refresh();
@@ -144,7 +179,120 @@ public class FootprintWindow : Form
 
         if (Visible)
         {
-            base.Hide();
+            if (_enableFade)
+            {
+                StartFadeOut();
+            }
+            else
+            {
+                base.Hide();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 立即隐藏（无动画）
+    /// </summary>
+    public void HideImmediate()
+    {
+        if (InvokeRequired)
+        {
+            Invoke(new Action(HideImmediate));
+            return;
+        }
+
+        StopFadeTimer();
+        _currentAlpha = 0;
+        base.Hide();
+    }
+
+    private void StartFadeIn()
+    {
+        StopFadeTimer();
+
+        _currentAlpha = 0;
+        _targetAlpha = Alpha;
+        _isFadingIn = true;
+
+        base.Show();
+
+        _fadeTimer = new Timer
+        {
+            Interval = 16 // ~60fps
+        };
+        _fadeTimer.Tick += FadeTimer_Tick;
+
+        var startTime = DateTime.Now;
+        _fadeTimer.Tag = startTime;
+
+        _fadeTimer.Start();
+    }
+
+    private void StartFadeOut()
+    {
+        StopFadeTimer();
+
+        _currentAlpha = Alpha;
+        _targetAlpha = 0;
+        _isFadingIn = false;
+
+        _fadeTimer = new Timer
+        {
+            Interval = 16 // ~60fps
+        };
+        _fadeTimer.Tick += FadeTimer_Tick;
+
+        var startTime = DateTime.Now;
+        _fadeTimer.Tag = startTime;
+
+        _fadeTimer.Start();
+    }
+
+    private void FadeTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_fadeTimer == null || _fadeTimer.Tag is not DateTime startTime)
+            return;
+
+        var elapsed = (DateTime.Now - startTime).TotalMilliseconds;
+        var progress = Math.Min(1.0, elapsed / _animationDuration);
+
+        // 使用 EaseOutQuad 缓动函数
+        var easedProgress = 1 - (1 - progress) * (1 - progress);
+
+        var startAlpha = _isFadingIn ? 0 : Alpha;
+        var endAlpha = _isFadingIn ? Alpha : 0;
+
+        _currentAlpha = (float)(startAlpha + (endAlpha - startAlpha) * easedProgress);
+
+        // 更新窗口透明度
+        UpdateWindowOpacity();
+
+        if (progress >= 1.0)
+        {
+            StopFadeTimer();
+
+            if (!_isFadingIn)
+            {
+                base.Hide();
+            }
+        }
+    }
+
+    private void UpdateWindowOpacity()
+    {
+        // 使用 SetLayeredWindowAttributes 设置窗口透明度
+        const int LWA_ALPHA = 0x00000002;
+        var opacity = (byte)(_currentAlpha * 255);
+        NativeMethods.SetLayeredWindowAttributes(Handle, 0, opacity, LWA_ALPHA);
+    }
+
+    private void StopFadeTimer()
+    {
+        if (_fadeTimer != null)
+        {
+            _fadeTimer.Stop();
+            _fadeTimer.Dispose();
+            _fadeTimer = null;
         }
     }
 
@@ -207,12 +355,14 @@ public class FootprintWindow : Form
     /// <summary>
     /// 配置预览窗口样式
     /// </summary>
-    public void Configure(float? alpha = null, int? borderWidth = null, Color? fillColor = null, Color? borderColor = null)
+    public void Configure(float? alpha = null, int? borderWidth = null, Color? fillColor = null, Color? borderColor = null, bool? enableFade = null, int? animationDuration = null)
     {
         if (alpha.HasValue) Alpha = alpha.Value;
         if (borderWidth.HasValue) BorderWidth = borderWidth.Value;
         if (fillColor.HasValue) FillColor = fillColor.Value;
         if (borderColor.HasValue) BorderColor = borderColor.Value;
+        if (enableFade.HasValue) EnableFade = enableFade.Value;
+        if (animationDuration.HasValue) AnimationDuration = animationDuration.Value;
     }
 
     /// <summary>
@@ -220,9 +370,10 @@ public class FootprintWindow : Form
     /// </summary>
     public new void Dispose()
     {
+        StopFadeTimer();
         if (Visible)
         {
-            Hide();
+            base.Hide();
         }
         base.Dispose();
         _instance = null;
@@ -239,4 +390,7 @@ internal static class NativeMethods
 
     [System.Runtime.InteropServices.DllImport("user32.dll")]
     internal static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+    [System.Runtime.InteropServices.DllImport("user32.dll")]
+    internal static extern bool SetLayeredWindowAttributes(IntPtr hWnd, uint crKey, byte bAlpha, uint dwFlags);
 }
