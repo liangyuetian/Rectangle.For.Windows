@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.IO;
+using Rectangle.Windows.Core;
 
 namespace Rectangle.Windows.Services;
 
@@ -120,6 +121,11 @@ public class AppConfig
     public List<string> IgnoredApps { get; set; } = GetDefaultIgnoredApps();
     public Dictionary<string, ShortcutConfig> Shortcuts { get; set; } = new();
     public SnapAreaConfig SnapAreas { get; set; } = new();
+    
+    /// <summary>
+    /// 重复执行模式：连续按同一快捷键时的行为
+    /// </summary>
+    public SubsequentExecutionMode SubsequentExecutionMode { get; set; } = SubsequentExecutionMode.CycleSize;
 
     private static List<string> GetDefaultIgnoredApps()
     {
