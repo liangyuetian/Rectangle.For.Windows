@@ -49,7 +49,7 @@ public class MouseHookService : IDisposable
                 new HINSTANCE(System.Diagnostics.Process.GetCurrentProcess().Handle),
                 0);
 
-            if (_hookHandle == IntPtr.Zero)
+            if (_hookHandle.Value == IntPtr.Zero)
             {
                 Console.WriteLine("[MouseHookService] 安装鼠标钩子失败");
                 return false;
@@ -75,10 +75,10 @@ public class MouseHookService : IDisposable
 
         try
         {
-            if (_hookHandle != IntPtr.Zero)
+            if (_hookHandle.Value != IntPtr.Zero)
             {
                 PInvoke.UnhookWindowsHookEx(_hookHandle);
-                _hookHandle = IntPtr.Zero;
+                _hookHandle = new HHOOK(IntPtr.Zero);
             }
 
             _isHookInstalled = false;
@@ -134,12 +134,17 @@ public class MouseHookService : IDisposable
         return PInvoke.CallNextHookEx(HHOOK.Null, nCode, wParam, lParam);
     }
 
+    // P/Invoke for GetCursorPos
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool GetCursorPos(out POINT lpPoint);
+
     /// <summary>
     /// 获取当前光标位置
     /// </summary>
-    public static System.Drawing.Point GetCursorPos()
+    public static System.Drawing.Point GetCursorPosition()
     {
-        if (PInvoke.GetCursorPos(out var pt))
+        if (GetCursorPos(out var pt))
         {
             return new System.Drawing.Point(pt.x, pt.y);
         }
@@ -151,7 +156,7 @@ public class MouseHookService : IDisposable
     /// </summary>
     public static nint GetWindowUnderCursor()
     {
-        var pt = GetCursorPos();
+        var pt = GetCursorPosition();
         return (nint)PInvoke.WindowFromPoint(pt).Value;
     }
 
@@ -169,8 +174,19 @@ public class MouseHookEventArgs : EventArgs
     public int X { get; set; }
     public int Y { get; set; }
     public int Timestamp { get; set; }
+    public System.Windows.Forms.MouseButtons Button { get; set; }
 
     public System.Drawing.Point Point => new(X, Y);
+}
+
+/// <summary>
+/// Win32 POINT 结构
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+public struct POINT
+{
+    public int x;
+    public int y;
 }
 
 /// <summary>

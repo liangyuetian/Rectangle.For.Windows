@@ -132,6 +132,16 @@ public class LastActiveWindowService : IDisposable
         }
     }
 
+    // P/Invoke for IsWindow
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindow(IntPtr hWnd);
+
+    // P/Invoke for IsWindowVisible
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
+
     /// <summary>
     /// 判断窗口是否是有效的应用程序窗口
     /// </summary>
@@ -144,14 +154,14 @@ public class LastActiveWindowService : IDisposable
             var hWnd = new HWND(hwnd);
 
             // 检查窗口句柄是否仍然有效
-            if (!PInvoke.IsWindow(hWnd))
+            if (!IsWindow(hWnd.Value))
             {
                 Console.WriteLine($"[LastActiveWindowService] 窗口句柄无效: {hwnd}");
                 return false;
             }
 
             // 检查窗口是否可见
-            if (!PInvoke.IsWindowVisible(hWnd)) return false;
+            if (!IsWindowVisible(hWnd.Value)) return false;
 
             // 获取窗口标题
             int titleLength = PInvoke.GetWindowTextLength(hWnd);

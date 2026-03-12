@@ -39,14 +39,14 @@ public unsafe class Win32WindowService
         var hWnd = (HWND)hwnd;
         
         // 检查窗口是否存在
-        if (!PInvoke.IsWindow(hWnd))
+        if (!IsWindowInternal(hWnd))
         {
             Console.WriteLine($"[SetWindowRect] 错误：窗口句柄无效或窗口已关闭 hwnd={hwnd}");
             return false;
         }
 
         // 检查窗口是否可见
-        if (!PInvoke.IsWindowVisible(hWnd))
+        if (!IsWindowVisibleInternal(hWnd))
         {
             Console.WriteLine($"[SetWindowRect] 警告：窗口不可见 hwnd={hwnd}");
         }
@@ -163,5 +163,25 @@ public unsafe class Win32WindowService
         {
             return "未知";
         }
+    }
+
+    // P/Invoke for IsWindow
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindow(void* hWnd);
+
+    // P/Invoke for IsWindowVisible
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(void* hWnd);
+
+    private bool IsWindowInternal(HWND hWnd)
+    {
+        return IsWindow(hWnd.Value);
+    }
+
+    private bool IsWindowVisibleInternal(HWND hWnd)
+    {
+        return IsWindowVisible(hWnd.Value);
     }
 }

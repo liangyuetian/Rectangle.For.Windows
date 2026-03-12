@@ -330,10 +330,15 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
         int iconWidth = hasImage ? 24 : 0;
         int textLeft = hasImage ? iconWidth + leftPadding : leftPadding;
 
+        // 判断是否有快捷键，只有有快捷键时才预留空间
+        var menuItem = e.Item as ToolStripMenuItem;
+        bool hasShortcut = menuItem != null && !string.IsNullOrEmpty(menuItem.ShortcutKeyDisplayString);
+        int actualShortcutWidth = hasShortcut ? shortcutWidth : 0;
+
         var textRect = new System.Drawing.Rectangle(
             textLeft,
             2,
-            item.Width - textLeft - rightPadding - shortcutWidth,
+            item.Width - textLeft - rightPadding - actualShortcutWidth,
             item.Height - 4);
 
         // 绘制菜单项文本
@@ -349,11 +354,11 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
         Font font = e.TextFont
             ?? SystemFonts.MenuFont
             ?? new Font("Microsoft YaHei UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
-     
+
         g.DrawString(item.Text, font, textBrush, textRect, format);
 
         // 绘制快捷键文本（如果有）
-        if (e.Item is ToolStripMenuItem menuItem && !string.IsNullOrEmpty(menuItem.ShortcutKeyDisplayString))
+        if (hasShortcut)
         {
             // 快捷键区域在右侧，固定宽度
             var shortcutRect = new System.Drawing.Rectangle(

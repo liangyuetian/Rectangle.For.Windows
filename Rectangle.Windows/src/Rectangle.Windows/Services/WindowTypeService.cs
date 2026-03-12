@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.InteropServices;
 using Windows.Win32;
 using Windows.Win32.Foundation;
@@ -130,6 +131,15 @@ public class WindowTypeService
         }
     }
 
+    // P/Invoke for IsIconic and IsZoomed
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsZoomed(IntPtr hWnd);
+
     /// <summary>
     /// 检查窗口是否是最小化状态
     /// </summary>
@@ -139,8 +149,7 @@ public class WindowTypeService
         
         try
         {
-            var hWnd = new HWND(hwnd);
-            return PInvoke.IsIconic(hWnd);
+            return IsIconic((IntPtr)hwnd);
         }
         catch
         {
@@ -157,8 +166,7 @@ public class WindowTypeService
         
         try
         {
-            var hWnd = new HWND(hwnd);
-            return PInvoke.IsZoomed(hWnd);
+            return IsZoomed((IntPtr)hwnd);
         }
         catch
         {

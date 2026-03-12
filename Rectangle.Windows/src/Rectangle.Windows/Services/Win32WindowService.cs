@@ -9,16 +9,12 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Rectangle.Windows.Services;
 
-// P/Invoke for SetCursorPos
-public partial class Win32WindowService
-{
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetCursorPos(int x, int y);
-}
-
 public unsafe class Win32WindowService
 {
+    // P/Invoke for SetCursorPos
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetCursorPosInternal(int x, int y);
     public nint GetForegroundWindowHandle()
     {
         return PInvoke.GetForegroundWindow().Value;
@@ -44,7 +40,7 @@ public unsafe class Win32WindowService
         var hWnd = (HWND)hwnd;
         
         // 检查窗口是否存在
-        if (!PInvoke.IsWindow(hWnd))
+        if (!IsWindowInternal(hWnd))
         {
             Console.WriteLine($"[SetWindowRect] 错误：窗口句柄无效或窗口已关闭 hwnd={hwnd}");
             return false;
@@ -239,7 +235,7 @@ public unsafe class Win32WindowService
     /// </summary>
     public bool SetCursorPos(int x, int y)
     {
-        return Win32WindowService.SetCursorPos(x, y);
+        return SetCursorPosInternal(x, y);
     }
 
     /// <summary>
@@ -252,5 +248,15 @@ public unsafe class Win32WindowService
         var centerY = y + h / 2;
         
         return SetCursorPos(centerX, centerY);
+    }
+
+    // P/Invoke for IsWindow
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindow(IntPtr hWnd);
+
+    private bool IsWindowInternal(HWND hWnd)
+    {
+        return IsWindow(hWnd.Value);
     }
 }
