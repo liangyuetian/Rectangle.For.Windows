@@ -256,12 +256,15 @@
 
 ### 2.3 预览窗口（Footprint）
 
-#### 任务 2.3.1: 创建预览窗口
-- [ ] 创建 `FootprintWindow.cs`（WinForms 或 WPF）
-- [ ] 半透明窗口（Alpha = 0.3）
-- [ ] 边框高亮（2px）
-- [ ] 无标题栏、无任务栏图标
-- [ ] 始终置顶（TopMost）
+#### 任务 2.3.1: 创建预览窗口 ✅
+- [x] 创建 `FootprintWindow.cs`
+- [x] 半透明窗口（Opacity = 0.3）
+- [x] 边框高亮（2px）
+- [x] 无标题栏、无任务栏图标
+- [x] 始终置顶（TopMost）
+- [x] 淡入淡出动画
+- [x] 自定义绘制
+- **提交**: `7fa58b1` - feat: 创建预览窗口 FootprintWindow
 
 #### 任务 2.3.2: 预览窗口样式配置
 - [ ] 添加 `FootprintAlpha` 配置（默认 0.3）
