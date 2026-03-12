@@ -109,9 +109,11 @@
 - [x] 添加 `MoveCursorAcrossDisplays` (bool, 默认 false)
 - **提交**: `6a34a87` - feat: 添加高级配置选项
 
-#### 任务 1.2.2: 实现接近最大化配置
-- [ ] 修改 `AlmostMaximizeCalculator` 使用配置的比例
-- [ ] 添加配置验证（0.5 - 1.0）
+#### 任务 1.2.2: 实现接近最大化配置 ✅
+- [x] 修改 `AlmostMaximizeCalculator` 使用配置的比例
+- [x] 添加配置验证（0.5 - 1.0）
+- [x] 重构 CalculatorFactory 支持依赖注入
+- **提交**: `7f017e3` - feat: 实现接近最大化配置
 
 #### 任务 1.2.3: 实现最小窗口尺寸限制
 - [ ] 在所有 Calculator 中应用最小尺寸限制

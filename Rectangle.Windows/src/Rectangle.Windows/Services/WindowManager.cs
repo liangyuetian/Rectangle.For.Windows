@@ -197,6 +197,12 @@ public class WindowManager
         // 为相邻窗口应用间隙
         target = ApplyWindowGap(target, workArea, actualAction);
         
+        // 应用最小窗口尺寸限制
+        target = target.ApplyMinimumSize(_configService);
+        
+        // 确保窗口在屏幕工作区内
+        target = target.ClampToWorkArea(workArea);
+        
         _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
 
         // 记录程序操作信息（包括操作类型、次数、时间）
