@@ -153,11 +153,15 @@
 
 **目标**：更智能地处理不同类型的窗口
 
-#### 任务 1.3.1: 扩展窗口检测
-- [ ] 添加 `IsDialog()` 检测（WS_EX_DLGMODALFRAME）
-- [ ] 添加 `IsResizable()` 检测（WS_THICKFRAME）
-- [ ] 添加 `GetWindowStyle()` 辅助方法
-- [ ] 添加 `GetWindowExStyle()` 辅助方法
+#### 任务 1.3.1: 扩展窗口检测 ✅
+- [x] 创建 `WindowTypeService.cs`
+- [x] 实现 `IsResizable()` 检测（WS_THICKFRAME）
+- [x] 实现 `IsDialog()` 检测（WS_EX_DLGMODALFRAME）
+- [x] 实现 `IsModalDialog()` 检测
+- [x] 实现 `IsToolWindow()` 检测
+- [x] 实现 `HasCaption()` 检测
+- [x] 实现 `IsMinimized()` / `IsMaximized()` 检测
+- **提交**: `309b5d3` - feat: 实现窗口类型检测服务
 
 #### 任务 1.3.2: 固定尺寸窗口特殊处理
 - [ ] 创建 `FixedSizeWindowHandler.cs`

@@ -12,6 +12,7 @@ public class WindowManager
     private readonly CalculatorFactory _factory;
     private readonly WindowHistory _history;
     private readonly ScreenDetectionService _screenDetection;
+    private readonly WindowTypeService _windowType;
     private readonly HashSet<nint> _maximizedWindows = new();
     private LastActiveWindowService? _lastActiveService;
     private ConfigService? _configService;
@@ -23,6 +24,7 @@ public class WindowManager
         _factory = factory;
         _history = history;
         _screenDetection = new ScreenDetectionService(win32);
+        _windowType = new WindowTypeService(win32);
     }
 
     public void SetLastActiveWindowService(LastActiveWindowService service)
@@ -151,6 +153,13 @@ public class WindowManager
             return;
         }
 
+        // 检查窗口类型
+        if (_windowType.IsModalDialog(hwnd))
+        {
+            Console.WriteLine($"[WindowManager] {processName} 是模态对话框，跳过操作");
+            return;
+        }
+
         var (x, y, w, h) = _win32.GetWindowRect(hwnd);
         
         // 根据配置获取目标屏幕（光标位置或窗口位置）
@@ -200,6 +209,13 @@ public class WindowManager
         
         // 为相邻窗口应用间隙
         target = ApplyWindowGap(target, workArea, actualAction);
+        
+        // 对固定尺寸窗口特殊处理：只移动，不调整大小
+        if (!_windowType.IsResizable(hwnd))
+        {
+            Console.WriteLine($"[WindowManager] {processName} 是固定尺寸窗口，只移动不调整大小");
+            target = HandleFixedSizeWindow(current, target, workArea, actualAction);
+        }
         
         // 应用最小窗口尺寸限制
         target = target.ApplyMinimumSize(_configService);
@@ -284,6 +300,57 @@ public class WindowManager
         {
             _win32.MoveCursorToWindowCenter(hwnd);
             Console.WriteLine($"[WindowManager] 光标已移动到窗口中心");
+        }
+    }
+
+    /// <summary>
+    /// 处理固定尺寸窗口：只移动位置，保持原有尺寸
+    /// </summary>
+    private WindowRect HandleFixedSizeWindow(WindowRect current, WindowRect target, WorkArea workArea, WindowAction action)
+    {
+        // 根据操作类型决定如何移动固定尺寸窗口
+        switch (action)
+        {
+            case WindowAction.LeftHalf:
+            case WindowAction.FirstThird:
+            case WindowAction.FirstFourth:
+                // 左对齐
+                return new WindowRect(workArea.Left, target.Y, current.Width, current.Height);
+                
+            case WindowAction.RightHalf:
+            case WindowAction.LastThird:
+            case WindowAction.LastFourth:
+                // 右对齐
+                return new WindowRect(workArea.Right - current.Width, target.Y, current.Width, current.Height);
+                
+            case WindowAction.Center:
+            case WindowAction.CenterHalf:
+            case WindowAction.CenterThird:
+                // 居中
+                var centerX = workArea.Left + (workArea.Width - current.Width) / 2;
+                var centerY = workArea.Top + (workArea.Height - current.Height) / 2;
+                return new WindowRect(centerX, centerY, current.Width, current.Height);
+                
+            case WindowAction.TopHalf:
+                // 顶部对齐
+                return new WindowRect(target.X, workArea.Top, current.Width, current.Height);
+                
+            case WindowAction.BottomHalf:
+                // 底部对齐
+                return new WindowRect(target.X, workArea.Bottom - current.Height, current.Width, current.Height);
+                
+            case WindowAction.MoveLeft:
+            case WindowAction.MoveRight:
+            case WindowAction.MoveUp:
+            case WindowAction.MoveDown:
+                // 移动操作保持原有尺寸
+                return new WindowRect(target.X, target.Y, current.Width, current.Height);
+                
+            default:
+                // 其他操作：居中放置
+                var defaultCenterX = workArea.Left + (workArea.Width - current.Width) / 2;
+                var defaultCenterY = workArea.Top + (workArea.Height - current.Height) / 2;
+                return new WindowRect(defaultCenterX, defaultCenterY, current.Width, current.Height);
         }
     }
 
