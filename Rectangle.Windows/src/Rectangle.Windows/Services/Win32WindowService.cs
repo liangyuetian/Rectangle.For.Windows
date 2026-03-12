@@ -9,6 +9,14 @@ using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Rectangle.Windows.Services;
 
+// P/Invoke for SetCursorPos
+public partial class Win32WindowService
+{
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetCursorPos(int x, int y);
+}
+
 public unsafe class Win32WindowService
 {
     public nint GetForegroundWindowHandle()
@@ -224,5 +232,25 @@ public unsafe class Win32WindowService
             Console.WriteLine($"[Win32WindowService] 获取进程名失败: {ex.Message}");
             return "未知";
         }
+    }
+
+    /// <summary>
+    /// 将光标移动到指定位置
+    /// </summary>
+    public bool SetCursorPos(int x, int y)
+    {
+        return Win32WindowService.SetCursorPos(x, y);
+    }
+
+    /// <summary>
+    /// 将光标移动到窗口中心
+    /// </summary>
+    public bool MoveCursorToWindowCenter(nint hwnd)
+    {
+        var (x, y, w, h) = GetWindowRect(hwnd);
+        var centerX = x + w / 2;
+        var centerY = y + h / 2;
+        
+        return SetCursorPos(centerX, centerY);
     }
 }
