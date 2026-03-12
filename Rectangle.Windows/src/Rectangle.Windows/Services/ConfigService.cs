@@ -203,6 +203,16 @@ public class AppConfig
     /// </summary>
     public int FootprintBorderColor { get; set; } = -16711614; // ARGB(0, 120, 212) 蓝色
 
+    /// <summary>
+    /// 是否启用预览窗口淡入淡出动画
+    /// </summary>
+    public bool FootprintFade { get; set; } = true;
+
+    /// <summary>
+    /// 预览窗口动画时长（毫秒，50-500）
+    /// </summary>
+    public int FootprintAnimationDuration { get; set; } = 150;
+
     private static List<string> GetDefaultIgnoredApps()
     {
         return new List<string>
