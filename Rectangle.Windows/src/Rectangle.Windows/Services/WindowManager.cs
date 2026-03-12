@@ -213,6 +213,9 @@ public class WindowManager
         // 注意：记录的是原始 action，而不是 actualAction，这样才能正确计数
         _history.RecordAction(hwnd, action, target.X, target.Y, target.Width, target.Height);
 
+        // 根据配置移动光标到窗口中心
+        MoveCursorIfEnabled(hwnd, action);
+
         Console.WriteLine($"{GetActionDisplayName(actualAction)} 了 {processName}");
     }
 
@@ -256,6 +259,32 @@ public class WindowManager
 
         // 不同的操作，返回原操作
         return requestedAction;
+    }
+
+    /// <summary>
+    /// 根据配置移动光标
+    /// </summary>
+    private void MoveCursorIfEnabled(nint hwnd, WindowAction action)
+    {
+        if (_configService == null) return;
+        
+        var config = _configService.Load();
+        
+        // 检查是否启用了光标移动
+        bool shouldMoveCursor = config.MoveCursor;
+        
+        // 对于跨显示器操作，检查 MoveCursorAcrossDisplays
+        if ((action == WindowAction.NextDisplay || action == WindowAction.PreviousDisplay) 
+            && !config.MoveCursorAcrossDisplays)
+        {
+            shouldMoveCursor = false;
+        }
+        
+        if (shouldMoveCursor)
+        {
+            _win32.MoveCursorToWindowCenter(hwnd);
+            Console.WriteLine($"[WindowManager] 光标已移动到窗口中心");
+        }
     }
 
     private nint GetTargetWindow()

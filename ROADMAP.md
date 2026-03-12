@@ -122,10 +122,12 @@
 - [x] 在 WindowManager 中集成应用
 - **提交**: `fb789ec` - feat: 实现最小窗口尺寸限制
 
-#### 任务 1.2.4: 实现光标位置检测
-- [ ] 创建 `ScreenDetection.cs`
-- [ ] 实现 `DetectScreenAtCursor()` 方法
-- [ ] 在 `WindowManager` 中集成
+#### 任务 1.2.4: 实现光标位置检测 ✅
+- [x] 创建 `ScreenDetectionService.cs`
+- [x] 实现 `GetWorkAreaFromCursor()` 方法
+- [x] 实现 `GetTargetWorkArea()` 智能选择
+- [x] 在 `WindowManager` 中集成
+- **提交**: `bf1fdfb` - feat: 实现光标位置检测
 
 #### 任务 1.2.5: 实现光标移动功能
 - [ ] 添加 `SetCursorPos` P/Invoke
