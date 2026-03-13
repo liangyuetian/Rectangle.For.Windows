@@ -2,6 +2,7 @@ GetForegroundWindow
 GetWindowRect
 SetWindowPos
 ShowWindow
+ShowWindowAsync
 MonitorFromWindow
 MonitorFromPoint
 GetMonitorInfo
@@ -24,6 +25,18 @@ SetWinEventHook
 UnhookWinEvent
 IsWindowVisible
 GetWindowTextLength
+GetWindowText
 GetClassName
 DestroyIcon
 GetSystemMetrics
+IsIconic
+IsZoomed
+IsWindow
+EnumWindows
+SetCursorPos
+GetCursorPos
+MapVirtualKey
+GetKeyNameText
+GetWindowLongPtr
+SetWindowLongPtr
+GetWindowLong

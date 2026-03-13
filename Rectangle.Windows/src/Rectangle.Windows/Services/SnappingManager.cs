@@ -567,20 +567,27 @@ public class SnappingManager : IDisposable
         if (!PInvoke.IsWindowVisible(new HWND((IntPtr)hwnd)))
             return false;
 
+        // 窗口样式常量
+        const int GWL_STYLE = -16;
+        const int GWL_EXSTYLE = -20;
+        const uint WS_CAPTION = 0x00C00000;
+        const uint WS_EX_TOOLWINDOW = 0x00000080;
+        const uint WS_EX_NOACTIVATE = 0x08000000;
+
         // 检查窗口是否有标题栏（排除桌面、任务栏等）
-        var style = (WINDOW_STYLE)PInvoke.GetWindowLong(new HWND((IntPtr)hwnd), WINDOW_LONG_PTR_INDEX.GWL_STYLE);
-        var exStyle = (WINDOW_EX_STYLE)PInvoke.GetWindowLong(new HWND((IntPtr)hwnd), WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
+        var style = PInvoke.GetWindowLong(new HWND((IntPtr)hwnd), (WINDOW_LONG_PTR_INDEX)GWL_STYLE);
+        var exStyle = PInvoke.GetWindowLong(new HWND((IntPtr)hwnd), (WINDOW_LONG_PTR_INDEX)GWL_EXSTYLE);
 
         // 排除无标题栏窗口（如桌面、某些工具窗口）
-        if ((style & WINDOW_STYLE.WS_CAPTION) != WINDOW_STYLE.WS_CAPTION)
+        if (((uint)style & WS_CAPTION) != WS_CAPTION)
             return false;
 
         // 排除弹出式菜单、工具提示等
-        if ((exStyle & WINDOW_EX_STYLE.WS_EX_TOOLWINDOW) == WINDOW_EX_STYLE.WS_EX_TOOLWINDOW)
+        if (((uint)exStyle & WS_EX_TOOLWINDOW) == WS_EX_TOOLWINDOW)
             return false;
 
         // 排除无激活窗口（如某些系统窗口）
-        if ((exStyle & WINDOW_EX_STYLE.WS_EX_NOACTIVATE) == WINDOW_EX_STYLE.WS_EX_NOACTIVATE)
+        if (((uint)exStyle & WS_EX_NOACTIVATE) == WS_EX_NOACTIVATE)
             return false;
 
         // 检查窗口是否可调整大小（可选，某些固定大小窗口也可以拖拽）
