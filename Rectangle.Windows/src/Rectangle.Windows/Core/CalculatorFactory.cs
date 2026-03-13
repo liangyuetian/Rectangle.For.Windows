@@ -46,6 +46,54 @@ public class CalculatorFactory
             [WindowAction.BottomLeftSixth] = new BottomLeftSixthCalculator(),
             [WindowAction.BottomCenterSixth] = new BottomCenterSixthCalculator(),
             [WindowAction.BottomRightSixth] = new BottomRightSixthCalculator(),
+            // 九等分
+            [WindowAction.TopLeftNinth] = new TopLeftNinthCalculator(),
+            [WindowAction.TopCenterNinth] = new TopCenterNinthCalculator(),
+            [WindowAction.TopRightNinth] = new TopRightNinthCalculator(),
+            [WindowAction.MiddleLeftNinth] = new MiddleLeftNinthCalculator(),
+            [WindowAction.MiddleCenterNinth] = new MiddleCenterNinthCalculator(),
+            [WindowAction.MiddleRightNinth] = new MiddleRightNinthCalculator(),
+            [WindowAction.BottomLeftNinth] = new BottomLeftNinthCalculator(),
+            [WindowAction.BottomCenterNinth] = new BottomCenterNinthCalculator(),
+            [WindowAction.BottomRightNinth] = new BottomRightNinthCalculator(),
+            // 八等分
+            [WindowAction.TopLeftEighth] = new TopLeftEighthCalculator(),
+            [WindowAction.TopCenterLeftEighth] = new TopCenterLeftEighthCalculator(),
+            [WindowAction.TopCenterRightEighth] = new TopCenterRightEighthCalculator(),
+            [WindowAction.TopRightEighth] = new TopRightEighthCalculator(),
+            [WindowAction.BottomLeftEighth] = new BottomLeftEighthCalculator(),
+            [WindowAction.BottomCenterLeftEighth] = new BottomCenterLeftEighthCalculator(),
+            [WindowAction.BottomCenterRightEighth] = new BottomCenterRightEighthCalculator(),
+            [WindowAction.BottomRightEighth] = new BottomRightEighthCalculator(),
+            // 角落三分之一
+            [WindowAction.TopLeftThird] = new TopLeftThirdCalculator(),
+            [WindowAction.TopRightThird] = new TopRightThirdCalculator(),
+            [WindowAction.BottomLeftThird] = new BottomLeftThirdCalculator(),
+            [WindowAction.BottomRightThird] = new BottomRightThirdCalculator(),
+            // 垂直三分之一
+            [WindowAction.TopVerticalThird] = new TopVerticalThirdCalculator(),
+            [WindowAction.MiddleVerticalThird] = new MiddleVerticalThirdCalculator(),
+            [WindowAction.BottomVerticalThird] = new BottomVerticalThirdCalculator(),
+            [WindowAction.TopVerticalTwoThirds] = new TopVerticalTwoThirdsCalculator(),
+            [WindowAction.BottomVerticalTwoThirds] = new BottomVerticalTwoThirdsCalculator(),
+            // 居中显著
+            [WindowAction.CenterProminently] = new CenterProminentlyCalculator(),
+            // 双倍/减半尺寸
+            [WindowAction.DoubleHeightUp] = new DoubleHeightUpCalculator(),
+            [WindowAction.DoubleHeightDown] = new DoubleHeightDownCalculator(),
+            [WindowAction.DoubleWidthLeft] = new DoubleWidthLeftCalculator(),
+            [WindowAction.DoubleWidthRight] = new DoubleWidthRightCalculator(),
+            [WindowAction.HalveHeightUp] = new HalveHeightUpCalculator(),
+            [WindowAction.HalveHeightDown] = new HalveHeightDownCalculator(),
+            [WindowAction.HalveWidthLeft] = new HalveWidthLeftCalculator(),
+            [WindowAction.HalveWidthRight] = new HalveWidthRightCalculator(),
+            // 单独调整宽度/高度
+            [WindowAction.LargerWidth] = new LargerWidthCalculator(configService),
+            [WindowAction.SmallerWidth] = new SmallerWidthCalculator(configService),
+            [WindowAction.LargerHeight] = new LargerHeightCalculator(configService),
+            [WindowAction.SmallerHeight] = new SmallerHeightCalculator(configService),
+            // 指定尺寸
+            [WindowAction.Specified] = new SpecifiedCalculator(configService),
             // 最大化
             [WindowAction.Maximize] = new MaximizeCalculator(),
             // 居中

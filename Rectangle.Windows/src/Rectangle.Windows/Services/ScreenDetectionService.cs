@@ -1,4 +1,6 @@
+using System;
 using System.Runtime.InteropServices;
+using Rectangle.Windows.Core;
 using Windows.Win32;
 using Windows.Win32.Foundation;
 using Windows.Win32.Graphics.Gdi;
@@ -24,7 +26,7 @@ public class ScreenDetectionService
     public WorkArea GetWorkAreaFromCursor()
     {
         // 获取光标位置
-        var pt = GetCursorPos();
+        var pt = GetCursorPosition();
         
         // 获取光标所在的显示器
         var hMonitor = PInvoke.MonitorFromPoint(pt, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
@@ -97,13 +99,8 @@ public class ScreenDetectionService
     /// <summary>
     /// 获取光标位置
     /// </summary>
-    private System.Drawing.Point GetCursorPos()
+    private System.Drawing.Point GetCursorPosition()
     {
-        if (PInvoke.GetCursorPos(out var pt))
-        {
-            return new System.Drawing.Point(pt.x, pt.y);
-        }
-        
-        return new System.Drawing.Point(0, 0);
+        return MouseHookService.GetCursorPosition();
     }
 }

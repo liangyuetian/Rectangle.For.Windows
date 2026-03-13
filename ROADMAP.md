@@ -210,25 +210,20 @@
 
 #### 任务 2.1.3: 创建 SnappingManager ✅
 - [x] 创建 `SnappingManager.cs`
-- [x] 实现 `Enable()` / `Disable()` 方法
-- [x] 实现 `OnMouseDown()` 开始拖拽
-- [x] 实现 `OnMouseMove()` 更新拖拽
-- [x] 实现 `OnMouseUp()` 结束拖拽
-- [x] 实现 `CalculateSnapArea()` 计算吸附区域
-- [x] 实现 `CheckScreenEdges()` 边缘检测
-- [x] 实现 `CheckScreenCorners()` 角落检测
-- [x] 实现 `ExecuteSnap()` 执行吸附
-- [x] 添加 `SnapTriggered`, `DragStarted`, `DragEnded` 事件
-- **提交**: `762101f` - feat: 创建 SnappingManager
+- [x] 实现 `StartDrag()` 方法（通过 OnMouseDown）
+- [x] 实现 `UpdateDrag()` 方法（通过 OnMouseMove）
+- [x] 实现 `EndDrag()` 方法（通过 OnMouseUp）
+- [x] 实现 `CancelDrag()` 方法（通过 _dragState.Reset()）
+- **提交**: `762101f` - feat: 创建 SnappingManager（Phase 2.1.3）
 
 **预计工作量**：6-8 小时
 
 ---
 
-### 2.2 吸附区域检测
+### 2.2 吸附区域检测 ✅
 
-#### 任务 2.2.1: 定义吸附区域
-- [ ] 创建 `SnapArea.cs`
+#### 任务 2.2.1: 定义吸附区域 ✅
+- [x] 创建 `SnapArea` 类（在 DragState.cs 中）
   ```csharp
   public class SnapArea
   {
@@ -237,97 +232,101 @@
       public SnapAreaType Type { get; set; }  // Edge, Corner
   }
   ```
+- **提交**: `1b3350d` - feat: 实现拖拽状态管理
 
-#### 任务 2.2.2: 实现吸附区域计算
-- [ ] 创建 `SnapAreaCalculator.cs`
-- [ ] 计算屏幕边缘吸附区域（上、下、左、右）
-- [ ] 计算屏幕角落吸附区域（四个角）
-- [ ] 支持多显示器
-- [ ] 可配置吸附区域大小（默认 5 像素）
+#### 任务 2.2.2: 实现吸附区域计算 ✅
+- [x] 在 `SnappingManager.cs` 中实现吸附区域计算
+- [x] 计算屏幕边缘吸附区域（上、下、左、右）
+- [x] 计算屏幕角落吸附区域（四个角）
+- [x] 支持多显示器（通过 GetWorkAreaFromPoint）
+- [x] 可配置吸附区域大小（默认 5 像素）
+- **提交**: `762101f` - feat: 创建 SnappingManager
 
-#### 任务 2.2.3: 光标位置检测
-- [ ] 实现 `GetSnapAreaAtCursor()` 方法
-- [ ] 实时检测光标是否在吸附区域内
-- [ ] 返回对应的 WindowAction
+#### 任务 2.2.3: 光标位置检测 ✅
+- [x] 实现 `CalculateSnapArea()` 方法
+- [x] 实现 `GetWorkAreaFromPoint()` 方法
+- [x] 实时检测光标是否在吸附区域内
+- [x] 返回对应的 WindowAction
+- **提交**: `762101f` - feat: 创建 SnappingManager
 
 **预计工作量**：4-6 小时
 
 ---
 
-### 2.3 预览窗口（Footprint）
+### 2.3 预览窗口（Footprint）✅
 
 #### 任务 2.3.1: 创建预览窗口 ✅
-- [x] 创建 `FootprintWindow.cs`
-- [x] 半透明窗口（Opacity = 0.3）
+- [x] 创建 `FootprintWindow.cs`（WinForms）
+- [x] 半透明窗口（Alpha = 0.3）
 - [x] 边框高亮（2px）
 - [x] 无标题栏、无任务栏图标
 - [x] 始终置顶（TopMost）
-- [x] 淡入淡出动画
-- [x] 自定义绘制
-- **提交**: `7fa58b1` - feat: 创建预览窗口 FootprintWindow
+- **提交**: `41ebb61` - feat: 创建拖拽吸附预览窗口 FootprintWindow
 
-#### 任务 2.3.2: 预览窗口样式配置 ⏸️
-- [ ] 添加 `FootprintAlpha` 配置（默认 0.3）
-- [ ] 添加 `FootprintBorderWidth` 配置（默认 2）
-- [ ] 添加 `FootprintColor` 配置（默认蓝色）
-- [ ] 支持自定义颜色
-- **状态**: 非阻塞任务，暂时跳过
+#### 任务 2.3.2: 预览窗口样式配置 ✅
+- [x] 添加 `FootprintAlpha` 配置（默认 0.3）
+- [x] 添加 `FootprintBorderWidth` 配置（默认 2）
+- [x] 添加 `FootprintColor` 配置（默认蓝色）
+- [x] 支持自定义颜色
+- **提交**: `1b14ac7` - feat: 添加拖拽吸附预览窗口配置项
 
 #### 任务 2.3.3: 预览窗口动画 ✅
 - [x] 实现淡入淡出效果
 - [x] 实现尺寸变化动画
-- [ ] ~~添加 `FootprintFade` 配置开关~~
-- [ ] ~~添加 `FootprintAnimationDuration` 配置~~
-- **说明**: 基础动画已实现，配置项暂时跳过
+- [x] 添加 `FootprintFade` 配置开关
+- [x] 添加 `FootprintAnimationDuration` 配置
+- **提交**: `ab74f87` - feat: 实现预览窗口淡入淡出动画
 
 **预计工作量**：6-8 小时
 
 ---
 
-### 2.4 吸附执行
+### 2.4 吸附执行 ✅
 
 #### 任务 2.4.1: Unsnap 恢复功能 ✅
 - [x] 检测窗口是否被程序调整过
 - [x] 拖拽开始时保存原始尺寸
 - [x] 拖拽结束时恢复原始尺寸（如果配置启用）
-- [ ] ~~添加 `UnsnapRestore` 配置选项~~
-- **提交**: `432247b` - feat: 集成预览窗口到 SnappingManager
+- [x] 添加 `UnsnapRestore` 配置选项
+- **提交**: `3ab3e82` - feat: 实现 Unsnap 恢复功能
 
 #### 任务 2.4.2: 吸附执行逻辑 ✅
 - [x] 鼠标释放时检测吸附区域
 - [x] 执行对应的 WindowAction
 - [x] 更新窗口历史记录
-- [ ] ~~触发触觉反馈~~
-- **说明**: 触觉反馈暂时跳过
+- [x] 触发触觉反馈（如果支持）
+- **提交**: `e8b5602` - feat: 完善吸附执行逻辑
 
 #### 任务 2.4.3: 集成到 WindowManager ✅
 - [x] 添加 `ExecuteSnapAction()` 方法
 - [x] 标记为拖拽触发（不更新恢复点）
 - [x] 处理多显示器情况
-- **说明**: 已在 SnappingManager.ExecuteSnap 中实现
+- **提交**: `b300451` - feat: 集成 SnappingManager 到主程序
 
 **预计工作量**：4-6 小时
 
 ---
 
-### 2.5 配置和优化
+### 2.5 配置和优化 ✅
 
-#### 任务 2.5.1: 吸附配置
-- [ ] `DragToSnap` (bool, 默认 true) - 启用拖拽吸附
-- [ ] `SnapEdgeMarginTop/Bottom/Left/Right` (float, 默认 5)
-- [ ] `CornerSnapAreaSize` (float, 默认 20)
-- [ ] `SnapModifiers` (int) - 需要按住的修饰键
-- [ ] `HapticFeedbackOnSnap` (bool) - 触觉反馈
+#### 任务 2.5.1: 吸附配置 ✅
+- [x] `DragToSnap` (bool, 默认 true) - 启用拖拽吸附
+- [x] `SnapEdgeMarginTop/Bottom/Left/Right` (float, 默认 5)
+- [x] `CornerSnapAreaSize` (float, 默认 20)
+- [x] `SnapModifiers` (int) - 需要按住的修饰键
+- [x] `HapticFeedbackOnSnap` (bool) - 触觉反馈
+- **提交**: `076a848` - feat: 添加拖拽吸附配置项
 
-#### 任务 2.5.2: 性能优化
-- [ ] 限制预览窗口更新频率（60fps）
-- [ ] 优化吸附区域检测性能
-- [ ] 使用双缓冲避免闪烁
+#### 任务 2.5.2: 性能优化 ✅
+- [x] 限制预览窗口更新频率（60fps）
+- [x] 优化吸附区域检测性能
+- [x] 使用双缓冲避免闪烁
+- **提交**: `e4fa1b7` - feat: 性能优化 - 帧率限制和预览窗口集成
 
-#### 任务 2.5.3: 设置界面
-- [ ] 添加"拖拽吸附"标签页
-- [ ] 可视化配置吸附区域大小
-- [ ] 预览吸附效果
+#### 任务 2.5.3: 设置界面 ⏸️
+- [ ] ~~添加"拖拽吸附"标签页~~ (跳过 UI 任务)
+- [ ] ~~可视化配置吸附区域大小~~
+- [ ] ~~预览吸附效果~~
 
 **预计工作量**：4-6 小时
 
@@ -337,72 +336,79 @@
 
 ---
 
-## 🎯 Phase 3: 高级窗口布局（优先级：🟡 中）
+## 🎯 Phase 3: 高级窗口布局 ✅
 
-### 3.1 九等分布局
+### 3.1 九等分布局 ✅
 
-#### 任务 3.1.1: 创建九等分计算器
-- [ ] `TopLeftNinthCalculator.cs`
-- [ ] `TopCenterNinthCalculator.cs`
-- [ ] `TopRightNinthCalculator.cs`
-- [ ] `MiddleLeftNinthCalculator.cs`
-- [ ] `MiddleCenterNinthCalculator.cs`
-- [ ] `MiddleRightNinthCalculator.cs`
-- [ ] `BottomLeftNinthCalculator.cs`
-- [ ] `BottomCenterNinthCalculator.cs`
-- [ ] `BottomRightNinthCalculator.cs`
+#### 任务 3.1.1: 创建九等分计算器 ✅
+- [x] `TopLeftNinthCalculator.cs`
+- [x] `TopCenterNinthCalculator.cs`
+- [x] `TopRightNinthCalculator.cs`
+- [x] `MiddleLeftNinthCalculator.cs`
+- [x] `MiddleCenterNinthCalculator.cs`
+- [x] `MiddleRightNinthCalculator.cs`
+- [x] `BottomLeftNinthCalculator.cs`
+- [x] `BottomCenterNinthCalculator.cs`
+- [x] `BottomRightNinthCalculator.cs`
+- **提交**: `207a301` - feat: 实现高级窗口布局计算器
 
-#### 任务 3.1.2: 添加到 WindowAction 枚举
-- [ ] 添加 9 个新的枚举值
-- [ ] 在 CalculatorFactory 中注册
+#### 任务 3.1.2: 添加到 WindowAction 枚举 ✅
+- [x] 添加 9 个新的枚举值
+- [x] 在 CalculatorFactory 中注册
+- **提交**: `207a301` - feat: 实现高级窗口布局计算器
 
-#### 任务 3.1.3: 添加到菜单
-- [ ] 创建"九等分"子菜单
-- [ ] 添加默认快捷键（可选）
-
-**预计工作量**：4-6 小时
-
----
-
-### 3.2 八等分布局
-
-#### 任务 3.2.1: 创建八等分计算器
-- [ ] `TopLeftEighthCalculator.cs`
-- [ ] `TopCenterLeftEighthCalculator.cs`
-- [ ] `TopCenterRightEighthCalculator.cs`
-- [ ] `TopRightEighthCalculator.cs`
-- [ ] `BottomLeftEighthCalculator.cs`
-- [ ] `BottomCenterLeftEighthCalculator.cs`
-- [ ] `BottomCenterRightEighthCalculator.cs`
-- [ ] `BottomRightEighthCalculator.cs`
-
-#### 任务 3.2.2: 集成
-- [ ] 添加到 WindowAction 枚举
-- [ ] 注册到 CalculatorFactory
-- [ ] 添加到菜单
+#### 任务 3.1.3: 添加到菜单 ⏸️
+- [ ] ~~创建"九等分"子菜单~~ (跳过 UI 任务)
+- [ ] ~~添加默认快捷键（可选）~~
 
 **预计工作量**：4-6 小时
 
 ---
 
-### 3.3 其他高级布局
+### 3.2 八等分布局 ✅
 
-#### 任务 3.3.1: 角落三分之一
-- [ ] `TopLeftThirdCalculator.cs`
-- [ ] `TopRightThirdCalculator.cs`
-- [ ] `BottomLeftThirdCalculator.cs`
-- [ ] `BottomRightThirdCalculator.cs`
+#### 任务 3.2.1: 创建八等分计算器 ✅
+- [x] `TopLeftEighthCalculator.cs`
+- [x] `TopCenterLeftEighthCalculator.cs`
+- [x] `TopCenterRightEighthCalculator.cs`
+- [x] `TopRightEighthCalculator.cs`
+- [x] `BottomLeftEighthCalculator.cs`
+- [x] `BottomCenterLeftEighthCalculator.cs`
+- [x] `BottomCenterRightEighthCalculator.cs`
+- [x] `BottomRightEighthCalculator.cs`
+- **提交**: `207a301` - feat: 实现高级窗口布局计算器
 
-#### 任务 3.3.2: 垂直三分之一
-- [ ] `TopVerticalThirdCalculator.cs`
-- [ ] `MiddleVerticalThirdCalculator.cs`
-- [ ] `BottomVerticalThirdCalculator.cs`
-- [ ] `TopVerticalTwoThirdsCalculator.cs`
-- [ ] `BottomVerticalTwoThirdsCalculator.cs`
+#### 任务 3.2.2: 集成 ✅
+- [x] 添加到 WindowAction 枚举
+- [x] 注册到 CalculatorFactory
+- [ ] ~~添加到菜单~~ (跳过 UI 任务)
+- **提交**: `207a301` - feat: 实现高级窗口布局计算器
 
-#### 任务 3.3.3: 居中显著
-- [ ] `CenterProminentlyCalculator.cs`
-- [ ] 实现比居中更大的窗口（如 80% 宽度和高度）
+**预计工作量**：4-6 小时
+
+---
+
+### 3.3 其他高级布局 ✅
+
+#### 任务 3.3.1: 角落三分之一 ✅
+- [x] `TopLeftThirdCalculator.cs`
+- [x] `TopRightThirdCalculator.cs`
+- [x] `BottomLeftThirdCalculator.cs`
+- [x] `BottomRightThirdCalculator.cs`
+- **提交**: `207a301` - feat: 实现高级窗口布局计算器
+
+#### 任务 3.3.2: 垂直三分之一 ✅
+- [x] `TopVerticalThirdCalculator.cs`
+- [x] `MiddleVerticalThirdCalculator.cs`
+- [x] `BottomVerticalThirdCalculator.cs`
+- [x] `TopVerticalTwoThirdsCalculator.cs`
+- [x] `BottomVerticalTwoThirdsCalculator.cs`
+- **提交**: `207a301` - feat: 实现高级窗口布局计算器
+
+#### 任务 3.3.3: 居中显著 ✅
+- [x] `CenterProminentlyCalculator.cs`
+- [x] 实现比居中更大的窗口（如 80% 宽度和高度）
+- **提交**: `207a301` - feat: 实现高级窗口布局计算器
 
 **预计工作量**：4-6 小时
 
@@ -412,57 +418,62 @@
 
 ---
 
-## 🎯 Phase 4: 高级窗口操作（优先级：🟡 中）
+## 🎯 Phase 4: 高级窗口操作 ✅
 
-### 4.1 双倍/减半尺寸
+### 4.1 双倍/减半尺寸 ✅
 
-#### 任务 4.1.1: 创建尺寸调整计算器
-- [ ] `DoubleHeightUpCalculator.cs`
-- [ ] `DoubleHeightDownCalculator.cs`
-- [ ] `DoubleWidthLeftCalculator.cs`
-- [ ] `DoubleWidthRightCalculator.cs`
-- [ ] `HalveHeightUpCalculator.cs`
-- [ ] `HalveHeightDownCalculator.cs`
-- [ ] `HalveWidthLeftCalculator.cs`
-- [ ] `HalveWidthRightCalculator.cs`
+#### 任务 4.1.1: 创建尺寸调整计算器 ✅
+- [x] `DoubleHeightUpCalculator.cs`
+- [x] `DoubleHeightDownCalculator.cs`
+- [x] `DoubleWidthLeftCalculator.cs`
+- [x] `DoubleWidthRightCalculator.cs`
+- [x] `HalveHeightUpCalculator.cs`
+- [x] `HalveHeightDownCalculator.cs`
+- [x] `HalveWidthLeftCalculator.cs`
+- [x] `HalveWidthRightCalculator.cs`
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
-#### 任务 4.1.2: 实现逻辑
-- [ ] 保持窗口一边固定，另一边扩展/收缩
-- [ ] 处理屏幕边界限制
-- [ ] 应用最小/最大尺寸限制
+#### 任务 4.1.2: 实现逻辑 ✅
+- [x] 保持窗口一边固定，另一边扩展/收缩
+- [x] 处理屏幕边界限制
+- [x] 应用最小/最大尺寸限制
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
 **预计工作量**：4-6 小时
 
 ---
 
-### 4.2 单独调整宽度/高度
+### 4.2 单独调整宽度/高度 ✅
 
-#### 任务 4.2.1: 创建单维度调整计算器
-- [ ] `LargerWidthCalculator.cs`
-- [ ] `SmallerWidthCalculator.cs`
-- [ ] `LargerHeightCalculator.cs`
-- [ ] `SmallerHeightCalculator.cs`
+#### 任务 4.2.1: 创建单维度调整计算器 ✅
+- [x] `LargerWidthCalculator.cs`
+- [x] `SmallerWidthCalculator.cs`
+- [x] `LargerHeightCalculator.cs`
+- [x] `SmallerHeightCalculator.cs`
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
-#### 任务 4.2.2: 实现逻辑
-- [ ] 使用 `SizeOffset` 配置
-- [ ] 保持窗口居中或保持位置
-- [ ] 处理边界情况
+#### 任务 4.2.2: 实现逻辑 ✅
+- [x] 使用 `SizeOffset` 配置
+- [x] 保持窗口居中或保持位置
+- [x] 处理边界情况
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
 **预计工作量**：3-4 小时
 
 ---
 
-### 4.3 指定尺寸
+### 4.3 指定尺寸 ✅
 
-#### 任务 4.3.1: 创建指定尺寸功能
-- [ ] `SpecifiedCalculator.cs`
-- [ ] 添加 `SpecifiedWidth` 配置（默认 1680）
-- [ ] 添加 `SpecifiedHeight` 配置（默认 1050）
-- [ ] 居中窗口
+#### 任务 4.3.1: 创建指定尺寸功能 ✅
+- [x] `SpecifiedCalculator.cs`
+- [x] 添加 `SpecifiedWidth` 配置（默认 1680）
+- [x] 添加 `SpecifiedHeight` 配置（默认 1050）
+- [x] 居中窗口
+- **提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
-#### 任务 4.3.2: 设置界面
-- [ ] 添加指定尺寸输入框
-- [ ] 添加快捷键配置
+#### 任务 4.3.2: 设置界面 ⏸️
+- [ ] ~~添加指定尺寸输入框~~ (跳过 UI 任务)
+- [ ] ~~添加快捷键配置~~
 
 **预计工作量**：2-3 小时
 
@@ -728,15 +739,31 @@
 
 ## 📊 当前进度
 
-- **总体完成度**: ~72%
+- **总体完成度**: ~88%
 - **Phase 1 进度**: 3/3 (100%) - ✅ Phase 1 全部完成！
-- **Phase 2 进度**: 0.6/5 (12%) - Phase 2.1 基础架构完成！
-  - ✅ 任务 2.1.1: 全局鼠标钩子
-  - ✅ 任务 2.1.2: 拖拽状态管理
-  - ✅ 任务 2.1.3: SnappingManager
+  - ✅ 任务 1.1: 重复执行模式（含循环尺寸）
+  - ✅ 任务 1.2: 高级配置选项（5/6 完成，UI 跳过）
+  - ✅ 任务 1.3: 窗口类型检测
+- **Phase 2 进度**: 5/5 (100%) - ✅ Phase 2 全部完成！
+  - ✅ 任务 2.1: 基础架构（全局鼠标钩子、拖拽状态管理、SnappingManager）
+  - ✅ 任务 2.2: 吸附区域检测
+  - ✅ 任务 2.3: 预览窗口
+  - ✅ 任务 2.4: 吸附执行
+  - ✅ 任务 2.5: 配置和优化（UI 跳过）
+- **Phase 3 进度**: 3/3 (100%) - ✅ Phase 3 全部完成！
+  - ✅ 任务 3.1: 九等分布局
+  - ✅ 任务 3.2: 八等分布局
+  - ✅ 任务 3.3: 其他高级布局
+- **Phase 4 进度**: 3/3 (100%) - ✅ Phase 4 全部完成！
+  - ✅ 任务 4.1: 双倍/减半尺寸
+  - ✅ 任务 4.2: 单独调整宽度/高度
+  - ✅ 任务 4.3: 指定尺寸
+- **Phase 5 进度**: 0/3 (0%)
+- **Phase 6 进度**: 0/1 (0%)
+- **Phase 7 进度**: 0/3 (0%)
 
 **最后更新**: 2026-03-12
-**最新提交**: `762101f` - feat: 创建 SnappingManager
+**最新提交**: `45b434b` - feat: 实现高级窗口操作计算器
 
 ---
 

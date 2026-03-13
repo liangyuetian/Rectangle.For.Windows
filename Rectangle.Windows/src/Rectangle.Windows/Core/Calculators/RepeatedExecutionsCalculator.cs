@@ -59,11 +59,61 @@ public static class RepeatedExecutionsCalculator
     /// <summary>
     /// 四分之三循环序列：FirstThreeFourths → CenterThreeFourths → LastThreeFourths → FirstThreeFourths
     /// </summary>
-    private static readonly WindowAction[] ThreeFourthsCycle = 
+    private static readonly WindowAction[] ThreeFourthsCycle =
     {
         WindowAction.FirstThreeFourths,
         WindowAction.CenterThreeFourths,
         WindowAction.LastThreeFourths
+    };
+
+    /// <summary>
+    /// 九等分循环序列（按行）：TopLeft → TopCenter → TopRight → MiddleLeft → ...
+    /// </summary>
+    private static readonly WindowAction[] NinthsCycle =
+    {
+        WindowAction.TopLeftNinth,
+        WindowAction.TopCenterNinth,
+        WindowAction.TopRightNinth,
+        WindowAction.MiddleLeftNinth,
+        WindowAction.MiddleCenterNinth,
+        WindowAction.MiddleRightNinth,
+        WindowAction.BottomLeftNinth,
+        WindowAction.BottomCenterNinth,
+        WindowAction.BottomRightNinth
+    };
+
+    /// <summary>
+    /// 八等分循环序列（按行）：TopLeft → TopCenterLeft → TopCenterRight → TopRight → BottomLeft → ...
+    /// </summary>
+    private static readonly WindowAction[] EighthsCycle =
+    {
+        WindowAction.TopLeftEighth,
+        WindowAction.TopCenterLeftEighth,
+        WindowAction.TopCenterRightEighth,
+        WindowAction.TopRightEighth,
+        WindowAction.BottomLeftEighth,
+        WindowAction.BottomCenterLeftEighth,
+        WindowAction.BottomCenterRightEighth,
+        WindowAction.BottomRightEighth
+    };
+
+    /// <summary>
+    /// 垂直三分之一循环序列：Top → Middle → Bottom → Top
+    /// </summary>
+    private static readonly WindowAction[] VerticalThirdsCycle =
+    {
+        WindowAction.TopVerticalThird,
+        WindowAction.MiddleVerticalThird,
+        WindowAction.BottomVerticalThird
+    };
+
+    /// <summary>
+    /// 垂直三分之二循环序列：Top → Bottom → Top
+    /// </summary>
+    private static readonly WindowAction[] VerticalTwoThirdsCycle =
+    {
+        WindowAction.TopVerticalTwoThirds,
+        WindowAction.BottomVerticalTwoThirds
     };
 
     /// <summary>
@@ -75,30 +125,60 @@ public static class RepeatedExecutionsCalculator
         { WindowAction.FirstThird, ThirdsCycle },
         { WindowAction.CenterThird, ThirdsCycle },
         { WindowAction.LastThird, ThirdsCycle },
-        
+
         // 三分之二循环组
         { WindowAction.FirstTwoThirds, TwoThirdsCycle },
         { WindowAction.CenterTwoThirds, TwoThirdsCycle },
         { WindowAction.LastTwoThirds, TwoThirdsCycle },
-        
+
         // 左右半屏循环组
         { WindowAction.LeftHalf, LeftRightCycle },
         { WindowAction.RightHalf, LeftRightCycle },
-        
+
         // 上下半屏循环组
         { WindowAction.TopHalf, TopBottomCycle },
         { WindowAction.BottomHalf, TopBottomCycle },
-        
+
         // 四等分循环组
         { WindowAction.FirstFourth, FourthsCycle },
         { WindowAction.SecondFourth, FourthsCycle },
         { WindowAction.ThirdFourth, FourthsCycle },
         { WindowAction.LastFourth, FourthsCycle },
-        
+
         // 四分之三循环组
         { WindowAction.FirstThreeFourths, ThreeFourthsCycle },
         { WindowAction.CenterThreeFourths, ThreeFourthsCycle },
         { WindowAction.LastThreeFourths, ThreeFourthsCycle },
+
+        // 九等分循环组
+        { WindowAction.TopLeftNinth, NinthsCycle },
+        { WindowAction.TopCenterNinth, NinthsCycle },
+        { WindowAction.TopRightNinth, NinthsCycle },
+        { WindowAction.MiddleLeftNinth, NinthsCycle },
+        { WindowAction.MiddleCenterNinth, NinthsCycle },
+        { WindowAction.MiddleRightNinth, NinthsCycle },
+        { WindowAction.BottomLeftNinth, NinthsCycle },
+        { WindowAction.BottomCenterNinth, NinthsCycle },
+        { WindowAction.BottomRightNinth, NinthsCycle },
+
+        // 八等分循环组
+        { WindowAction.TopLeftEighth, EighthsCycle },
+        { WindowAction.TopCenterLeftEighth, EighthsCycle },
+        { WindowAction.TopCenterRightEighth, EighthsCycle },
+        { WindowAction.TopRightEighth, EighthsCycle },
+        { WindowAction.BottomLeftEighth, EighthsCycle },
+        { WindowAction.BottomCenterLeftEighth, EighthsCycle },
+        { WindowAction.BottomCenterRightEighth, EighthsCycle },
+        { WindowAction.BottomRightEighth, EighthsCycle },
+
+        // 垂直三分之一循环组
+        { WindowAction.TopVerticalThird, VerticalThirdsCycle },
+        { WindowAction.MiddleVerticalThird, VerticalThirdsCycle },
+        { WindowAction.BottomVerticalThird, VerticalThirdsCycle },
+
+        // 垂直三分之二循环组
+        { WindowAction.TopVerticalTwoThirds, VerticalTwoThirdsCycle },
+        { WindowAction.BottomVerticalTwoThirds, VerticalTwoThirdsCycle },
     };
 
     /// <summary>
