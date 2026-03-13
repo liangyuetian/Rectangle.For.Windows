@@ -31,7 +31,6 @@ public class ModernCard : Panel
         }
         target.ControlAdded += (s, e) => WireHoverEvents(e.Control);
     }
-    }
 
     public void SetContent(Control content)
     {
