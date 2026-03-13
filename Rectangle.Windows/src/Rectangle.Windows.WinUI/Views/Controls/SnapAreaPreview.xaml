@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<UserControl
+    x:Class="Rectangle.Windows.WinUI.Views.Controls.SnapAreaPreview"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+
+    <Grid Background="{StaticResource InputBackgroundBrush}"
+          CornerRadius="8"
+          BorderBrush="{StaticResource CardBorderBrush}"
+          BorderThickness="1">
+
+        <!-- 模拟屏幕区域 -->
+        <Grid x:Name="ScreenPreview"
+              Margin="40,30"
+              Background="{StaticResource CardBackgroundBrush}"
+              CornerRadius="4"
+              BorderBrush="{StaticResource CardBorderBrush}"
+              BorderThickness="1">
+
+            <!-- 半屏区域 - 左 -->
+            <Border x:Name="LeftHalfArea"
+                   Background="Transparent"
+                   BorderBrush="{StaticResource AccentBrush}"
+                   BorderThickness="2"
+                   CornerRadius="2"
+                   HorizontalAlignment="Left"
+                   Width="33%"
+                   Height="100%"
+                   Opacity="0.3"
+                   PointerEntered="Area_PointerEntered"
+                   PointerExited="Area_PointerExited">
+                <TextBlock Text="左半屏"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          FontSize="10"
+                          Foreground="{StaticResource SecondaryTextBrush}"/>
+            </Border>
+
+            <!-- 半屏区域 - 右 -->
+            <Border x:Name="RightHalfArea"
+                   Background="Transparent"
+                   BorderBrush="{StaticResource AccentBrush}"
+                   BorderThickness="2"
+                   CornerRadius="2"
+                   HorizontalAlignment="Right"
+                   Width="33%"
+                   Height="100%"
+                   Opacity="0.3"
+                   PointerEntered="Area_PointerEntered"
+                   PointerExited="Area_PointerExited">
+                <TextBlock Text="右半屏"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          FontSize="10"
+                          Foreground="{StaticResource SecondaryTextBrush}"/>
+            </Border>
+
+            <!-- 四角区域 - 左上 -->
+            <Border x:Name="TopLeftArea"
+                   Background="Transparent"
+                   BorderBrush="{StaticResource AccentBrush}"
+                   BorderThickness="2"
+                   CornerRadius="2"
+                   HorizontalAlignment="Left"
+                   VerticalAlignment="Top"
+                   Width="25%"
+                   Height="50%"
+                   Opacity="0.3"
+                   PointerEntered="Area_PointerEntered"
+                   PointerExited="Area_PointerExited">
+                <TextBlock Text="左上"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          FontSize="9"
+                          Foreground="{StaticResource SecondaryTextBrush}"/>
+            </Border>
+
+            <!-- 四角区域 - 右上 -->
+            <Border x:Name="TopRightArea"
+                   Background="Transparent"
+                   BorderBrush="{StaticResource AccentBrush}"
+                   BorderThickness="2"
+                   CornerRadius="2"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Top"
+                   Width="25%"
+                   Height="50%"
+                   Opacity="0.3"
+                   PointerEntered="Area_PointerEntered"
+                   PointerExited="Area_PointerExited">
+                <TextBlock Text="右上"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          FontSize="9"
+                          Foreground="{StaticResource SecondaryTextBrush}"/>
+            </Border>
+
+            <!-- 四角区域 - 左下 -->
+            <Border x:Name="BottomLeftArea"
+                   Background="Transparent"
+                   BorderBrush="{StaticResource AccentBrush}"
+                   BorderThickness="2"
+                   CornerRadius="2"
+                   HorizontalAlignment="Left"
+                   VerticalAlignment="Bottom"
+                   Width="25%"
+                   Height="50%"
+                   Opacity="0.3"
+                   PointerEntered="Area_PointerEntered"
+                   PointerExited="Area_PointerExited">
+                <TextBlock Text="左下"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          FontSize="9"
+                          Foreground="{StaticResource SecondaryTextBrush}"/>
+            </Border>
+
+            <!-- 四角区域 - 右下 -->
+            <Border x:Name="BottomRightArea"
+                   Background="Transparent"
+                   BorderBrush="{StaticResource AccentBrush}"
+                   BorderThickness="2"
+                   CornerRadius="2"
+                   HorizontalAlignment="Right"
+                   VerticalAlignment="Bottom"
+                   Width="25%"
+                   Height="50%"
+                   Opacity="0.3"
+                   PointerEntered="Area_PointerEntered"
+                   PointerExited="Area_PointerExited">
+                <TextBlock Text="右下"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          FontSize="9"
+                          Foreground="{StaticResource SecondaryTextBrush}"/>
+            </Border>
+
+            <!-- 最大化区域 - 顶部边缘 -->
+            <Border x:Name="MaximizeArea"
+                   Background="Transparent"
+                   BorderBrush="{StaticResource AccentBrush}"
+                   BorderThickness="2"
+                   CornerRadius="2"
+                   VerticalAlignment="Top"
+                   Height="10%"
+                   Width="100%"
+                   Opacity="0.3"
+                   PointerEntered="Area_PointerEntered"
+                   PointerExited="Area_PointerExited">
+                <TextBlock Text="最大化"
+                          HorizontalAlignment="Center"
+                          VerticalAlignment="Center"
+                          FontSize="9"
+                          Foreground="{StaticResource SecondaryTextBrush}"/>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
