@@ -50,5 +50,9 @@ public enum WindowAction
     Restore,
     // 显示器
     NextDisplay,
-    PreviousDisplay
+    PreviousDisplay,
+
+    // 撤销/重做
+    Undo,
+    Redo
 }

@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Window
+    x:Class="Rectangle.Windows.WinUI.Views.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Rectangle 设置"
+    Width="960"
+    Height="700"
+    MinWidth="800"
+    MinHeight="500">
+
+    <Grid>
+        <NavigationView x:Name="NavView"
+                       PaneDisplayMode="Left"
+                       IsSettingsVisible="False"
+                       PaneTitle="Rectangle"
+                       Background="{StaticResource NavBackgroundBrush}"
+                       SelectionChanged="NavView_SelectionChanged">
+
+            <NavigationView.MenuItems>
+                <NavigationViewItem Icon="Keyboard"
+                                   Content="键盘快捷键"
+                                   Tag="Shortcuts"
+                                   Style="{StaticResource NavButtonStyle}"/>
+                <NavigationViewItem Icon="PreviewLink"
+                                   Content="吸附区域"
+                                   Tag="SnapAreas"
+                                   Style="{StaticResource NavButtonStyle}"/>
+                <NavigationViewItem Icon="Setting"
+                                   Content="设置"
+                                   Tag="Settings"
+                                   Style="{StaticResource NavButtonStyle}"/>
+            </NavigationView.MenuItems>
+
+            <NavigationView.PaneFooter>
+                <StackPanel Padding="16,8">
+                    <TextBlock Text="v1.0.0"
+                              FontSize="12"
+                              Foreground="{StaticResource SecondaryTextBrush}"/>
+                </StackPanel>
+            </NavigationView.PaneFooter>
+
+            <Frame x:Name="ContentFrame"
+                   Background="{ThemeResource ApplicationPageBackgroundThemeBrush}"
+                   Padding="0"/>
+        </NavigationView>
+    </Grid>
+</Window>
