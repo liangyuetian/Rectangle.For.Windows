@@ -549,27 +549,32 @@
 
 ---
 
-## 🎯 Phase 6: Todo 模式（优先级：🟢 低）
+## 🎯 Phase 6: Todo 模式 ✅（已完成）
 
-### 6.1 Todo 侧边栏
+### 6.1 Todo 侧边栏 ✅
 
-#### 任务 6.1.1: 配置选项
-- [ ] 添加 `TodoMode` (bool)
-- [ ] 添加 `TodoApplication` (string) - 应用进程名
-- [ ] 添加 `TodoSidebarWidth` (float, 默认 400)
-- [ ] 添加 `TodoSidebarSide` (enum: Left/Right)
+#### 任务 6.1.1: 配置选项 ✅
+- [x] 添加 `TodoMode` (bool)
+- [x] 添加 `TodoApplication` (string) - 应用进程名
+- [x] 添加 `TodoSidebarWidth` (float, 默认 400)
+- [x] 添加 `TodoSidebarSide` (enum: Left/Right)
+- **提交**: `94fa329` - feat: 添加 Todo 模式配置和基础架构
 
-#### 任务 6.1.2: 实现 Todo 计算器
-- [ ] `LeftTodoCalculator.cs`
-- [ ] `RightTodoCalculator.cs`
-- [ ] 为其他窗口预留 Todo 侧边栏空间
+#### 任务 6.1.2: 实现 Todo 计算器 ✅
+- [x] `LeftTodoCalculator.cs`
+- [x] `RightTodoCalculator.cs`
+- [x] 为其他窗口预留 Todo 侧边栏空间
+- **提交**: `94fa329` - feat: 添加 Todo 模式配置和基础架构
 
-#### 任务 6.1.3: Todo 窗口管理
-- [ ] 检测 Todo 应用窗口
-- [ ] 自动调整 Todo 窗口到侧边栏
-- [ ] 其他窗口避开 Todo 区域
+#### 任务 6.1.3: Todo 窗口管理 ✅
+- [x] 检测 Todo 应用窗口
+- [x] 自动调整 Todo 窗口到侧边栏
+- [x] 其他窗口避开 Todo 区域
+- [x] 创建 `TodoManager.cs` 管理 Todo 窗口
+- **提交**: `94fa329` - feat: 添加 Todo 模式配置和基础架构
 
 **预计工作量**：6-8 小时
+**Phase 6 状态**：✅ 已完成（100%）
 
 ---
 
