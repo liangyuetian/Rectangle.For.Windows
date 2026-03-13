@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -12,7 +13,7 @@ namespace Rectangle.Windows.Views;
 /// </summary>
 public class FootprintWindow : Form
 {
-    private static FootprintWindow? _instance;
+    private static volatile FootprintWindow? _instance;
     private static readonly object _lock = new();
 
     private Timer? _fadeTimer;
@@ -21,6 +22,7 @@ public class FootprintWindow : Form
     private bool _isFadingIn;
     private int _animationDuration = 150; // 默认动画时长（毫秒）
     private bool _enableFade = true;
+    private Stopwatch? _fadeStopwatch;
 
     /// <summary>
     /// 预览窗口的透明度（0.0 - 1.0）
@@ -134,6 +136,12 @@ public class FootprintWindow : Form
     /// <param name="height">高度</param>
     public void ShowPreview(int x, int y, int width, int height)
     {
+        // 参数验证
+        if (width <= 0 || height <= 0)
+        {
+            throw new ArgumentException("宽度和高度必须大于 0");
+        }
+
         if (InvokeRequired)
         {
             Invoke(new Action(() => ShowPreview(x, y, width, height)));
@@ -222,8 +230,7 @@ public class FootprintWindow : Form
         };
         _fadeTimer.Tick += FadeTimer_Tick;
 
-        var startTime = DateTime.Now;
-        _fadeTimer.Tag = startTime;
+        _fadeStopwatch = Stopwatch.StartNew();
 
         _fadeTimer.Start();
     }
@@ -242,18 +249,17 @@ public class FootprintWindow : Form
         };
         _fadeTimer.Tick += FadeTimer_Tick;
 
-        var startTime = DateTime.Now;
-        _fadeTimer.Tag = startTime;
+        _fadeStopwatch = Stopwatch.StartNew();
 
         _fadeTimer.Start();
     }
 
     private void FadeTimer_Tick(object? sender, EventArgs e)
     {
-        if (_fadeTimer == null || _fadeTimer.Tag is not DateTime startTime)
+        if (_fadeTimer == null || _fadeStopwatch == null)
             return;
 
-        var elapsed = (DateTime.Now - startTime).TotalMilliseconds;
+        var elapsed = _fadeStopwatch.Elapsed.TotalMilliseconds;
         var progress = Math.Min(1.0, elapsed / _animationDuration);
 
         // 使用 EaseOutQuad 缓动函数
@@ -293,6 +299,12 @@ public class FootprintWindow : Form
             _fadeTimer.Stop();
             _fadeTimer.Dispose();
             _fadeTimer = null;
+        }
+
+        if (_fadeStopwatch != null)
+        {
+            _fadeStopwatch.Stop();
+            _fadeStopwatch = null;
         }
     }
 
@@ -368,15 +380,18 @@ public class FootprintWindow : Form
     /// <summary>
     /// 清理资源
     /// </summary>
-    public new void Dispose()
+    protected override void Dispose(bool disposing)
     {
-        StopFadeTimer();
-        if (Visible)
+        if (disposing)
         {
-            base.Hide();
+            StopFadeTimer();
+            if (Visible)
+            {
+                base.Hide();
+            }
+            _instance = null;
         }
-        base.Dispose();
-        _instance = null;
+        base.Dispose(disposing);
     }
 }
 

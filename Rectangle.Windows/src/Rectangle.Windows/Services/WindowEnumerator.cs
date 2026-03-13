@@ -12,23 +12,28 @@ namespace Rectangle.Windows.Services;
 /// </summary>
 public static class WindowEnumerator
 {
-    // P/Invoke delegates and methods
-    private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
+    /// <summary>
+    /// 获取窗口标题（内部使用）
+    /// </summary>
+    private static unsafe string GetWindowTitleInternal(IntPtr hwnd)
+    {
+        int length = PInvoke.GetWindowTextLength(new HWND(hwnd));
+        if (length == 0) return string.Empty;
 
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
+        char* buf = stackalloc char[length + 1];
+        int result = PInvoke.GetWindowText(new HWND(hwnd), buf, length + 1);
+        return result > 0 ? new string(buf, 0, result) : string.Empty;
+    }
 
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsIconic(IntPtr hWnd);
-
-    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-    private static extern int GetWindowText(IntPtr hWnd, StringBuilder lpString, int nMaxCount);
+    /// <summary>
+    /// 检查窗口是否是工具窗口（内部使用）
+    /// </summary>
+    private static bool IsToolWindowInternal(IntPtr hwnd)
+    {
+        var exStyle = GetWindowLong(hwnd, -20); // GWL_EXSTYLE = -20
+        const int WS_EX_TOOLWINDOW = 0x00000080;
+        return (exStyle.ToInt64() & WS_EX_TOOLWINDOW) != 0;
+    }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
     private static extern nint GetWindowLong32(IntPtr hWnd, int nIndex);
@@ -44,64 +49,13 @@ public static class WindowEnumerator
             return GetWindowLong32(hWnd, nIndex);
     }
 
-    [DllImport("user32.dll")]
-    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-    [StructLayout(LayoutKind.Sequential)]
-    private struct RECT
-    {
-        public int left;
-        public int top;
-        public int right;
-        public int bottom;
-    }
-
     /// <summary>
-    /// 枚举所有可见窗口
+    /// 获取窗口矩形（内部使用）
     /// </summary>
-    /// <param name="excludeMinimized">是否排除最小化的窗口</param>
-    /// <param name="excludeToolWindows">是否排除工具窗口</param>
-    /// <returns>窗口句柄列表</returns>
-    public static List<nint> EnumerateVisibleWindows(bool excludeMinimized = true, bool excludeToolWindows = true)
+    private static (int X, int Y, int Width, int Height) GetWindowRectInternal(IntPtr hwnd)
     {
-        var windows = new List<nint>();
-
-        EnumWindows((hwnd, lParam) =>
-        {
-            if (IsWindowValid(hwnd, excludeMinimized, excludeToolWindows))
-            {
-                windows.Add(hwnd);
-            }
-            return true;
-        }, IntPtr.Zero);
-
-        return windows;
-    }
-
-    /// <summary>
-    /// 枚举指定进程的所有窗口
-    /// </summary>
-    /// <param name="processName">进程名称</param>
-    /// <param name="excludeMinimized">是否排除最小化的窗口</param>
-    /// <returns>窗口句柄列表</returns>
-    public static List<nint> EnumerateWindowsByProcess(string processName, bool excludeMinimized = true)
-    {
-        var windows = new List<nint>();
-
-        EnumWindows((hwnd, lParam) =>
-        {
-            if (IsWindowValid(hwnd, excludeMinimized, true))
-            {
-                var process = GetProcessNameFromWindow(hwnd);
-                if (process.Equals(processName, StringComparison.OrdinalIgnoreCase))
-                {
-                    windows.Add(hwnd);
-                }
-            }
-            return true;
-        }, IntPtr.Zero);
-
-        return windows;
+        PInvoke.GetWindowRect(new HWND(hwnd), out var rect);
+        return (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
     }
 
     /// <summary>
@@ -110,7 +64,7 @@ public static class WindowEnumerator
     private static bool IsWindowValid(IntPtr hwnd, bool excludeMinimized, bool excludeToolWindows)
     {
         // 检查窗口是否可见
-        if (!IsWindowVisible(hwnd))
+        if (!PInvoke.IsWindowVisible(new HWND(hwnd)))
             return false;
 
         // 检查窗口是否有标题
@@ -119,7 +73,7 @@ public static class WindowEnumerator
             return false;
 
         // 排除最小化窗口
-        if (excludeMinimized && IsIconic(hwnd))
+        if (excludeMinimized && PInvoke.IsIconic(new HWND(hwnd)))
             return false;
 
         // 排除工具窗口
@@ -135,32 +89,51 @@ public static class WindowEnumerator
     }
 
     /// <summary>
-    /// 获取窗口标题（内部使用）
+    /// 枚举所有可见窗口
     /// </summary>
-    private static string GetWindowTitleInternal(IntPtr hwnd)
+    /// <param name="excludeMinimized">是否排除最小化的窗口</param>
+    /// <param name="excludeToolWindows">是否排除工具窗口</param>
+    /// <returns>窗口句柄列表</returns>
+    public static List<nint> EnumerateVisibleWindows(bool excludeMinimized = true, bool excludeToolWindows = true)
     {
-        var sb = new StringBuilder(256);
-        var length = GetWindowText(hwnd, sb, 256);
-        return length > 0 ? sb.ToString() : string.Empty;
+        var windows = new List<nint>();
+
+        PInvoke.EnumWindows((hwnd, lParam) =>
+        {
+            if (IsWindowValid(hwnd.Value, excludeMinimized, excludeToolWindows))
+            {
+                windows.Add(hwnd.Value);
+            }
+            return true;
+        }, default);
+
+        return windows;
     }
 
     /// <summary>
-    /// 检查窗口是否是工具窗口（内部使用）
+    /// 枚举指定进程的所有窗口
     /// </summary>
-    private static bool IsToolWindowInternal(IntPtr hwnd)
+    /// <param name="processName">进程名称</param>
+    /// <param name="excludeMinimized">是否排除最小化的窗口</param>
+    /// <returns>窗口句柄列表</returns>
+    public static List<nint> EnumerateWindowsByProcess(string processName, bool excludeMinimized = true)
     {
-        var exStyle = GetWindowLong(hwnd, -20); // GWL_EXSTYLE = -20
-        const int WS_EX_TOOLWINDOW = 0x00000080;
-        return (exStyle.ToInt64() & WS_EX_TOOLWINDOW) != 0;
-    }
+        var windows = new List<nint>();
 
-    /// <summary>
-    /// 获取窗口矩形（内部使用）
-    /// </summary>
-    private static (int X, int Y, int Width, int Height) GetWindowRectInternal(IntPtr hwnd)
-    {
-        GetWindowRect(hwnd, out var rect);
-        return (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+        PInvoke.EnumWindows((hwnd, lParam) =>
+        {
+            if (IsWindowValid(hwnd.Value, excludeMinimized, true))
+            {
+                var process = GetProcessNameFromWindow(hwnd.Value);
+                if (process.Equals(processName, StringComparison.OrdinalIgnoreCase))
+                {
+                    windows.Add(hwnd.Value);
+                }
+            }
+            return true;
+        }, default);
+
+        return windows;
     }
 
     /// <summary>

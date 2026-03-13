@@ -131,14 +131,20 @@ public class WindowTypeService
         }
     }
 
-    // P/Invoke for IsIconic and IsZoomed
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsIconic(IntPtr hWnd);
+    // 使用 P/Invoke 直接调用 GetWindowLong
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
+    private static extern nint GetWindowLong32(IntPtr hWnd, int nIndex);
 
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsZoomed(IntPtr hWnd);
+    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
+    private static extern nint GetWindowLong64(IntPtr hWnd, int nIndex);
+
+    private static nint GetWindowLong(HWND hWnd, int nIndex)
+    {
+        if (nint.Size == 8)
+            return GetWindowLong64(hWnd.Value, nIndex);
+        else
+            return GetWindowLong32(hWnd.Value, nIndex);
+    }
 
     /// <summary>
     /// 检查窗口是否是最小化状态
@@ -149,7 +155,7 @@ public class WindowTypeService
         
         try
         {
-            return IsIconic((IntPtr)hwnd);
+            return PInvoke.IsIconic(new HWND(hwnd));
         }
         catch
         {
@@ -166,7 +172,7 @@ public class WindowTypeService
         
         try
         {
-            return IsZoomed((IntPtr)hwnd);
+            return PInvoke.IsZoomed(new HWND(hwnd));
         }
         catch
         {
@@ -190,18 +196,5 @@ public class WindowTypeService
         return (uint)GetWindowLong(new HWND(hwnd), -20); // GWL_EXSTYLE = -20
     }
 
-    // 使用 P/Invoke 直接调用 GetWindowLong
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongW")]
-    private static extern nint GetWindowLong32(IntPtr hWnd, int nIndex);
 
-    [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
-    private static extern nint GetWindowLong64(IntPtr hWnd, int nIndex);
-
-    private static nint GetWindowLong(HWND hWnd, int nIndex)
-    {
-        if (nint.Size == 8)
-            return GetWindowLong64(hWnd.Value, nIndex);
-        else
-            return GetWindowLong32(hWnd.Value, nIndex);
-    }
 }

@@ -52,7 +52,7 @@ public class CascadeAllManager
             index++;
         }
 
-        Console.WriteLine($"[CascadeAllManager] 层叠 {windows.Count} 个窗口");
+        Logger.Info("CascadeAllManager", $"层叠 {windows.Count} 个窗口");
     }
 
     /// <summary>
@@ -85,7 +85,7 @@ public class CascadeAllManager
             index++;
         }
 
-        Console.WriteLine($"[CascadeAllManager] 层叠应用 {processName} 的 {windows.Count} 个窗口");
+        Logger.Info("CascadeAllManager", $"层叠应用 {processName} 的 {windows.Count} 个窗口");
     }
 
     /// <summary>

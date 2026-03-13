@@ -11,10 +11,6 @@ namespace Rectangle.Windows.Services;
 
 public unsafe class Win32WindowService
 {
-    // P/Invoke for SetCursorPos
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool SetCursorPosInternal(int x, int y);
     public nint GetForegroundWindowHandle()
     {
         return PInvoke.GetForegroundWindow().Value;
@@ -28,12 +24,12 @@ public unsafe class Win32WindowService
 
     public bool SetWindowRect(nint hwnd, int x, int y, int width, int height)
     {
-        Console.WriteLine($"[SetWindowRect] 尝试移动窗口 hwnd={hwnd} 到 ({x}, {y}, {width}, {height})");
+        Logger.Debug("SetWindowRect", $"尝试移动窗口 hwnd={hwnd} 到 ({x}, {y}, {width}, {height})");
         
         // 验证窗口句柄是否有效
         if (hwnd == 0)
         {
-            Console.WriteLine("[SetWindowRect] 错误：窗口句柄为 0");
+            Logger.Warning("SetWindowRect", "错误：窗口句柄为 0");
             return false;
         }
 
@@ -42,14 +38,14 @@ public unsafe class Win32WindowService
         // 检查窗口是否存在
         if (!IsWindowInternal(hWnd))
         {
-            Console.WriteLine($"[SetWindowRect] 错误：窗口句柄无效或窗口已关闭 hwnd={hwnd}");
+            Logger.Warning("SetWindowRect", $"错误：窗口句柄无效或窗口已关闭 hwnd={hwnd}");
             return false;
         }
 
         // 检查窗口是否可见
         if (!PInvoke.IsWindowVisible(hWnd))
         {
-            Console.WriteLine($"[SetWindowRect] 警告：窗口不可见 hwnd={hwnd}");
+            Logger.Warning("SetWindowRect", $"警告：窗口不可见 hwnd={hwnd}");
         }
         
         // 先确保窗口处于正常状态（非最大化/最小化）
@@ -58,17 +54,15 @@ public unsafe class Win32WindowService
         // WS_MAXIMIZE = 0x01000000, 如果窗口已最大化，先还原
         if ((style & 0x01000000) != 0)
         {
-            Console.WriteLine("[SetWindowRect] 窗口已最大化，先还原");
-            PInvoke.ShowWindow(hWnd, (SHOW_WINDOW_CMD)9); // SW_RESTORE = 9
-            System.Threading.Thread.Sleep(50); // 等待窗口还原完成
+            Logger.Debug("SetWindowRect", "窗口已最大化，先还原");
+            PInvoke.ShowWindowAsync(hWnd, SHOW_WINDOW_CMD.SW_RESTORE); // SW_RESTORE = 9
         }
 
         // WS_MINIMIZE = 0x20000000, 如果窗口已最小化，先还原
         if ((style & 0x20000000) != 0)
         {
-            Console.WriteLine("[SetWindowRect] 窗口已最小化，先还原");
-            PInvoke.ShowWindow(hWnd, (SHOW_WINDOW_CMD)9); // SW_RESTORE = 9
-            System.Threading.Thread.Sleep(50); // 等待窗口还原完成
+            Logger.Debug("SetWindowRect", "窗口已最小化，先还原");
+            PInvoke.ShowWindowAsync(hWnd, SHOW_WINDOW_CMD.SW_RESTORE); // SW_RESTORE = 9
         }
 
         // SWP_FRAMECHANGED: 强制更新窗口框架（对 Electron 应用很重要）
@@ -79,13 +73,13 @@ public unsafe class Win32WindowService
             x, y, width, height, 
             SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED | SET_WINDOW_POS_FLAGS.SWP_ASYNCWINDOWPOS);
         
-        Console.WriteLine($"[SetWindowRect] SetWindowPos 结果: {result}");
+        Logger.Debug("SetWindowRect", $"SetWindowPos 结果: {result}");
         
         if (!result)
         {
             // 获取错误码
             var errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"[SetWindowRect] SetWindowPos 失败，错误码: {errorCode}");
+            Logger.Error("SetWindowRect", $"SetWindowPos 失败，错误码: {errorCode}");
             
             // 如果失败，尝试不带 SWP_ASYNCWINDOWPOS 再试一次
             result = PInvoke.SetWindowPos(
@@ -93,12 +87,12 @@ public unsafe class Win32WindowService
                 HWND.Null, 
                 x, y, width, height, 
                 SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED);
-            Console.WriteLine($"[SetWindowRect] 重试结果: {result}");
+            Logger.Debug("SetWindowRect", $"重试结果: {result}");
             
             if (!result)
             {
                 errorCode = Marshal.GetLastWin32Error();
-                Console.WriteLine($"[SetWindowRect] 重试失败，错误码: {errorCode}");
+                Logger.Error("SetWindowRect", $"重试失败，错误码: {errorCode}");
             }
         }
         
@@ -225,7 +219,7 @@ public unsafe class Win32WindowService
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Win32WindowService] 获取进程名失败: {ex.Message}");
+            Logger.Warning("Win32WindowService", $"获取进程名失败: {ex.Message}");
             return "未知";
         }
     }
@@ -235,7 +229,7 @@ public unsafe class Win32WindowService
     /// </summary>
     public bool SetCursorPos(int x, int y)
     {
-        return SetCursorPosInternal(x, y);
+        return PInvoke.SetCursorPos(x, y);
     }
 
     /// <summary>
@@ -250,13 +244,8 @@ public unsafe class Win32WindowService
         return SetCursorPos(centerX, centerY);
     }
 
-    // P/Invoke for IsWindow
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsWindow(IntPtr hWnd);
-
     private bool IsWindowInternal(HWND hWnd)
     {
-        return IsWindow(hWnd.Value);
+        return PInvoke.IsWindow(hWnd);
     }
 }

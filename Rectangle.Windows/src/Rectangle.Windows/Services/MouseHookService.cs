@@ -51,17 +51,17 @@ public class MouseHookService : IDisposable
 
             if (_hookHandle.Value == IntPtr.Zero)
             {
-                Console.WriteLine("[MouseHookService] 安装鼠标钩子失败");
+                Logger.Error("MouseHookService", "安装鼠标钩子失败");
                 return false;
             }
 
             _isHookInstalled = true;
-            Console.WriteLine("[MouseHookService] 鼠标钩子安装成功");
+            Logger.Info("MouseHookService", "鼠标钩子安装成功");
             return true;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MouseHookService] 安装钩子异常: {ex.Message}");
+            Logger.Error("MouseHookService", $"安装钩子异常: {ex.Message}");
             return false;
         }
     }
@@ -83,11 +83,11 @@ public class MouseHookService : IDisposable
 
             _isHookInstalled = false;
             _hookProc = null;
-            Console.WriteLine("[MouseHookService] 鼠标钩子已卸载");
+            Logger.Info("MouseHookService", "鼠标钩子已卸载");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[MouseHookService] 卸载钩子异常: {ex.Message}");
+            Logger.Error("MouseHookService", $"卸载钩子异常: {ex.Message}");
         }
     }
 
@@ -126,7 +126,7 @@ public class MouseHookService : IDisposable
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[MouseHookService] 钩子回调异常: {ex.Message}");
+                Logger.Error("MouseHookService", $"钩子回调异常: {ex.Message}");
             }
         }
 
@@ -134,17 +134,12 @@ public class MouseHookService : IDisposable
         return PInvoke.CallNextHookEx(HHOOK.Null, nCode, wParam, lParam);
     }
 
-    // P/Invoke for GetCursorPos
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool GetCursorPos(out POINT lpPoint);
-
     /// <summary>
     /// 获取当前光标位置
     /// </summary>
     public static System.Drawing.Point GetCursorPosition()
     {
-        if (GetCursorPos(out var pt))
+        if (PInvoke.GetCursorPos(out var pt))
         {
             return new System.Drawing.Point(pt.x, pt.y);
         }

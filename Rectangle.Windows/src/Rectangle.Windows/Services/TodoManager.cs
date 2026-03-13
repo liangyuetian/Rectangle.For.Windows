@@ -1,21 +1,25 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Rectangle.Windows.Core;
 
 namespace Rectangle.Windows.Services;
 
 /// <summary>
 /// Todo 模式管理器
-/// 管理 Todo 应用窗口的位置，为其他窗口预留侧边栏空间
+/// 管理 Todo 应用窗口和其他窗口的协调布局
 /// </summary>
 public class TodoManager
 {
     private readonly Win32WindowService _win32;
     private readonly ConfigService _configService;
+    private readonly WindowTypeService _windowTypeService;
 
-    public TodoManager(Win32WindowService win32, ConfigService configService)
+    public TodoManager(Win32WindowService win32, ConfigService configService, WindowTypeService windowTypeService)
     {
         _win32 = win32;
         _configService = configService;
+        _windowTypeService = windowTypeService;
     }
 
     /// <summary>
@@ -28,98 +32,73 @@ public class TodoManager
     }
 
     /// <summary>
-    /// 获取 Todo 侧边栏宽度
+    /// 获取 Todo 应用窗口句柄
     /// </summary>
-    public int GetTodoSidebarWidth()
+    public nint GetTodoWindow()
     {
         var config = _configService.Load();
-        return config.TodoSidebarWidth;
+        if (string.IsNullOrEmpty(config.TodoApplication))
+            return 0;
+
+        var windows = WindowEnumerator.EnumerateWindowsByProcess(config.TodoApplication);
+        return windows.FirstOrDefault();
     }
 
     /// <summary>
-    /// 获取 Todo 侧边栏位置
+    /// 调整 Todo 窗口到侧边栏位置
     /// </summary>
-    public string GetTodoSidebarSide()
+    public void AdjustTodoWindow(WorkArea workArea)
     {
         var config = _configService.Load();
-        return config.TodoSidebarSide;
+        if (!config.TodoMode) return;
+
+        var todoHwnd = GetTodoWindow();
+        if (todoHwnd == 0) return;
+
+        var sidebarWidth = config.TodoSidebarWidth;
+        var isLeftSide = config.TodoSidebarSide == TodoSidebarSide.Left;
+
+        int x = isLeftSide ? workArea.Left : workArea.Right - sidebarWidth;
+        int y = workArea.Top;
+        int width = sidebarWidth;
+        int height = workArea.Height;
+
+        _win32.SetWindowRect(todoHwnd, x, y, width, height);
+
+        Logger.Info("TodoManager", $"调整 Todo 窗口到 {(isLeftSide ? "左侧" : "右侧")}: ({x}, {y}, {width}, {height})");
     }
 
     /// <summary>
-    /// 定位 Todo 应用窗口到侧边栏
+    /// 获取排除 Todo 区域后的可用工作区
     /// </summary>
-    /// <param name="workArea">工作区域</param>
-    public void PositionTodoWindow(WorkArea workArea)
+    public WorkArea GetAvailableWorkArea(WorkArea fullWorkArea)
     {
         var config = _configService.Load();
         if (!config.TodoMode || string.IsNullOrEmpty(config.TodoApplication))
-            return;
+            return fullWorkArea;
 
-        // 查找 Todo 应用窗口
-        var todoWindows = WindowEnumerator.EnumerateWindowsByProcess(config.TodoApplication);
-        if (todoWindows.Count == 0)
-        {
-            Console.WriteLine($"[TodoManager] 未找到 Todo 应用窗口: {config.TodoApplication}");
-            return;
-        }
+        var todoHwnd = GetTodoWindow();
+        if (todoHwnd == 0) return fullWorkArea;
 
-        var gap = config.GapSize;
-        var todoWidth = config.TodoSidebarWidth;
-        var isLeft = config.TodoSidebarSide.Equals("Left", StringComparison.OrdinalIgnoreCase);
+        var sidebarWidth = config.TodoSidebarWidth;
+        var isLeftSide = config.TodoSidebarSide == TodoSidebarSide.Left;
 
-        foreach (var hwnd in todoWindows)
-        {
-            int x, y, width, height;
-
-            if (isLeft)
-            {
-                x = workArea.Left + gap;
-                width = todoWidth - gap * 2;
-            }
-            else
-            {
-                x = workArea.Right - todoWidth + gap;
-                width = todoWidth - gap * 2;
-            }
-
-            y = workArea.Top + gap;
-            height = workArea.Height - gap * 2;
-
-            _win32.SetWindowRect(hwnd, x, y, width, height);
-            Console.WriteLine($"[TodoManager] 已定位 Todo 窗口: {hwnd} -> ({x}, {y}, {width}, {height})");
-        }
-    }
-
-    /// <summary>
-    /// 计算排除 Todo 侧边栏后的可用工作区域
-    /// </summary>
-    /// <param name="workArea">原始工作区域</param>
-    /// <returns>调整后的工作区域</returns>
-    public WorkArea GetAdjustedWorkArea(WorkArea workArea)
-    {
-        var config = _configService.Load();
-        if (!config.TodoMode || string.IsNullOrEmpty(config.TodoApplication))
-            return workArea;
-
-        var todoWidth = config.TodoSidebarWidth;
-        var isLeft = config.TodoSidebarSide.Equals("Left", StringComparison.OrdinalIgnoreCase);
-
-        if (isLeft)
+        if (isLeftSide)
         {
             return new WorkArea(
-                workArea.Left + todoWidth,
-                workArea.Top,
-                workArea.Right,
-                workArea.Bottom
+                fullWorkArea.Left + sidebarWidth,
+                fullWorkArea.Top,
+                fullWorkArea.Right,
+                fullWorkArea.Bottom
             );
         }
         else
         {
             return new WorkArea(
-                workArea.Left,
-                workArea.Top,
-                workArea.Right - todoWidth,
-                workArea.Bottom
+                fullWorkArea.Left,
+                fullWorkArea.Top,
+                fullWorkArea.Right - sidebarWidth,
+                fullWorkArea.Bottom
             );
         }
     }
@@ -127,15 +106,39 @@ public class TodoManager
     /// <summary>
     /// 检查窗口是否是 Todo 应用窗口
     /// </summary>
-    /// <param name="hwnd">窗口句柄</param>
-    /// <returns>是否是 Todo 应用窗口</returns>
     public bool IsTodoWindow(nint hwnd)
     {
         var config = _configService.Load();
-        if (!config.TodoMode || string.IsNullOrEmpty(config.TodoApplication))
+        if (string.IsNullOrEmpty(config.TodoApplication))
             return false;
 
         var processName = WindowEnumerator.GetProcessNameFromWindow(hwnd);
         return processName.Equals(config.TodoApplication, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// 获取所有非 Todo 窗口
+    /// </summary>
+    public List<nint> GetNonTodoWindows()
+    {
+        var allWindows = WindowEnumerator.EnumerateVisibleWindows();
+        return allWindows.Where(hwnd => !IsTodoWindow(hwnd)).ToList();
+    }
+
+    /// <summary>
+    /// 重新布局所有非 Todo 窗口（在可用区域内）
+    /// </summary>
+    public void RelayoutNonTodoWindows(WorkArea workArea)
+    {
+        var availableWorkArea = GetAvailableWorkArea(workArea);
+        var windows = GetNonTodoWindows();
+
+        if (windows.Count == 0) return;
+
+        // 简单的平铺布局
+        var tileManager = new TileAllManager(_win32, _configService);
+        tileManager.TileAll(availableWorkArea);
+
+        Logger.Info("TodoManager", $"重新布局 {windows.Count} 个非 Todo 窗口");
     }
 }
