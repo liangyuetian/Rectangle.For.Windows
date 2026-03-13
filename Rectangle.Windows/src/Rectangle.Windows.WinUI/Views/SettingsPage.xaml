@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Page
+    x:Class="Rectangle.Windows.WinUI.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controls="using:Rectangle.Windows.WinUI.Views.Controls"
+    xmlns:vm="using:Rectangle.Windows.WinUI.ViewModels"
+    mc:Ignorable="d">
+
+    <Page.Resources>
+        <DataTemplate x:Key="ShortcutItemTemplate" x:DataType="vm:ShortcutItem">
+            <controls:ShortcutEditor
+                Action="{x:Bind Action}"
+                DisplayName="{x:Bind DisplayName}"
+                IconGlyph="{x:Bind IconGlyph}"
+                ShortcutText="{x:Bind ShortcutText, Mode=TwoWay}"
+                ShortcutChanged="ShortcutEditor_ShortcutChanged"
+                ShortcutCleared="ShortcutEditor_ShortcutCleared"/>
+        </DataTemplate>
+    </Page.Resources>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel Padding="40,30" Spacing="8">
+            <!-- 页面标题 -->
+            <StackPanel Margin="0,0,0,16">
+                <TextBlock Text="键盘快捷键" Style="{StaticResource PageTitleStyle}"/>
+                <TextBlock Text="配置窗口管理的快捷键" Style="{StaticResource PageSubtitleStyle}"/>
+            </StackPanel>
+
+            <!-- 两列卡片布局 -->
+            <Grid ColumnSpacing="20">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- 左列 -->
+                <StackPanel Grid.Column="0" Spacing="16">
+                    <!-- 半屏卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="半屏" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.HalfScreenShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 四角卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="四角" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.CornerShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 三分屏卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="三分屏" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.ThirdShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 四等分卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="四等分" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.FourthShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 移动卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="移动" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.MoveShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- 右列 -->
+                <StackPanel Grid.Column="1" Spacing="16">
+                    <!-- 最大化卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="最大化与恢复" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.MaximizeShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 缩放卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="缩放" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.ResizeShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 六等分卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="六等分" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.SixthShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 八等分卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="八等分" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.EighthShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 九宫格卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="九宫格" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.NinthShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 显示器卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="显示器" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.DisplayShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- 其他卡片 -->
+                    <Border Style="{StaticResource ModernCardStyle}">
+                        <StackPanel>
+                            <TextBlock Text="其他" Style="{StaticResource CardTitleStyle}"/>
+                            <ItemsControl ItemsSource="{x:Bind ViewModel.OtherShortcuts}"
+                                         ItemTemplate="{StaticResource ShortcutItemTemplate}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <!-- 恢复默认按钮 -->
+            <Button Content="恢复默认快捷键"
+                   Style="{StaticResource RestoreButtonStyle}"
+                   Click="RestoreDefaults_Click"/>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

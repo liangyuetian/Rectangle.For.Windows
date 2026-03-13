@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Rectangle.Windows.Services;
 
 namespace Rectangle.Windows.Core;
 
@@ -13,17 +14,17 @@ public struct RectangleAction
     /// 执行的操作类型
     /// </summary>
     public WindowAction Action { get; set; }
-    
+
     /// <summary>
     /// 连续执行同一操作的次数
     /// </summary>
     public int Count { get; set; }
-    
+
     /// <summary>
     /// 最后一次执行的时间
     /// </summary>
     public DateTime LastExecutionTime { get; set; }
-    
+
     /// <summary>
     /// 操作后的窗口位置
     /// </summary>
@@ -36,31 +37,36 @@ public class WindowHistory
     /// 保存用户原始窗口位置（用于恢复）
     /// </summary>
     private readonly Dictionary<nint, (int X, int Y, int W, int H)> _restoreRects = new();
-    
+
     /// <summary>
     /// 记录程序最后一次对窗口的操作信息（用于重复执行检测）
     /// </summary>
     private readonly Dictionary<nint, RectangleAction> _lastActions = new();
-    
+
     /// <summary>
     /// 记录哪些窗口是由程序调整的（这些窗口的位置变化不应该被记录）
     /// </summary>
     private readonly HashSet<nint> _programAdjustedWindows = new();
-    
+
+    /// <summary>
+    /// 记录窗口最后访问时间（用于清理过期记录）
+    /// </summary>
+    private readonly Dictionary<nint, DateTime> _lastAccessTimes = new();
+
     /// <summary>
     /// 重复执行的超时时间（秒）
     /// </summary>
     private const double RepeatTimeoutSeconds = 2.0;
 
     /// <summary>
-    /// 最大历史记录数量
+    /// 历史记录最大数量
     /// </summary>
-    private const int MaxHistoryCount = 100;
+    private int _maxHistoryCount = 100;
 
     /// <summary>
-    /// 历史记录的过期时间（分钟）
+    /// 历史记录过期时间（分钟）
     /// </summary>
-    private const int HistoryExpirationMinutes = 60;
+    private int _expirationMinutes = 60;
 
     /// <summary>
     /// 最后清理时间
@@ -70,14 +76,104 @@ public class WindowHistory
     /// <summary>
     /// 清理间隔（分钟）
     /// </summary>
-    private const int CleanupIntervalMinutes = 5;
+    private const int CleanupIntervalMinutes = 10;
+
+    /// <summary>
+    /// 配置服务
+    /// </summary>
+    private readonly ConfigService? _configService;
+
+    public WindowHistory(ConfigService? configService = null)
+    {
+        _configService = configService;
+        LoadConfig();
+    }
+
+    /// <summary>
+    /// 从配置加载设置
+    /// </summary>
+    private void LoadConfig()
+    {
+        if (_configService == null) return;
+
+        try
+        {
+            var config = _configService.Load();
+            _maxHistoryCount = config.MaxWindowHistoryCount;
+            _expirationMinutes = config.WindowHistoryExpirationMinutes;
+        }
+        catch
+        {
+            // 使用默认值
+        }
+    }
 
     /// <summary>
     /// 保存窗口位置到恢复点（总是覆盖）
     /// </summary>
     public void SaveRestoreRect(nint hwnd, int x, int y, int w, int h)
     {
+        CleanupIfNeeded();
         _restoreRects[hwnd] = (x, y, w, h);
+        _lastAccessTimes[hwnd] = DateTime.Now;
+    }
+
+    /// <summary>
+    /// 检查并执行清理（如果需要）
+    /// </summary>
+    private void CleanupIfNeeded()
+    {
+        var now = DateTime.Now;
+        if ((now - _lastCleanupTime).TotalMinutes < CleanupIntervalMinutes)
+            return;
+
+        CleanupExpiredRecords();
+        _lastCleanupTime = now;
+    }
+
+    /// <summary>
+    /// 清理过期记录
+    /// </summary>
+    private void CleanupExpiredRecords()
+    {
+        var now = DateTime.Now;
+        var expiredWindows = new List<nint>();
+
+        // 找出过期窗口
+        foreach (var kvp in _lastAccessTimes)
+        {
+            if ((now - kvp.Value).TotalMinutes > _expirationMinutes)
+            {
+                expiredWindows.Add(kvp.Key);
+            }
+        }
+
+        // 删除过期记录
+        foreach (var hwnd in expiredWindows)
+        {
+            _restoreRects.Remove(hwnd);
+            _lastActions.Remove(hwnd);
+            _programAdjustedWindows.Remove(hwnd);
+            _lastAccessTimes.Remove(hwnd);
+        }
+
+        // 如果超过最大数量，删除最旧的
+        if (_restoreRects.Count > _maxHistoryCount)
+        {
+            var oldest = _lastAccessTimes.OrderBy(x => x.Value).Take(_restoreRects.Count - _maxHistoryCount);
+            foreach (var item in oldest)
+            {
+                _restoreRects.Remove(item.Key);
+                _lastActions.Remove(item.Key);
+                _programAdjustedWindows.Remove(item.Key);
+                _lastAccessTimes.Remove(item.Key);
+            }
+        }
+
+        if (expiredWindows.Count > 0)
+        {
+            Logger.Debug("WindowHistory", $"清理了 {expiredWindows.Count} 个过期窗口记录");
+        }
     }
 
     /// <summary>
@@ -86,9 +182,11 @@ public class WindowHistory
     /// </summary>
     public void SaveRestoreRectIfNotExists(nint hwnd, int x, int y, int w, int h)
     {
+        CleanupIfNeeded();
         if (!_restoreRects.ContainsKey(hwnd))
         {
             _restoreRects[hwnd] = (x, y, w, h);
+            _lastAccessTimes[hwnd] = DateTime.Now;
         }
     }
 
@@ -97,7 +195,9 @@ public class WindowHistory
     /// </summary>
     public void RecordAction(nint hwnd, WindowAction action, int x, int y, int w, int h)
     {
+        CleanupIfNeeded();
         var now = DateTime.Now;
+        _lastAccessTimes[hwnd] = now;
         
         if (_lastActions.TryGetValue(hwnd, out var lastAction))
         {
@@ -227,6 +327,7 @@ public class WindowHistory
         _restoreRects.Remove(hwnd);
         _lastActions.Remove(hwnd);
         _programAdjustedWindows.Remove(hwnd);
+        _lastAccessTimes.Remove(hwnd);
     }
     
     /// <summary>
@@ -242,58 +343,21 @@ public class WindowHistory
         _restoreRects.Clear();
         _lastActions.Clear();
         _programAdjustedWindows.Clear();
+        _lastAccessTimes.Clear();
+        _lastCleanupTime = DateTime.MinValue;
+        Logger.Info("WindowHistory", "历史记录已清空");
     }
 
     /// <summary>
-    /// 清理过期和超量的历史记录
+    /// 获取当前历史记录数量
     /// </summary>
-    public void CleanupIfNeeded()
-    {
-        var now = DateTime.Now;
-
-        // 检查是否需要清理
-        if ((now - _lastCleanupTime).TotalMinutes < CleanupIntervalMinutes)
-            return;
-
-        _lastCleanupTime = now;
-
-        // 清理过期的操作记录
-        var expiredKeys = new List<nint>();
-        foreach (var kvp in _lastActions)
-        {
-            if ((now - kvp.Value.LastExecutionTime).TotalMinutes > HistoryExpirationMinutes)
-            {
-                expiredKeys.Add(kvp.Key);
-            }
-        }
-
-        foreach (var key in expiredKeys)
-        {
-            _lastActions.Remove(key);
-        }
-
-        // 如果记录数量超过限制，清理最旧的
-        if (_restoreRects.Count > MaxHistoryCount)
-        {
-            var keysToRemove = _lastActions
-                .OrderBy(x => x.Value.LastExecutionTime)
-                .Take(_restoreRects.Count - MaxHistoryCount)
-                .Select(x => x.Key)
-                .ToList();
-
-            foreach (var key in keysToRemove)
-            {
-                _restoreRects.Remove(key);
-                _lastActions.Remove(key);
-            }
-        }
-    }
+    public int GetHistoryCount() => _restoreRects.Count;
 
     /// <summary>
     /// 获取历史记录统计信息
     /// </summary>
-    public (int RestoreRects, int LastActions, int ProgramAdjusted) GetStatistics()
+    public (int RestoreRects, int LastActions, int ProgramAdjusted, int AccessTimes) GetStats()
     {
-        return (_restoreRects.Count, _lastActions.Count, _programAdjustedWindows.Count);
+        return (_restoreRects.Count, _lastActions.Count, _programAdjustedWindows.Count, _lastAccessTimes.Count);
     }
 }

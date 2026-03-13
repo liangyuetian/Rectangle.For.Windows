@@ -18,8 +18,9 @@ public class ModernCheckBox : Panel
     private readonly Label _titleLabel;
     private readonly Label _descLabel;
     private readonly Panel _switchBox;
+    private bool _isHovered;
 
-    private static readonly Color CheckedColor = Color.FromArgb(0, 120, 212);
+    private static readonly Color CheckedColor = SettingsTheme.AccentColor;
     private static readonly Color UncheckedColor = Color.FromArgb(60, 60, 60);
 
     public ModernCheckBox(string title, string description)
@@ -31,7 +32,7 @@ public class ModernCheckBox : Panel
         _titleLabel = new Label
         {
             Text = title,
-            ForeColor = Color.White,
+            ForeColor = SettingsTheme.TextColor,
             Location = new Point(0, 5),
             AutoSize = true
         };
@@ -40,7 +41,7 @@ public class ModernCheckBox : Panel
         _descLabel = new Label
         {
             Text = description,
-            ForeColor = Color.FromArgb(150, 150, 150),
+            ForeColor = SettingsTheme.SecondaryTextColor,
             Font = new Font("Microsoft YaHei UI", 8F),
             Location = new Point(0, 25),
             AutoSize = true
@@ -56,6 +57,9 @@ public class ModernCheckBox : Panel
         _switchBox.Click += Toggle;
         Controls.Add(_switchBox);
 
+        _switchBox.MouseEnter += (s, e) => { _isHovered = true; _switchBox.Invalidate(); };
+        _switchBox.MouseLeave += (s, e) => { _isHovered = false; _switchBox.Invalidate(); };
+        
         _titleLabel.Click += Toggle;
         _descLabel.Click += Toggle;
         Click += Toggle;
@@ -77,9 +81,23 @@ public class ModernCheckBox : Panel
         using var path = SettingsTheme.CreateRoundedRect(rect, 10);
 
         var bgColor = Checked ? CheckedColor : UncheckedColor;
+        if (_isHovered)
+        {
+            // slightly lighter on hover
+            bgColor = Color.FromArgb(
+                Math.Min(255, bgColor.R + 15), 
+                Math.Min(255, bgColor.G + 15), 
+                Math.Min(255, bgColor.B + 15));
+        }
+        
         using var brush = new SolidBrush(bgColor);
         g.FillPath(brush, path);
+        
+        // draw inner stroke
+        using var borderPen = new Pen(SettingsTheme.BorderColor, 1);
+        g.DrawPath(borderPen, path);
 
+        // thumb
         var circleX = Checked ? 24 : 3;
         using var circleBrush = new SolidBrush(Color.White);
         g.FillEllipse(circleBrush, circleX, 3, 16, 16);

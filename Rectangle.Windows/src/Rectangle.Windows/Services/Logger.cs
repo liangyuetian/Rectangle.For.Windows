@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Text.Json;
+using System.Threading;
 
 namespace Rectangle.Windows.Services;
 
@@ -9,297 +11,230 @@ namespace Rectangle.Windows.Services;
 /// </summary>
 public enum LogLevel
 {
-    Debug,
-    Info,
-    Warning,
-    Error
+    Debug = 0,
+    Info = 1,
+    Warning = 2,
+    Error = 3
 }
 
 /// <summary>
-/// 结构化日志服务
-/// 支持多级别日志、格式化输出、文件写入
+/// 结构化日志记录器
 /// </summary>
-public class Logger : IDisposable
+public static class Logger
 {
-    private static Logger? _instance;
     private static readonly object _lock = new();
-
-    private readonly string _logPath;
-    private readonly LogLevel _minLevel;
-    private readonly int _maxFileSizeMB;
-    private readonly int _maxLogFiles;
-    private readonly object _fileLock = new();
-    private bool _disposed;
+    private static LogLevel _minLevel = LogLevel.Info;
+    private static bool _logToFile = false;
+    private static string _logFilePath = "";
+    private static int _maxFileSize = 10; // MB
 
     /// <summary>
-    /// 获取日志服务单例
+    /// 初始化日志系统
     /// </summary>
-    public static Logger Instance
-    {
-        get
-        {
-            if (_instance == null)
-            {
-                lock (_lock)
-                {
-                    _instance ??= new Logger();
-                }
-            }
-            return _instance;
-        }
-    }
-
-    /// <summary>
-    /// 是否启用控制台输出
-    /// </summary>
-    public bool EnableConsoleOutput { get; set; } = true;
-
-    /// <summary>
-    /// 是否启用文件输出
-    /// </summary>
-    public bool EnableFileOutput { get; set; } = true;
-
-    private Logger(LogLevel minLevel = LogLevel.Debug, int maxFileSizeMB = 10, int maxLogFiles = 5)
+    public static void Initialize(LogLevel minLevel, bool logToFile, string logFilePath, int maxFileSizeMB)
     {
         _minLevel = minLevel;
-        _maxFileSizeMB = maxFileSizeMB;
-        _maxLogFiles = maxLogFiles;
+        _logToFile = logToFile;
+        _logFilePath = logFilePath;
+        _maxFileSize = maxFileSizeMB;
 
-        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        var logDir = Path.Combine(appData, "Rectangle", "Logs");
-        Directory.CreateDirectory(logDir);
-        _logPath = Path.Combine(logDir, $"rectangle_{DateTime.Now:yyyyMMdd}.log");
+        // 如果没有指定日志路径，使用默认路径
+        if (_logToFile && string.IsNullOrEmpty(_logFilePath))
+        {
+            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            _logFilePath = Path.Combine(appData, "Rectangle", "logs", "rectangle.log");
+        }
+
+        Info("Logger", "日志系统初始化完成");
     }
 
     /// <summary>
-    /// 记录调试日志
+    /// 记录 Debug 级别日志
     /// </summary>
-    public void Debug(string message, string? category = null)
+    public static void Debug(string category, string message, object? data = null)
     {
-        Log(LogLevel.Debug, message, category);
+        Log(LogLevel.Debug, category, message, data);
     }
 
     /// <summary>
-    /// 记录信息日志
+    /// 记录 Info 级别日志
     /// </summary>
-    public void Info(string message, string? category = null)
+    public static void Info(string category, string message, object? data = null)
     {
-        Log(LogLevel.Info, message, category);
+        Log(LogLevel.Info, category, message, data);
     }
 
     /// <summary>
-    /// 记录警告日志
+    /// 记录 Warning 级别日志
     /// </summary>
-    public void Warning(string message, string? category = null)
+    public static void Warning(string category, string message, object? data = null)
     {
-        Log(LogLevel.Warning, message, category);
+        Log(LogLevel.Warning, category, message, data);
     }
 
     /// <summary>
-    /// 记录错误日志
+    /// 记录 Error 级别日志
     /// </summary>
-    public void Error(string message, string? category = null, Exception? exception = null)
+    public static void Error(string category, string message, Exception? exception = null, object? data = null)
     {
-        var fullMessage = exception != null
-            ? $"{message}\nException: {exception.Message}\nStackTrace: {exception.StackTrace}"
-            : message;
-        Log(LogLevel.Error, fullMessage, category);
+        Log(LogLevel.Error, category, message, data, exception);
     }
 
     /// <summary>
-    /// 记录日志
+    /// 核心日志记录方法
     /// </summary>
-    private void Log(LogLevel level, string message, string? category)
+    private static void Log(LogLevel level, string category, string message, object? data = null, Exception? exception = null)
     {
         if (level < _minLevel) return;
 
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-        var levelStr = level.ToString().ToUpper().PadRight(7);
-        var categoryStr = !string.IsNullOrEmpty(category) ? $"[{category}] " : "";
-        var logLine = $"{timestamp} | {levelStr} | {categoryStr}{message}";
+        var entry = new LogEntry
+        {
+            Timestamp = DateTime.Now,
+            Level = level,
+            Category = category,
+            Message = message,
+            Data = data,
+            Exception = exception?.ToString()
+        };
 
-        if (EnableConsoleOutput)
-        {
-            WriteToConsole(level, logLine);
-        }
+        var formatted = FormatLogEntry(entry);
 
-        if (EnableFileOutput)
-        {
-            WriteToFile(logLine);
-        }
-    }
+        // 输出到控制台
+        Console.WriteLine(formatted);
 
-    /// <summary>
-    /// 写入控制台（带颜色）
-    /// </summary>
-    private void WriteToConsole(LogLevel level, string message)
-    {
-        var originalColor = Console.ForegroundColor;
-        try
+        // 输出到文件
+        if (_logToFile)
         {
-            Console.ForegroundColor = level switch
-            {
-                LogLevel.Debug => ConsoleColor.Gray,
-                LogLevel.Info => ConsoleColor.White,
-                LogLevel.Warning => ConsoleColor.Yellow,
-                LogLevel.Error => ConsoleColor.Red,
-                _ => ConsoleColor.White
-            };
-            Console.WriteLine(message);
-        }
-        finally
-        {
-            Console.ForegroundColor = originalColor;
+            WriteToFile(formatted);
         }
     }
 
     /// <summary>
-    /// 写入文件
+    /// 格式化日志条目
     /// </summary>
-    private void WriteToFile(string message)
+    private static string FormatLogEntry(LogEntry entry)
     {
-        lock (_fileLock)
+        var sb = new StringBuilder();
+        sb.Append(entry.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff"));
+        sb.Append(" [");
+        sb.Append(entry.Level.ToString().ToUpper());
+        sb.Append("] [");
+        sb.Append(entry.Category);
+        sb.Append("] ");
+        sb.Append(entry.Message);
+
+        if (entry.Data != null)
+        {
+            sb.Append(" | Data: ");
+            sb.Append(JsonSerializer.Serialize(entry.Data));
+        }
+
+        if (!string.IsNullOrEmpty(entry.Exception))
+        {
+            sb.Append(" | Exception: ");
+            sb.Append(entry.Exception);
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// 写入日志到文件
+    /// </summary>
+    private static void WriteToFile(string formattedLog)
+    {
+        lock (_lock)
         {
             try
             {
-                CheckLogFileSize();
-                File.AppendAllText(_logPath, message + "\n", Encoding.UTF8);
+                // 确保目录存在
+                var dir = Path.GetDirectoryName(_logFilePath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+                {
+                    Directory.CreateDirectory(dir);
+                }
+
+                // 检查文件大小，如果超过限制则轮转
+                RotateLogFileIfNeeded();
+
+                // 追加写入
+                File.AppendAllText(_logFilePath, formattedLog + Environment.NewLine);
             }
-            catch { }
-        }
-    }
-
-    /// <summary>
-    /// 检查日志文件大小，超过限制则归档
-    /// </summary>
-    private void CheckLogFileSize()
-    {
-        try
-        {
-            if (!File.Exists(_logPath)) return;
-
-            var fileInfo = new FileInfo(_logPath);
-            if (fileInfo.Length >= _maxFileSizeMB * 1024 * 1024)
+            catch
             {
-                ArchiveLogFile();
-                CleanOldLogs();
+                // 忽略文件写入错误
             }
         }
-        catch { }
     }
 
     /// <summary>
-    /// 归档日志文件
+    /// 轮转日志文件（如果超过大小限制）
     /// </summary>
-    private void ArchiveLogFile()
+    private static void RotateLogFileIfNeeded()
     {
-        try
+        if (!File.Exists(_logFilePath)) return;
+
+        var fileInfo = new FileInfo(_logFilePath);
+        if (fileInfo.Length > _maxFileSize * 1024 * 1024)
         {
-            var archivePath = _logPath.Replace(".log", $"_{DateTime.Now:HHmmss}.log");
-            File.Move(_logPath, archivePath);
+            // 备份旧日志
+            var backupPath = _logFilePath + "." + DateTime.Now.ToString("yyyyMMddHHmmss") + ".bak";
+            File.Move(_logFilePath, backupPath);
+
+            // 清理旧备份（只保留最近 5 个）
+            CleanupOldBackups();
         }
-        catch { }
     }
 
     /// <summary>
-    /// 清理旧日志文件
+    /// 清理旧日志备份
     /// </summary>
-    private void CleanOldLogs()
+    private static void CleanupOldBackups()
     {
         try
         {
-            var logDir = Path.GetDirectoryName(_logPath);
-            if (logDir == null) return;
+            var dir = Path.GetDirectoryName(_logFilePath);
+            if (string.IsNullOrEmpty(dir)) return;
 
-            var logFiles = Directory.GetFiles(logDir, "rectangle_*.log");
-            if (logFiles.Length <= _maxLogFiles) return;
+            var pattern = Path.GetFileName(_logFilePath) + ".*.bak";
+            var backups = Directory.GetFiles(dir, pattern);
 
-            Array.Sort(logFiles);
-            var filesToDelete = logFiles.Length - _maxLogFiles;
-            for (int i = 0; i < filesToDelete; i++)
+            // 按时间排序，删除旧的
+            if (backups.Length > 5)
             {
-                File.Delete(logFiles[i]);
+                Array.Sort(backups);
+                for (int i = 0; i < backups.Length - 5; i++)
+                {
+                    File.Delete(backups[i]);
+                }
             }
-        }
-        catch { }
-    }
-
-    /// <summary>
-    /// 获取日志文件路径
-    /// </summary>
-    public string GetLogFilePath() => _logPath;
-
-    /// <summary>
-    /// 获取所有日志内容
-    /// </summary>
-    public string GetAllLogs()
-    {
-        try
-        {
-            return File.Exists(_logPath) ? File.ReadAllText(_logPath) : "";
         }
         catch
         {
-            return "";
+            // 忽略清理错误
         }
     }
 
     /// <summary>
-    /// 清空日志文件
+    /// 获取当前日志级别
     /// </summary>
-    public void ClearLogs()
-    {
-        try
-        {
-            if (File.Exists(_logPath))
-            {
-                File.Delete(_logPath);
-            }
-        }
-        catch { }
-    }
+    public static LogLevel GetCurrentLevel() => _minLevel;
 
-    public void Dispose()
-    {
-        if (_disposed) return;
-        _disposed = true;
-    }
+    /// <summary>
+    /// 设置日志级别
+    /// </summary>
+    public static void SetLevel(LogLevel level) => _minLevel = level;
 }
 
 /// <summary>
-/// 日志扩展方法
+/// 日志条目
 /// </summary>
-public static class LoggerExtensions
+public class LogEntry
 {
-    /// <summary>
-    /// 记录窗口操作日志
-    /// </summary>
-    public static void LogWindowAction(this Logger logger, string action, nint hwnd, string details = "")
-    {
-        logger.Info($"Window Action: {action}, HWND: {hwnd}, {details}", "WindowManager");
-    }
-
-    /// <summary>
-    /// 记录快捷键日志
-    /// </summary>
-    public static void LogShortcut(this Logger logger, string shortcut, string action)
-    {
-        logger.Info($"Shortcut: {shortcut} -> {action}", "Hotkey");
-    }
-
-    /// <summary>
-    /// 记录拖拽吸附日志
-    /// </summary>
-    public static void LogSnap(this Logger logger, string action, int x, int y)
-    {
-        logger.Info($"Snap: {action} at ({x}, {y})", "Snapping");
-    }
-
-    /// <summary>
-    /// 记录配置变更日志
-    /// </summary>
-    public static void LogConfig(this Logger logger, string key, object? oldValue, object? newValue)
-    {
-        logger.Info($"Config Changed: {key} = {newValue} (was {oldValue})", "Config");
-    }
+    public DateTime Timestamp { get; set; }
+    public LogLevel Level { get; set; }
+    public string Category { get; set; } = "";
+    public string Message { get; set; } = "";
+    public object? Data { get; set; }
+    public string? Exception { get; set; }
 }

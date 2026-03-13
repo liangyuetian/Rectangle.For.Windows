@@ -29,58 +29,13 @@ public class HotkeyManager : IDisposable
 
     private void PrintUsageGuide()
     {
-        Console.WriteLine();
-        Console.WriteLine("═══════════════════════════════════════════════════════════════════════════");
-        Console.WriteLine("                         Rectangle 快捷键使用指南");
-        Console.WriteLine("═══════════════════════════════════════════════════════════════════════════");
-        Console.WriteLine();
-        Console.WriteLine("【半屏操作】");
-        Console.WriteLine("  Ctrl+Alt+←           左半屏");
-        Console.WriteLine("  Ctrl+Alt+→           右半屏");
-        Console.WriteLine("  Ctrl+Alt+↑           上半屏");
-        Console.WriteLine("  Ctrl+Alt+↓           下半屏");
-        Console.WriteLine("  (中间半屏需在设置中配置快捷键)");
-        Console.WriteLine();
-        Console.WriteLine("【四角操作】");
-        Console.WriteLine("  Ctrl+Alt+U           左上");
-        Console.WriteLine("  Ctrl+Alt+I           右上");
-        Console.WriteLine("  Ctrl+Alt+J           左下");
-        Console.WriteLine("  Ctrl+Alt+K           右下");
-        Console.WriteLine();
-        Console.WriteLine("【三分之一屏】");
-        Console.WriteLine("  Ctrl+Alt+D           左首 1/3");
-        Console.WriteLine("  Ctrl+Alt+F           中间 1/3");
-        Console.WriteLine("  Ctrl+Alt+G           右首 1/3");
-        Console.WriteLine();
-        Console.WriteLine("【三分之二屏】");
-        Console.WriteLine("  Ctrl+Alt+E           左侧 2/3");
-        Console.WriteLine("  Ctrl+Alt+R           中间 2/3");
-        Console.WriteLine("  Ctrl+Alt+T           右侧 2/3");
-        Console.WriteLine();
-        Console.WriteLine("【最大化与缩放】");
-        Console.WriteLine("  Ctrl+Alt+Enter       最大化 (再次按下恢复)");
-        Console.WriteLine("  Ctrl+Alt+Shift+↑     最大化高度");
-        Console.WriteLine("  Ctrl+Alt+=           放大 (窗口增大 10%)");
-        Console.WriteLine("  Ctrl+Alt+-           缩小 (窗口缩小 10%)");
-        Console.WriteLine("  Ctrl+Alt+C           居中");
-        Console.WriteLine("  Ctrl+Alt+Backspace   恢复原始位置");
-        Console.WriteLine("  (接近最大化需在设置中配置快捷键)");
-        Console.WriteLine();
-        Console.WriteLine("【显示器切换】");
-        Console.WriteLine("  Ctrl+Alt+Win+→       移动到下一个显示器");
-        Console.WriteLine("  Ctrl+Alt+Win+←       移动到上一个显示器");
-        Console.WriteLine();
-        Console.WriteLine("【高级功能】(默认禁用，可在偏好设置中启用)");
-        Console.WriteLine("  四等分: 左首/左二/右二/右首 1/4, 左侧/中间/右侧 3/4");
-        Console.WriteLine("  六等分: 左上/中上/右上/左下/中下/右下 1/6");
-        Console.WriteLine("  移动到边缘: 向左/右/上/下移动窗口");
-        Console.WriteLine();
-        Console.WriteLine("【托盘菜单】");
-        Console.WriteLine("  左键/右键点击托盘图标可查看所有操作选项");
-        Console.WriteLine("  偏好设置中可自定义所有快捷键");
-        Console.WriteLine();
-        Console.WriteLine("═══════════════════════════════════════════════════════════════════════════");
-        Console.WriteLine();
+        Logger.Info("HotkeyManager", "快捷键使用指南：");
+        Logger.Info("HotkeyManager", "  【半屏操作】 Ctrl+Alt+←/→/↑/↓");
+        Logger.Info("HotkeyManager", "  【四角操作】 Ctrl+Alt+U/I/J/K");
+        Logger.Info("HotkeyManager", "  【三分之一屏】 Ctrl+Alt+D/F/G");
+        Logger.Info("HotkeyManager", "  【三分之二屏】 Ctrl+Alt+E/R/T");
+        Logger.Info("HotkeyManager", "  【最大化与缩放】 Ctrl+Alt+Enter/Shift+↑/=/C/Backspace");
+        Logger.Info("HotkeyManager", "  【显示器切换】 Ctrl+Alt+Win+←/→");
     }
 
     private void RegisterDefaultHotkeys()
@@ -146,7 +101,7 @@ public class HotkeyManager : IDisposable
         {
             // TASK-053: 热键冲突处理 - 记录日志但不崩溃
             var error = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
-            Debug.WriteLine($"[HotkeyManager] 无法注册热键 {action} (VK=0x{vk:X}, Modifiers={modifiers}), 错误码: {error}");
+            Logger.Warning("HotkeyManager", $"无法注册热键 {action} (VK=0x{vk:X}, Modifiers={modifiers}), 错误码: {error}");
             // 热键可能被其他应用占用，跳过此热键继续注册其他热键
         }
     }
@@ -164,7 +119,7 @@ public class HotkeyManager : IDisposable
             if (_hotkeyInfo.TryGetValue(id, out var info))
             {
                 var shortcutStr = GetShortcutString(info.Vk, info.Modifiers);
-                Console.WriteLine($"按下快捷键: {shortcutStr}");
+                Logger.Info("HotkeyManager", $"按下快捷键: {shortcutStr}");
             }
             _windowManager.Execute(action);
         }
@@ -196,32 +151,26 @@ public class HotkeyManager : IDisposable
         return string.Join("+", parts);
     }
 
-    private static string GetKeyName(ushort vk)
+    private static unsafe string GetKeyName(ushort vk)
     {
-        return vk switch
+        uint scanCode = PInvoke.MapVirtualKey(vk, MAP_VIRTUAL_KEY_TYPE.MAPVK_VK_TO_VSC);
+        int lParam = (int)(scanCode << 16);
+        
+        switch (vk)
         {
-            0x25 => "←",
-            0x26 => "↑",
-            0x27 => "→",
-            0x28 => "↓",
-            0x0D => "Enter",
-            0x08 => "Backspace",
-            0x2E => "Delete",
-            0x43 => "C",
-            0x44 => "D",
-            0x45 => "E",
-            0x46 => "F",
-            0x47 => "G",
-            0x49 => "I",
-            0x4A => "J",
-            0x4B => "K",
-            0x52 => "R",
-            0x54 => "T",
-            0x55 => "U",
-            0xBB => "=",
-            0xBD => "-",
-            _ => $"0x{vk:X}"
-        };
+            case 0x25: case 0x26: case 0x27: case 0x28: case 0x2E:
+                lParam |= (1 << 24); // extended key flag
+                break;
+        }
+
+        char* buf = stackalloc char[128];
+        int result = PInvoke.GetKeyNameText(lParam, buf, 128);
+        if (result > 0)
+        {
+            return new string(buf, 0, result);
+        }
+        
+        return $"0x{vk:X}";
     }
 
     public void ReloadFromConfig(Dictionary<string, ShortcutConfig> shortcuts)
@@ -273,7 +222,7 @@ public class HotkeyManager : IDisposable
             RegisterHotkey(ref newId, (ushort)config.KeyCode, newModifiers, action);
         }
         
-        Console.WriteLine($"[HotkeyManager] 已重新注册 {newId - 1} 个快捷键");
+        Logger.Info("HotkeyManager", $"已重新注册 {newId - 1} 个快捷键");
     }
 
     private bool _disposed;

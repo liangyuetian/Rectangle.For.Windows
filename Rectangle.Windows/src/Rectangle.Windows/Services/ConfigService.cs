@@ -11,6 +11,8 @@ public class ConfigService
 {
     private const string ConfigFileName = "config.json";
     private readonly string _configPath;
+    
+    public event EventHandler<AppConfig>? ConfigChanged;
 
     public ConfigService()
     {
@@ -46,6 +48,7 @@ public class ConfigService
 
         var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_configPath, json);
+        ConfigChanged?.Invoke(this, config);
     }
 
     public static Dictionary<string, ShortcutConfig> GetDefaultShortcuts()
@@ -259,6 +262,69 @@ public class AppConfig
     /// 吸附时是否触发触觉反馈
     /// </summary>
     public bool HapticFeedbackOnSnap { get; set; } = false;
+
+    // === Todo 模式配置 ===
+
+    /// <summary>
+    /// 是否启用 Todo 模式
+    /// </summary>
+    public bool TodoMode { get; set; } = false;
+
+    /// <summary>
+    /// Todo 应用进程名称
+    /// </summary>
+    public string TodoApplication { get; set; } = "";
+
+    /// <summary>
+    /// Todo 侧边栏宽度（像素）
+    /// </summary>
+    public int TodoSidebarWidth { get; set; } = 400;
+
+    /// <summary>
+    /// Todo 侧边栏位置（左/右）
+    /// </summary>
+    public TodoSidebarSide TodoSidebarSide { get; set; } = TodoSidebarSide.Right;
+
+    // === 层叠配置 ===
+
+    /// <summary>
+    /// 层叠窗口偏移量（像素）
+    /// </summary>
+    public int CascadeAllDeltaSize { get; set; } = 30;
+
+    // === 日志配置 ===
+
+    /// <summary>
+    /// 日志级别（0=Debug, 1=Info, 2=Warning, 3=Error）
+    /// </summary>
+    public int LogLevel { get; set; } = 1;
+
+    /// <summary>
+    /// 是否启用日志文件
+    /// </summary>
+    public bool LogToFile { get; set; } = false;
+
+    /// <summary>
+    /// 日志文件路径
+    /// </summary>
+    public string LogFilePath { get; set; } = "";
+
+    /// <summary>
+    /// 最大日志文件大小（MB）
+    /// </summary>
+    public int MaxLogFileSize { get; set; } = 10;
+
+    // === 性能配置 ===
+
+    /// <summary>
+    /// 窗口历史记录最大数量
+    /// </summary>
+    public int MaxWindowHistoryCount { get; set; } = 100;
+
+    /// <summary>
+    /// 历史记录过期时间（分钟）
+    /// </summary>
+    public int WindowHistoryExpirationMinutes { get; set; } = 60;
 
     // === 指定尺寸配置 ===
 

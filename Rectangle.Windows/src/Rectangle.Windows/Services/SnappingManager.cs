@@ -32,10 +32,21 @@ public class SnappingManager : IDisposable
     private int _cornerSize = 20;
     private int _snapModifiers = 0;
 
+    // 缓存配置
+    private AppConfig? _cachedConfig;
+    private DateTime _configLastLoadTime = DateTime.MinValue;
+    private readonly TimeSpan _configCacheDuration = TimeSpan.FromSeconds(5);
+
     // 性能优化：帧率限制
     private DateTime _lastUpdateTime = DateTime.MinValue;
     private readonly int _updateIntervalMs = 16; // ~60fps
     private SnapArea? _lastSnapArea;
+
+    // 常量定义
+    private const int MinimumDragDistance = 5;
+    private const int ValidDragDistance = 10;
+    private const int ValidDragDurationMs = 100;
+    private const int PositionChangeThreshold = 5;
 
     // 事件
     public event EventHandler<SnapEventArgs>? SnapTriggered;
@@ -74,21 +85,44 @@ public class SnappingManager : IDisposable
         LoadConfig();
 
         // 检查是否启用了拖拽吸附
-        var config = _configService?.Load();
+        var config = GetCachedConfig();
         if (config?.DragToSnap == false)
         {
-            Console.WriteLine("[SnappingManager] 拖拽吸附已禁用（配置）");
+            Logger.Info("SnappingManager", "拖拽吸附已禁用（配置）");
             return false;
         }
 
         if (_mouseHook.InstallHook())
         {
             _isEnabled = true;
-            Console.WriteLine("[SnappingManager] 拖拽吸附已启用");
+            Logger.Info("SnappingManager", "拖拽吸附已启用");
             return true;
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// 获取缓存的配置，如果缓存过期则重新加载
+    /// </summary>
+    private AppConfig? GetCachedConfig()
+    {
+        var now = DateTime.Now;
+        if (_cachedConfig == null || (now - _configLastLoadTime) > _configCacheDuration)
+        {
+            _cachedConfig = _configService?.Load();
+            _configLastLoadTime = now;
+        }
+        return _cachedConfig;
+    }
+
+    /// <summary>
+    /// 清除配置缓存，强制下次重新加载
+    /// </summary>
+    public void InvalidateConfigCache()
+    {
+        _cachedConfig = null;
+        _configLastLoadTime = DateTime.MinValue;
     }
 
     /// <summary>
@@ -101,7 +135,7 @@ public class SnappingManager : IDisposable
         _mouseHook.UninstallHook();
         _isEnabled = false;
         _dragState.Reset();
-        Console.WriteLine("[SnappingManager] 拖拽吸附已禁用");
+        Logger.Info("SnappingManager", "拖拽吸附已禁用");
     }
 
     /// <summary>
@@ -151,14 +185,14 @@ public class SnappingManager : IDisposable
 
         // Unsnap 恢复：检测窗口是否被程序调整过
         // 如果是，从历史记录获取原始尺寸保存到 OriginalRect
-        var config = _configService?.Load();
+        var config = GetCachedConfig();
         if (config?.UnsnapRestore == true && _history.IsProgramAdjusted(hwnd))
         {
             if (_history.TryGetRestoreRect(hwnd, out var restoreRect))
             {
                 _dragState.OriginalRect = new WindowRect(
                     restoreRect.X, restoreRect.Y, restoreRect.W, restoreRect.H);
-                Console.WriteLine($"[SnappingManager] Unsnap: 检测到已吸附窗口，保存原始位置 ({restoreRect.X}, {restoreRect.Y}, {restoreRect.W}, {restoreRect.H})");
+                Logger.Info("SnappingManager", $"Unsnap: 检测到已吸附窗口，保存原始位置 ({restoreRect.X}, {restoreRect.Y}, {restoreRect.W}, {restoreRect.H})");
             }
         }
         else
@@ -169,7 +203,7 @@ public class SnappingManager : IDisposable
 
         DragStarted?.Invoke(this, EventArgs.Empty);
 
-        Console.WriteLine($"[SnappingManager] 开始拖拽窗口: {hwnd}");
+        Logger.Debug("SnappingManager", $"开始拖拽窗口: {hwnd}");
     }
 
     /// <summary>
@@ -189,7 +223,7 @@ public class SnappingManager : IDisposable
         _dragState.CurrentMousePos = e.Point;
 
         // 检查拖拽距离，如果太小可能是点击而不是拖拽
-        if (_dragState.GetDragDistance() < 5)
+        if (_dragState.GetDragDistance() < MinimumDragDistance)
             return;
 
         // 计算吸附区域
@@ -206,7 +240,7 @@ public class SnappingManager : IDisposable
             if (snapAreaChanged)
             {
                 ShowSnapPreview(snapArea);
-                Console.WriteLine($"[SnappingManager] 检测到吸附区域: {snapArea.Name}");
+                Logger.Debug("SnappingManager", $"检测到吸附区域: {snapArea.Name}");
             }
         }
         else
@@ -245,7 +279,7 @@ public class SnappingManager : IDisposable
 
         // 显示预览
         var footprint = Views.FootprintWindow.Instance;
-        var config = _configService?.Load();
+        var config = GetCachedConfig();
 
         // 配置预览窗口
         footprint.Configure(
@@ -279,10 +313,10 @@ public class SnappingManager : IDisposable
         var hwnd = _dragState.DraggedWindow;
 
         // 检查是否是有效拖拽（持续时间 > 100ms 或距离 > 10px）
-        bool isValidDrag = _dragState.GetDragDurationMs() > 100 ||
-                          _dragState.GetDragDistance() > 10;
+        bool isValidDrag = _dragState.GetDragDurationMs() > ValidDragDurationMs ||
+                          _dragState.GetDragDistance() > ValidDragDistance;
 
-        var config = _configService?.Load();
+        var config = GetCachedConfig();
 
         if (isValidDrag && _dragState.CurrentSnapArea != null)
         {
@@ -296,8 +330,8 @@ public class SnappingManager : IDisposable
 
             // 检查窗口当前位置是否与原始位置不同（说明用户确实拖拽了）
             var (currentX, currentY, currentW, currentH) = _win32.GetWindowRect(hwnd);
-            bool positionChanged = Math.Abs(currentX - originalRect.X) > 5 ||
-                                   Math.Abs(currentY - originalRect.Y) > 5;
+            bool positionChanged = Math.Abs(currentX - originalRect.X) > PositionChangeThreshold ||
+                                   Math.Abs(currentY - originalRect.Y) > PositionChangeThreshold;
 
             if (positionChanged)
             {
@@ -307,13 +341,13 @@ public class SnappingManager : IDisposable
                 // 清除程序调整标记
                 _history.ClearProgramAdjustedMark(hwnd);
 
-                Console.WriteLine($"[SnappingManager] Unsnap 恢复: 恢复窗口到原始位置 ({originalRect.X}, {originalRect.Y}, {originalRect.Width}, {originalRect.Height})");
+                Logger.Info("SnappingManager", $"Unsnap 恢复: 恢复窗口到原始位置 ({originalRect.X}, {originalRect.Y}, {originalRect.Width}, {originalRect.Height})");
             }
         }
 
         DragEnded?.Invoke(this, EventArgs.Empty);
 
-        Console.WriteLine($"[SnappingManager] 结束拖拽窗口: {hwnd}");
+        Logger.Debug("SnappingManager", $"结束拖拽窗口: {hwnd}");
 
         _dragState.Reset();
     }
@@ -477,7 +511,7 @@ public class SnappingManager : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[SnappingManager] 获取屏幕工作区失败: {ex.Message}");
+            Logger.Warning("SnappingManager", $"获取屏幕工作区失败: {ex.Message}");
         }
         
         return null;
@@ -509,7 +543,7 @@ public class SnappingManager : IDisposable
         if (_windowManager != null)
         {
             _windowManager.Execute(snapArea.Action, hwnd);
-            Console.WriteLine($"[SnappingManager] 执行吸附: {snapArea.Name} -> {snapArea.Action}");
+            Logger.Info("SnappingManager", $"执行吸附: {snapArea.Name} -> {snapArea.Action}");
         }
         else
         {
@@ -520,14 +554,9 @@ public class SnappingManager : IDisposable
                 Action = snapArea.Action,
                 SnapArea = snapArea
             });
-            Console.WriteLine($"[SnappingManager] 触发吸附事件: {snapArea.Name} -> {snapArea.Action}");
+            Logger.Debug("SnappingManager", $"触发吸附事件: {snapArea.Name} -> {snapArea.Action}");
         }
     }
-
-    // P/Invoke for IsWindowVisible
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
 
     /// <summary>
     /// 检查窗口是否适合拖拽
@@ -535,11 +564,28 @@ public class SnappingManager : IDisposable
     private bool IsValidWindowForDragging(nint hwnd)
     {
         // 检查窗口是否可见
-        if (!IsWindowVisible((IntPtr)hwnd))
+        if (!PInvoke.IsWindowVisible(new HWND((IntPtr)hwnd)))
             return false;
 
-        // 检查窗口是否有标题栏（排除桌面等）
-        // 这里可以添加更多检查
+        // 检查窗口是否有标题栏（排除桌面、任务栏等）
+        var style = (WINDOW_STYLE)PInvoke.GetWindowLong(new HWND((IntPtr)hwnd), WINDOW_LONG_PTR_INDEX.GWL_STYLE);
+        var exStyle = (WINDOW_EX_STYLE)PInvoke.GetWindowLong(new HWND((IntPtr)hwnd), WINDOW_LONG_PTR_INDEX.GWL_EXSTYLE);
+
+        // 排除无标题栏窗口（如桌面、某些工具窗口）
+        if ((style & WINDOW_STYLE.WS_CAPTION) != WINDOW_STYLE.WS_CAPTION)
+            return false;
+
+        // 排除弹出式菜单、工具提示等
+        if ((exStyle & WINDOW_EX_STYLE.WS_EX_TOOLWINDOW) == WINDOW_EX_STYLE.WS_EX_TOOLWINDOW)
+            return false;
+
+        // 排除无激活窗口（如某些系统窗口）
+        if ((exStyle & WINDOW_EX_STYLE.WS_EX_NOACTIVATE) == WINDOW_EX_STYLE.WS_EX_NOACTIVATE)
+            return false;
+
+        // 检查窗口是否可调整大小（可选，某些固定大小窗口也可以拖拽）
+        // if ((style & WINDOW_STYLE.WS_THICKFRAME) != WINDOW_STYLE.WS_THICKFRAME)
+        //     return false;
 
         return true;
     }
