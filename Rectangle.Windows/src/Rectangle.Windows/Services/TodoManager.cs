@@ -65,7 +65,7 @@ public class TodoManager
 
         _win32.SetWindowRect(todoHwnd, x, y, width, height);
 
-        Console.WriteLine($"[TodoManager] 调整 Todo 窗口到 {(isLeftSide ? "左侧" : "右侧")}: ({x}, {y}, {width}, {height})");
+        Logger.Info("TodoManager", $"调整 Todo 窗口到 {(isLeftSide ? "左侧" : "右侧")}: ({x}, {y}, {width}, {height})");
     }
 
     /// <summary>
@@ -139,6 +139,6 @@ public class TodoManager
         var tileManager = new TileAllManager(_win32, _configService);
         tileManager.TileAll(availableWorkArea);
 
-        Console.WriteLine($"[TodoManager] 重新布局 {windows.Count} 个非 Todo 窗口");
+        Logger.Info("TodoManager", $"重新布局 {windows.Count} 个非 Todo 窗口");
     }
 }

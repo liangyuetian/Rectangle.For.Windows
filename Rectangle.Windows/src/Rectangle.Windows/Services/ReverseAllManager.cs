@@ -45,7 +45,7 @@ public class ReverseAllManager
             _win32.SetWindowRect(hwnd, newX, rect.Y, rect.Width, rect.Height);
         }
 
-        Console.WriteLine($"[ReverseAllManager] 反转 {windows.Count} 个窗口位置");
+        Logger.Info("ReverseAllManager", $"反转 {windows.Count} 个窗口位置");
     }
 
     /// <summary>
@@ -74,6 +74,6 @@ public class ReverseAllManager
             _win32.SetWindowRect(hwnd, rect.X, newY, rect.Width, rect.Height);
         }
 
-        Console.WriteLine($"[ReverseAllManager] 垂直反转 {windows.Count} 个窗口位置");
+        Logger.Info("ReverseAllManager", $"垂直反转 {windows.Count} 个窗口位置");
     }
 }

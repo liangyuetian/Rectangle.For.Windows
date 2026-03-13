@@ -180,14 +180,14 @@ public class WindowManager
         // 检查是否在忽略列表中
         if (IsIgnoredApp(processName))
         {
-            Console.WriteLine($"[WindowManager] {processName} 在忽略列表中，跳过操作");
+            Logger.Info("WindowManager", $"{processName} 在忽略列表中，跳过操作");
             return;
         }
 
         // 检查窗口类型
         if (_windowType.IsModalDialog(hwnd))
         {
-            Console.WriteLine($"[WindowManager] {processName} 是模态对话框，跳过操作");
+            Logger.Info("WindowManager", $"{processName} 是模态对话框，跳过操作");
             return;
         }
 
@@ -208,14 +208,14 @@ public class WindowManager
         {
             // 用户手动移动了窗口，清除程序操作记录
             _history.RemoveLastAction(hwnd);
-            Console.WriteLine($"[WindowManager] 检测到窗口被用户手动移动: {processName}");
+            Logger.Info("WindowManager", $"检测到窗口被用户手动移动: {processName}");
         }
 
         // 处理重复执行模式（循环尺寸）
         var actualAction = GetActualAction(hwnd, action, windowMovedExternally);
         if (actualAction != action)
         {
-            Console.WriteLine($"[WindowManager] 循环尺寸: {action} → {actualAction}");
+            Logger.Info("WindowManager", $"循环尺寸: {action} → {actualAction}");
         }
 
         var calculator = _factory.GetCalculator(actualAction);
@@ -227,7 +227,7 @@ public class WindowManager
         if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
         {
             _history.SaveRestoreRect(hwnd, x, y, w, h);
-            Console.WriteLine($"[WindowManager] 保存恢复点: ({x}, {y}, {w}, {h})");
+            Logger.Debug("WindowManager", $"保存恢复点: ({x}, {y}, {w}, {h})");
         }
 
         // 标记此窗口由程序调整（用于窗口位置监听时排除记录）
@@ -244,7 +244,7 @@ public class WindowManager
         // 对固定尺寸窗口特殊处理：只移动，不调整大小
         if (!_windowType.IsResizable(hwnd))
         {
-            Console.WriteLine($"[WindowManager] {processName} 是固定尺寸窗口，只移动不调整大小");
+            Logger.Info("WindowManager", $"{processName} 是固定尺寸窗口，只移动不调整大小");
             target = HandleFixedSizeWindow(current, target, workArea, actualAction);
         }
         
@@ -263,7 +263,7 @@ public class WindowManager
         // 根据配置移动光标到窗口中心
         MoveCursorIfEnabled(hwnd, action);
 
-        Console.WriteLine($"{GetActionDisplayName(actualAction)} 了 {processName}");
+        Logger.Info("WindowManager", $"{GetActionDisplayName(actualAction)} 了 {processName}");
     }
 
     /// <summary>
@@ -329,7 +329,7 @@ public class WindowManager
         if (shouldMoveCursor)
         {
             _win32.MoveCursorToWindowCenter(hwnd);
-            Console.WriteLine($"[WindowManager] 光标已移动到窗口中心");
+            Logger.Debug("WindowManager", $"光标已移动到窗口中心");
         }
     }
 
@@ -395,7 +395,7 @@ public class WindowManager
             var processName = _win32.GetProcessNameFromWindow(foregroundHwnd);
             if (!string.IsNullOrEmpty(processName) && IsIgnoredApp(processName))
             {
-                Console.WriteLine($"[WindowManager] 前台窗口 {processName} 在忽略列表中，不执行操作");
+                Logger.Info("WindowManager", $"前台窗口 {processName} 在忽略列表中，不执行操作");
                 return 0; // 返回 0 表示不执行操作
             }
         }
@@ -422,7 +422,7 @@ public class WindowManager
         // 检查是否在忽略列表中
         if (IsIgnoredApp(processName))
         {
-            Console.WriteLine($"[WindowManager] {processName} 在忽略列表中，跳过操作");
+            Logger.Info("WindowManager", $"{processName} 在忽略列表中，跳过操作");
             return;
         }
 
@@ -435,7 +435,7 @@ public class WindowManager
                 _history.RemoveLastAction(hwnd);
             }
             _maximizedWindows.Remove(hwnd);
-            Console.WriteLine($"恢复了 {processName}");
+            Logger.Info("WindowManager", $"恢复了 {processName}");
         }
         else
         {
@@ -448,7 +448,7 @@ public class WindowManager
             if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
             {
                 _history.SaveRestoreRect(hwnd, x, y, w, h);
-                Console.WriteLine($"[WindowManager] 最大化前保存恢复点: ({x}, {y}, {w}, {h})");
+                Logger.Debug("WindowManager", $"最大化前保存恢复点: ({x}, {y}, {w}, {h})");
             }
 
             // 标记此窗口由程序调整
@@ -466,7 +466,7 @@ public class WindowManager
                 _history.RecordAction(hwnd, WindowAction.Maximize, target.X, target.Y, target.Width, target.Height);
                 
                 _maximizedWindows.Add(hwnd);
-                Console.WriteLine($"最大化了 {processName}");
+                Logger.Info("WindowManager", $"最大化了 {processName}");
             }
         }
     }
@@ -482,7 +482,7 @@ public class WindowManager
         
         if (!_history.TryGetRestoreRect(hwnd, out var rect))
         { 
-            Console.WriteLine("[WindowManager] 没有可恢复的窗口位置");
+            Logger.Warning("WindowManager", "没有可恢复的窗口位置");
             System.Media.SystemSounds.Beep.Play(); 
             return; 
         }
@@ -496,7 +496,7 @@ public class WindowManager
         // 清除最大化状态
         _maximizedWindows.Remove(hwnd);
         
-        Console.WriteLine($"恢复了 {processName} 到 ({rect.X}, {rect.Y}, {rect.W}, {rect.H})");
+        Logger.Info("WindowManager", $"恢复了 {processName} 到 ({rect.X}, {rect.Y}, {rect.W}, {rect.H})");
     }
 
     private void ExecuteNextDisplay(nint? targetHwnd = null)
@@ -533,7 +533,7 @@ public class WindowManager
         // 记录程序操作信息
         _history.RecordAction(hwnd, WindowAction.NextDisplay, newX, newY, w, h);
         
-        Console.WriteLine($"将 {processName} 移动到下一个显示器");
+        Logger.Info("WindowManager", $"将 {processName} 移动到下一个显示器");
     }
 
     private void ExecutePreviousDisplay(nint? targetHwnd = null)
@@ -570,7 +570,7 @@ public class WindowManager
         // 记录程序操作信息
         _history.RecordAction(hwnd, WindowAction.PreviousDisplay, newX, newY, w, h);
         
-        Console.WriteLine($"将 {processName} 移动到上一个显示器");
+        Logger.Info("WindowManager", $"将 {processName} 移动到上一个显示器");
     }
 
     private WorkArea ApplyGap(WorkArea workArea)
