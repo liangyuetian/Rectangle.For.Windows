@@ -48,7 +48,7 @@ public class SettingsForm : Form
     private void InitializeForm()
     {
         Text = "Rectangle 偏好设置";
-        Size = new Size(900, 640);
+        Size = new Size(960, 680); // slightly larger for breathing room
         MinimumSize = new Size(800, 500);
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
@@ -74,9 +74,9 @@ public class SettingsForm : Form
         var titleLabel = new Label
         {
             Text = "Rectangle",
-            Font = new Font("Microsoft YaHei UI", 14F, FontStyle.Bold),
+            Font = new Font("Microsoft YaHei UI", 16F, FontStyle.Bold),
             ForeColor = SettingsTheme.TextColor,
-            Location = new Point(20, 20),
+            Location = new Point(20, 24),
             AutoSize = true
         };
         _navPanel.Controls.Add(titleLabel);
@@ -92,7 +92,6 @@ public class SettingsForm : Form
         };
         _navPanel.Controls.Add(versionLabel);
 
-        // 导航按钮
         var navItems = new[]
         {
             ("⌨️", "键盘快捷键"),
@@ -100,7 +99,7 @@ public class SettingsForm : Form
             ("⚙️", "设置")
         };
 
-        int y = 90;
+        int y = 100;
         for (int i = 0; i < navItems.Length; i++)
         {
             var (icon, text) = navItems[i];
@@ -123,7 +122,7 @@ public class SettingsForm : Form
         {
             Dock = DockStyle.Fill,
             BackColor = SettingsTheme.BackgroundColor,
-            Padding = new Padding(30, 20, 30, 20)
+            Padding = new Padding(40, 30, 40, 30) // more generous padding
         };
         Controls.Add(_contentPanel);
     }
@@ -172,7 +171,7 @@ public class SettingsForm : Form
             AutoSize = true,
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
-            Padding = new Padding(0, 0, 20, 20)
+            Padding = new Padding(0, 0, 20, 40) // extra bottom padding for scrolling
         };
 
         // 页面标题
@@ -184,10 +183,10 @@ public class SettingsForm : Form
             AutoSize = true,
             ColumnCount = 2,
             RowCount = 1,
-            Margin = new Padding(0, 10, 0, 0)
+            Margin = new Padding(0, 16, 0, 0)
         };
-        columnsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 320));
-        columnsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 320));
+        columnsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 340));
+        columnsPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 340));
 
         // 左列
         var leftColumn = new FlowLayoutPanel
@@ -277,8 +276,8 @@ public class SettingsForm : Form
     {
         var card = new ModernCard
         {
-            Width = 300,
-            Margin = new Padding(0, 0, 0, 12)
+            Width = 320,
+            Margin = new Padding(0, 0, 0, 20) // better spacing between cards
         };
 
         var contentPanel = new FlowLayoutPanel
@@ -320,9 +319,9 @@ public class SettingsForm : Form
 
         row.Container = new Panel
         {
-            Width = 280,
-            Height = 32,
-            Margin = new Padding(0, 2, 0, 2)
+            Width = 290,
+            Height = 40,
+            Margin = new Padding(0, 4, 0, 4) // row breathing room
         };
 
         // 图标
@@ -344,7 +343,7 @@ public class SettingsForm : Form
         {
             Text = displayName,
             ForeColor = SettingsTheme.TextColor,
-            Location = new Point(24, 7),
+            Location = new Point(24, 11),
             AutoSize = true
         };
         row.Container.Controls.Add(row.NameLabel);
@@ -352,9 +351,9 @@ public class SettingsForm : Form
         // 快捷键输入框
         row.KeyLabel = new Label
         {
-            Width = 100,
-            Height = 24,
-            Location = new Point(130, 4),
+            Width = 110,
+            Height = 28,
+            Location = new Point(140, 6),
             BackColor = SettingsTheme.InputBackColor,
             ForeColor = SettingsTheme.SecondaryTextColor,
             TextAlign = ContentAlignment.MiddleCenter,
@@ -368,6 +367,7 @@ public class SettingsForm : Form
             var rect = new System.Drawing.Rectangle(0, 0, row.KeyLabel.Width - 1, row.KeyLabel.Height - 1);
             using var path = SettingsTheme.CreateRoundedRect(rect, 4);
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            e.Graphics.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
             e.Graphics.DrawPath(pen, path);
         };
         row.Container.Controls.Add(row.KeyLabel);
@@ -377,7 +377,7 @@ public class SettingsForm : Form
         {
             Text = "✕",
             ForeColor = SettingsTheme.SecondaryTextColor,
-            Location = new Point(238, 7),
+            Location = new Point(260, 11),
             AutoSize = true,
             Cursor = Cursors.Hand
         };
@@ -415,7 +415,7 @@ public class SettingsForm : Form
         AddPageTitle(container, "吸附区域", "配置窗口拖拽吸附行为");
 
         // 吸附选项卡片
-        var optionsCard = new ModernCard { Width = 500, Height = 200 };
+        var optionsCard = new ModernCard { Width = 600, Height = 200 };
         var optionsPanel = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -440,21 +440,21 @@ public class SettingsForm : Form
         container.Controls.Add(optionsCard);
 
         // 吸附区域示意图
-        var previewCard = new ModernCard { Width = 500, Height = 280, Margin = new Padding(0, 20, 0, 0) };
+        var previewCard = new ModernCard { Width = 600, Height = 300, Margin = new Padding(0, 20, 0, 0) };
         var previewLabel = new Label
         {
             Text = "吸附区域示意",
             Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold),
             ForeColor = SettingsTheme.TextColor,
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 10)
+            Margin = new Padding(0, 0, 0, 16)
         };
 
         var previewPanel = new SnapAreaPreview
         {
-            Width = 460,
-            Height = 200,
-            Margin = new Padding(0, 10, 0, 0)
+            Width = 560,
+            Height = 220,
+            Margin = new Padding(0, 0, 0, 0)
         };
 
         var previewContainer = new FlowLayoutPanel
@@ -499,7 +499,7 @@ public class SettingsForm : Form
         AddPageTitle(container, "设置", "通用设置和偏好选项");
 
         // 通用设置卡片
-        var generalCard = new ModernCard { Width = 500, Height = 160 };
+        var generalCard = new ModernCard { Width = 600, Height = 180 };
         var generalPanel = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -513,7 +513,7 @@ public class SettingsForm : Form
         generalPanel.Controls.Add(_launchOnLoginCheckBox);
 
         // 窗口间隙
-        var gapPanel = new Panel { Width = 460, Height = 60 };
+        var gapPanel = new Panel { Width = 560, Height = 60, Margin = new Padding(0, 10, 0, 0) };
         var gapLabel = new Label
         {
             Text = "窗口间隙",
@@ -531,8 +531,8 @@ public class SettingsForm : Form
         };
         _gapSizeSlider = new ModernSlider(0, 30)
         {
-            Location = new Point(300, 10),
-            Width = 160
+            Location = new Point(360, 10),
+            Width = 180
         };
         _gapSizeSlider.ValueChanged += (s, e) => _config.GapSize = _gapSizeSlider.Value;
         gapPanel.Controls.Add(gapLabel);
@@ -544,7 +544,7 @@ public class SettingsForm : Form
         container.Controls.Add(generalCard);
 
         // 关于卡片
-        var aboutCard = new ModernCard { Width = 500, Height = 120, Margin = new Padding(0, 20, 0, 0) };
+        var aboutCard = new ModernCard { Width = 600, Height = 140, Margin = new Padding(0, 20, 0, 0) };
         var aboutPanel = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -600,19 +600,20 @@ public class SettingsForm : Form
         var titleLabel = new Label
         {
             Text = title,
-            Font = new Font("Microsoft YaHei UI", 16F, FontStyle.Bold),
+            Font = new Font("Microsoft YaHei UI", 20F, FontStyle.Bold),
             ForeColor = SettingsTheme.TextColor,
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 5)
+            Margin = new Padding(0, 0, 0, 8)
         };
         parent.Controls.Add(titleLabel);
 
         var descLabel = new Label
         {
             Text = description,
+            Font = new Font("Microsoft YaHei UI", 10F),
             ForeColor = SettingsTheme.SecondaryTextColor,
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 20)
+            Margin = new Padding(0, 0, 0, 28)
         };
         parent.Controls.Add(descLabel);
     }
