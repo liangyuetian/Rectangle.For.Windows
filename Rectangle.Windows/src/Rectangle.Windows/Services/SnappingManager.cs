@@ -89,14 +89,14 @@ public class SnappingManager : IDisposable
         var config = GetCachedConfig();
         if (config?.DragToSnap == false)
         {
-            Console.WriteLine("[SnappingManager] 拖拽吸附已禁用（配置）");
+            Logger.Info("SnappingManager", "拖拽吸附已禁用（配置）");
             return false;
         }
 
         if (_mouseHook.InstallHook())
         {
             _isEnabled = true;
-            Console.WriteLine("[SnappingManager] 拖拽吸附已启用");
+            Logger.Info("SnappingManager", "拖拽吸附已启用");
             return true;
         }
 
@@ -136,7 +136,7 @@ public class SnappingManager : IDisposable
         _mouseHook.UninstallHook();
         _isEnabled = false;
         _dragState.Reset();
-        Console.WriteLine("[SnappingManager] 拖拽吸附已禁用");
+        Logger.Info("SnappingManager", "拖拽吸附已禁用");
     }
 
     /// <summary>
@@ -193,7 +193,7 @@ public class SnappingManager : IDisposable
             {
                 _dragState.OriginalRect = new WindowRect(
                     restoreRect.X, restoreRect.Y, restoreRect.W, restoreRect.H);
-                Console.WriteLine($"[SnappingManager] Unsnap: 检测到已吸附窗口，保存原始位置 ({restoreRect.X}, {restoreRect.Y}, {restoreRect.W}, {restoreRect.H})");
+                Logger.Info("SnappingManager", $"Unsnap: 检测到已吸附窗口，保存原始位置 ({restoreRect.X}, {restoreRect.Y}, {restoreRect.W}, {restoreRect.H})");
             }
         }
         else
@@ -204,7 +204,7 @@ public class SnappingManager : IDisposable
 
         DragStarted?.Invoke(this, EventArgs.Empty);
 
-        Console.WriteLine($"[SnappingManager] 开始拖拽窗口: {hwnd}");
+        Logger.Debug("SnappingManager", $"开始拖拽窗口: {hwnd}");
     }
 
     /// <summary>
@@ -241,7 +241,7 @@ public class SnappingManager : IDisposable
             if (snapAreaChanged)
             {
                 ShowSnapPreview(snapArea);
-                Console.WriteLine($"[SnappingManager] 检测到吸附区域: {snapArea.Name}");
+                Logger.Debug("SnappingManager", $"检测到吸附区域: {snapArea.Name}");
             }
         }
         else
@@ -342,13 +342,13 @@ public class SnappingManager : IDisposable
                 // 清除程序调整标记
                 _history.ClearProgramAdjustedMark(hwnd);
 
-                Console.WriteLine($"[SnappingManager] Unsnap 恢复: 恢复窗口到原始位置 ({originalRect.X}, {originalRect.Y}, {originalRect.Width}, {originalRect.Height})");
+                Logger.Info("SnappingManager", $"Unsnap 恢复: 恢复窗口到原始位置 ({originalRect.X}, {originalRect.Y}, {originalRect.Width}, {originalRect.Height})");
             }
         }
 
         DragEnded?.Invoke(this, EventArgs.Empty);
 
-        Console.WriteLine($"[SnappingManager] 结束拖拽窗口: {hwnd}");
+        Logger.Debug("SnappingManager", $"结束拖拽窗口: {hwnd}");
 
         _dragState.Reset();
     }
@@ -512,7 +512,7 @@ public class SnappingManager : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[SnappingManager] 获取屏幕工作区失败: {ex.Message}");
+            Logger.Warning("SnappingManager", $"获取屏幕工作区失败: {ex.Message}");
         }
         
         return null;
@@ -544,7 +544,7 @@ public class SnappingManager : IDisposable
         if (_windowManager != null)
         {
             _windowManager.Execute(snapArea.Action, hwnd);
-            Console.WriteLine($"[SnappingManager] 执行吸附: {snapArea.Name} -> {snapArea.Action}");
+            Logger.Info("SnappingManager", $"执行吸附: {snapArea.Name} -> {snapArea.Action}");
         }
         else
         {
@@ -555,14 +555,9 @@ public class SnappingManager : IDisposable
                 Action = snapArea.Action,
                 SnapArea = snapArea
             });
-            Console.WriteLine($"[SnappingManager] 触发吸附事件: {snapArea.Name} -> {snapArea.Action}");
+            Logger.Debug("SnappingManager", $"触发吸附事件: {snapArea.Name} -> {snapArea.Action}");
         }
     }
-
-    // P/Invoke for IsWindowVisible
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
 
     /// <summary>
     /// 检查窗口是否适合拖拽
@@ -570,7 +565,7 @@ public class SnappingManager : IDisposable
     private bool IsValidWindowForDragging(nint hwnd)
     {
         // 检查窗口是否可见
-        if (!IsWindowVisible((IntPtr)hwnd))
+        if (!PInvoke.IsWindowVisible(new HWND((IntPtr)hwnd)))
             return false;
 
         // 检查窗口是否有标题栏（排除桌面、任务栏等）

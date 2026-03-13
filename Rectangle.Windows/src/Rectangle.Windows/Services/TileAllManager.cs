@@ -52,7 +52,7 @@ public class TileAllManager
             index++;
         }
 
-        Console.WriteLine($"[TileAllManager] 平铺 {windows.Count} 个窗口，布局: {cols}x{rows}");
+        Logger.Info("TileAllManager", $"平铺 {windows.Count} 个窗口，布局: {cols}x{rows}");
     }
 
     /// <summary>
@@ -88,7 +88,7 @@ public class TileAllManager
             index++;
         }
 
-        Console.WriteLine($"[TileAllManager] 平铺应用 {processName} 的 {windows.Count} 个窗口，布局: {cols}x{rows}");
+        Logger.Info("TileAllManager", $"平铺应用 {processName} 的 {windows.Count} 个窗口，布局: {cols}x{rows}");
     }
 
     /// <summary>

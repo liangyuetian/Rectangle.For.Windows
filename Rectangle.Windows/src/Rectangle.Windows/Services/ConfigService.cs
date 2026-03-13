@@ -11,6 +11,8 @@ public class ConfigService
 {
     private const string ConfigFileName = "config.json";
     private readonly string _configPath;
+    
+    public event EventHandler<AppConfig>? ConfigChanged;
 
     public ConfigService()
     {
@@ -46,6 +48,7 @@ public class ConfigService
 
         var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_configPath, json);
+        ConfigChanged?.Invoke(this, config);
     }
 
     public static Dictionary<string, ShortcutConfig> GetDefaultShortcuts()

@@ -60,11 +60,11 @@ internal static class Program
         if (!createdNew)
         {
             // 已有实例在运行，默默退出
-            Console.WriteLine("Rectangle 已经在运行中，退出。");
+            Logger.Warning("Program", "Rectangle 已经在运行中，退出。");
             return;
         }
 
-        Console.WriteLine("Rectangle 已启动。");
+        Logger.Info("Program", "Rectangle 已启动。");
 
         // 创建服务
         var win32 = new Win32WindowService();
@@ -143,7 +143,7 @@ internal static class Program
         _lastActiveWindowService?.Dispose();
         _mutex?.ReleaseMutex();
         _mutex?.Dispose();
-        Console.WriteLine("Rectangle 已退出。");
+        Logger.Info("Program", "Rectangle 已退出。");
     }
 
     /// <summary>
@@ -177,7 +177,7 @@ internal static class Program
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Program] 加载图标失败: {ex.Message}");
+                Logger.Error("Program", $"加载图标失败: {ex.Message}");
             }
         }
         
@@ -209,7 +209,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[Program] 生成默认图标失败: {ex.Message}");
+            Logger.Error("Program", $"生成默认图标失败: {ex.Message}");
             return null;
         }
     }
@@ -290,12 +290,12 @@ internal static class Program
         if (isIgnored)
         {
             config.IgnoredApps.RemoveAll(a => a.Equals(processName, StringComparison.OrdinalIgnoreCase));
-            Console.WriteLine($"[Program] 已从忽略列表移除: {processName}");
+            Logger.Info("Program", $"已从忽略列表移除: {processName}");
         }
         else
         {
             config.IgnoredApps.Add(processName);
-            Console.WriteLine($"[Program] 已添加到忽略列表: {processName}");
+            Logger.Info("Program", $"已添加到忽略列表: {processName}");
         }
 
         _configService.Save(config);
@@ -573,19 +573,19 @@ internal static class Program
     // SnappingManager 事件处理
     private static void OnDragStarted(object? sender, EventArgs e)
     {
-        Console.WriteLine("[Program] 拖拽开始");
+        Logger.Info("Program", "拖拽开始");
     }
 
     private static void OnDragEnded(object? sender, EventArgs e)
     {
-        Console.WriteLine("[Program] 拖拽结束");
+        Logger.Info("Program", "拖拽结束");
         // 隐藏预览窗口
         FootprintWindow.Instance.HideImmediate();
     }
 
     private static void OnSnapTriggered(object? sender, SnapEventArgs e)
     {
-        Console.WriteLine($"[Program] 吸附触发: {e.Action}");
+        Logger.Info("Program", $"吸附触发: {e.Action}");
     }
 
     // 隐藏窗口类，用于接收 WM_HOTKEY 消息

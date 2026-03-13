@@ -38,7 +38,7 @@ public class LastActiveWindowService : IDisposable
         lock (_lock)
         {
             _isPaused = true;
-            Console.WriteLine("[LastActiveWindowService] 暂停窗口跟踪");
+            Logger.Info("LastActiveWindowService", "暂停窗口跟踪");
         }
     }
 
@@ -50,7 +50,7 @@ public class LastActiveWindowService : IDisposable
         lock (_lock)
         {
             _isPaused = false;
-            Console.WriteLine("[LastActiveWindowService] 恢复窗口跟踪");
+            Logger.Info("LastActiveWindowService", "恢复窗口跟踪");
             
             // 恢复跟踪时，立即检查当前前台窗口
             var currentForeground = PInvoke.GetForegroundWindow().Value;
@@ -58,7 +58,7 @@ public class LastActiveWindowService : IDisposable
             {
                 _lastValidWindowHwnd = currentForeground;
                 var processName = GetProcessName(currentForeground);
-                Console.WriteLine($"[LastActiveWindowService] 恢复跟踪后更新窗口: {_lastValidWindowHwnd} ({processName})");
+                Logger.Debug("LastActiveWindowService", $"恢复跟踪后更新窗口: {_lastValidWindowHwnd} ({processName})");
             }
         }
     }
@@ -70,11 +70,11 @@ public class LastActiveWindowService : IDisposable
         if (IsValidWindow(current))
         {
             _lastValidWindowHwnd = current;
-            Console.WriteLine($"[LastActiveWindowService] 初始有效窗口: {_lastValidWindowHwnd}");
+            Logger.Debug("LastActiveWindowService", $"初始有效窗口: {_lastValidWindowHwnd}");
         }
         else
         {
-            Console.WriteLine($"[LastActiveWindowService] 警告：初始前台窗口无效: {current}");
+            Logger.Warning("LastActiveWindowService", $"初始前台窗口无效: {current}");
         }
 
         // 设置事件钩子，监听前台窗口变化
@@ -93,20 +93,19 @@ public class LastActiveWindowService : IDisposable
         
         if (_hook == null || _hook.IsInvalid)
         {
-            Console.WriteLine("[LastActiveWindowService] 错误：无法设置窗口事件钩子");
+            Logger.Error("LastActiveWindowService", "无法设置窗口事件钩子");
         }
         else
         {
-            Console.WriteLine("[LastActiveWindowService] 窗口事件钩子设置成功");
+            Logger.Info("LastActiveWindowService", "窗口事件钩子设置成功");
         }
     }
 
     private void OnForegroundWindowChanged(HWINEVENTHOOK hWinEventHook, uint eventType, HWND hwnd, int idObject, int idChild, uint idEventThread, uint dwmsEventTime)
     {
-        // 如果暂停跟踪，直接返回
         if (_isPaused)
         {
-            Console.WriteLine($"[LastActiveWindowService] 跟踪已暂停，忽略窗口变化: {hwnd.Value}");
+            Logger.Debug("LastActiveWindowService", $"跟踪已暂停，忽略窗口变化: {hwnd.Value}");
             return;
         }
 
@@ -122,25 +121,15 @@ public class LastActiveWindowService : IDisposable
             {
                 _lastValidWindowHwnd = newHwnd;
                 var processName = GetProcessName(newHwnd);
-                Console.WriteLine($"[LastActiveWindowService] 更新有效窗口: {_lastValidWindowHwnd} ({processName})");
+                Logger.Debug("LastActiveWindowService", $"更新有效窗口: {_lastValidWindowHwnd} ({processName})");
             }
         }
         else
         {
             // 无效窗口（如托盘、任务栏），不更新记录
-            Console.WriteLine($"[LastActiveWindowService] 忽略无效窗口: {newHwnd}");
+            Logger.Debug("LastActiveWindowService", $"忽略无效窗口: {newHwnd}");
         }
     }
-
-    // P/Invoke for IsWindow
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsWindow(IntPtr hWnd);
-
-    // P/Invoke for IsWindowVisible
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    private static extern bool IsWindowVisible(IntPtr hWnd);
 
     /// <summary>
     /// 判断窗口是否是有效的应用程序窗口
@@ -154,14 +143,14 @@ public class LastActiveWindowService : IDisposable
             var hWnd = new HWND(hwnd);
 
             // 检查窗口句柄是否仍然有效
-            if (!IsWindow(hWnd.Value))
+            if (!PInvoke.IsWindow(hWnd))
             {
-                Console.WriteLine($"[LastActiveWindowService] 窗口句柄无效: {hwnd}");
+                Logger.Warning("LastActiveWindowService", $"窗口句柄无效: {hwnd}");
                 return false;
             }
 
             // 检查窗口是否可见
-            if (!IsWindowVisible(hWnd.Value)) return false;
+            if (!PInvoke.IsWindowVisible(hWnd)) return false;
 
             // 获取窗口标题
             int titleLength = PInvoke.GetWindowTextLength(hWnd);
@@ -207,7 +196,7 @@ public class LastActiveWindowService : IDisposable
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[LastActiveWindowService] IsValidWindow 异常: {ex.Message}");
+            Logger.Error("LastActiveWindowService", $"IsValidWindow 异常: {ex.Message}");
             return false;
         }
     }
@@ -353,7 +342,7 @@ public class LastActiveWindowService : IDisposable
             if (_lastValidWindowHwnd != 0 && IsValidWindow(_lastValidWindowHwnd))
             {
                 var processName = GetProcessName(_lastValidWindowHwnd);
-                Console.WriteLine($"[LastActiveWindowService] 获取目标窗口: {_lastValidWindowHwnd} ({processName})");
+                Logger.Debug("LastActiveWindowService", $"获取目标窗口: {_lastValidWindowHwnd} ({processName})");
                 return _lastValidWindowHwnd;
             }
             
@@ -364,12 +353,12 @@ public class LastActiveWindowService : IDisposable
                 // 更新缓存
                 _lastValidWindowHwnd = foregroundWindow;
                 var processName = GetProcessName(foregroundWindow);
-                Console.WriteLine($"[LastActiveWindowService] 缓存窗口无效，使用前台窗口: {foregroundWindow} ({processName})");
+                Logger.Debug("LastActiveWindowService", $"缓存窗口无效，使用前台窗口: {foregroundWindow} ({processName})");
                 return foregroundWindow;
             }
             
             // 如果前台窗口也无效，返回缓存的窗口（尽管可能无效）
-            Console.WriteLine($"[LastActiveWindowService] 警告：无有效窗口可用，返回缓存窗口: {_lastValidWindowHwnd}");
+            Logger.Warning("LastActiveWindowService", $"无有效窗口可用，返回缓存窗口: {_lastValidWindowHwnd}");
             return _lastValidWindowHwnd;
         }
     }
