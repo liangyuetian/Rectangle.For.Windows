@@ -104,5 +104,8 @@ public enum WindowAction
     CascadeAll,
     ReverseAll,
     TileActiveApp,
-    CascadeActiveApp
+    CascadeActiveApp,
+    // Todo 模式
+    LeftTodo,
+    RightTodo
 }
