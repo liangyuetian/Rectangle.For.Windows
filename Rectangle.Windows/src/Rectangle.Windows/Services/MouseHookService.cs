@@ -141,7 +141,7 @@ public class MouseHookService : IDisposable
     {
         if (PInvoke.GetCursorPos(out var pt))
         {
-            return new System.Drawing.Point(pt.x, pt.y);
+            return new System.Drawing.Point(pt.X, pt.Y);
         }
         return new System.Drawing.Point(0, 0);
     }

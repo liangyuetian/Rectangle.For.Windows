@@ -338,29 +338,7 @@ public class AppConfig
     /// </summary>
     public int SpecifiedHeight { get; set; } = 1050;
 
-    // === Todo 模式配置 ===
-
-    /// <summary>
-    /// 是否启用 Todo 模式
-    /// </summary>
-    public bool TodoMode { get; set; } = false;
-
-    /// <summary>
-    /// Todo 应用进程名称（如 "Todoist", "Microsoft.To-Do"）
-    /// </summary>
-    public string TodoApplication { get; set; } = "";
-
-    /// <summary>
-    /// Todo 侧边栏宽度（像素）
-    /// </summary>
-    public int TodoSidebarWidth { get; set; } = 400;
-
-    /// <summary>
-    /// Todo 侧边栏位置：Left 或 Right
-    /// </summary>
-    public string TodoSidebarSide { get; set; } = "Right";
-
-    private static List<string> GetDefaultIgnoredApps()
+        private static List<string> GetDefaultIgnoredApps()
     {
         return new List<string>
         {
