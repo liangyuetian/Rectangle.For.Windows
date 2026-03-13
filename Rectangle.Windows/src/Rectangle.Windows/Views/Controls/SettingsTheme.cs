@@ -8,15 +8,16 @@ namespace Rectangle.Windows.Views.Controls;
 /// </summary>
 public static class SettingsTheme
 {
-    public static readonly Color BackgroundColor = Color.FromArgb(32, 32, 32);
-    public static readonly Color CardColor = Color.FromArgb(45, 45, 45);
-    public static readonly Color CardHoverColor = Color.FromArgb(55, 55, 55);
-    public static readonly Color AccentColor = Color.FromArgb(0, 120, 212);
-    public static readonly Color TextColor = Color.FromArgb(255, 255, 255);
-    public static readonly Color SecondaryTextColor = Color.FromArgb(180, 180, 180);
-    public static readonly Color BorderColor = Color.FromArgb(60, 60, 60);
-    public static readonly Color InputBackColor = Color.FromArgb(38, 38, 38);
-    public static readonly Color NavBackgroundColor = Color.FromArgb(28, 28, 28);
+    public static readonly Color BackgroundColor = Color.FromArgb(24, 24, 24); // Deeper background for contrast
+    public static readonly Color CardColor = Color.FromArgb(38, 38, 38);       // Slightly lighter cards
+    public static readonly Color CardHoverColor = Color.FromArgb(45, 45, 45);  // Subtle hover state
+    public static readonly Color AccentColor = Color.FromArgb(0, 120, 212);    // Windows 11 Blue
+    public static readonly Color AccentHoverColor = Color.FromArgb(0, 100, 190); 
+    public static readonly Color TextColor = Color.FromArgb(250, 250, 250);
+    public static readonly Color SecondaryTextColor = Color.FromArgb(160, 160, 160);
+    public static readonly Color BorderColor = Color.FromArgb(50, 50, 50);     // Dim border
+    public static readonly Color InputBackColor = Color.FromArgb(32, 32, 32);  // Inputs slightly darker than cards
+    public static readonly Color NavBackgroundColor = Color.FromArgb(20, 20, 20);// Nav darkest
 
     public static GraphicsPath CreateRoundedRect(System.Drawing.Rectangle rect, int radius)
     {
