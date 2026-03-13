@@ -137,6 +137,37 @@ public class WindowManager
             return;
         }
 
+        // 多窗口操作
+        if (action == WindowAction.TileAll)
+        {
+            ExecuteTileAll();
+            return;
+        }
+
+        if (action == WindowAction.CascadeAll)
+        {
+            ExecuteCascadeAll();
+            return;
+        }
+
+        if (action == WindowAction.ReverseAll)
+        {
+            ExecuteReverseAll();
+            return;
+        }
+
+        if (action == WindowAction.TileActiveApp)
+        {
+            ExecuteTileActiveApp();
+            return;
+        }
+
+        if (action == WindowAction.CascadeActiveApp)
+        {
+            ExecuteCascadeActiveApp();
+            return;
+        }
+
         var hwnd = targetHwnd ?? GetTargetWindow();
         if (hwnd == 0)
         {
@@ -264,9 +295,8 @@ public class WindowManager
             return requestedAction;
         }
 
-        // 检查是否是同一个操作或同一循环组中的操作
-        if (lastAction.Action == requestedAction || 
-            RepeatedExecutionsCalculator.InSameCycleGroup(lastAction.Action, requestedAction))
+        // 检查是否是同一个操作（只有连续按同一快捷键才触发循环）
+        if (lastAction.Action == requestedAction)
         {
             // 获取下一个循环操作
             // 使用 lastAction.Count + 1 因为这是即将执行的次数
@@ -583,5 +613,84 @@ public class WindowManager
             // 其他操作不应用间隙
             _ => target
         };
+    }
+
+    // ========== 多窗口操作 ==========
+
+    private void ExecuteTileAll()
+    {
+        var workArea = GetPrimaryWorkArea();
+        var manager = new TileAllManager(_win32, _configService);
+        manager.TileAll(workArea);
+    }
+
+    private void ExecuteCascadeAll()
+    {
+        var workArea = GetPrimaryWorkArea();
+        var manager = new CascadeAllManager(_win32, _configService);
+        manager.CascadeAll(workArea);
+    }
+
+    private void ExecuteReverseAll()
+    {
+        var workArea = GetPrimaryWorkArea();
+        var manager = new ReverseAllManager(_win32);
+        manager.ReverseAll(workArea);
+    }
+
+    private void ExecuteTileActiveApp()
+    {
+        var hwnd = GetTargetWindow();
+        if (hwnd == 0)
+        {
+            System.Media.SystemSounds.Beep.Play();
+            return;
+        }
+
+        var processName = _win32.GetProcessNameFromWindow(hwnd);
+        if (string.IsNullOrEmpty(processName))
+        {
+            System.Media.SystemSounds.Beep.Play();
+            return;
+        }
+
+        var workArea = GetPrimaryWorkArea();
+        var manager = new TileAllManager(_win32, _configService);
+        manager.TileActiveApp(workArea, processName);
+    }
+
+    private void ExecuteCascadeActiveApp()
+    {
+        var hwnd = GetTargetWindow();
+        if (hwnd == 0)
+        {
+            System.Media.SystemSounds.Beep.Play();
+            return;
+        }
+
+        var processName = _win32.GetProcessNameFromWindow(hwnd);
+        if (string.IsNullOrEmpty(processName))
+        {
+            System.Media.SystemSounds.Beep.Play();
+            return;
+        }
+
+        var workArea = GetPrimaryWorkArea();
+        var manager = new CascadeAllManager(_win32, _configService);
+        manager.CascadeActiveApp(workArea, processName);
+    }
+
+    private WorkArea GetPrimaryWorkArea()
+    {
+        // 获取主显示器的工作区
+        var hwnd = GetTargetWindow();
+        if (hwnd != 0)
+        {
+            return _win32.GetWorkAreaFromWindow(hwnd);
+        }
+
+        // 使用默认工作区
+        return new WorkArea(0, 0, System.Windows.Forms.Screen.PrimaryScreen.WorkingArea.Width,
+            System.Windows.Forms.Screen.PrimaryScreen.WorkingArea.Height);
     }
 }

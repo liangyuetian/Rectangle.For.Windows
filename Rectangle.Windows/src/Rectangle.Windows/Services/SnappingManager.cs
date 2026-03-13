@@ -1,8 +1,12 @@
-using Rectangle.Windows.Core;
-using Rectangle.Windows.Views;
 using System;
 using System.Drawing;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using Rectangle.Windows.Core;
+using Windows.Win32;
+using Windows.Win32.Foundation;
+using Windows.Win32.Graphics.Gdi;
+using Windows.Win32.UI.WindowsAndMessaging;
 
 namespace Rectangle.Windows.Services;
 
@@ -17,13 +21,22 @@ public class SnappingManager : IDisposable
     private readonly ConfigService _configService;
     private readonly DragState _dragState;
     private readonly WindowHistory _history;
-    private readonly FootprintWindow _footprint;
-    
+    private WindowManager? _windowManager;
+
     // 配置
     private bool _isEnabled = true;
-    private int _edgeMargin = 5;  // 边缘吸附区域大小（像素）
-    private int _cornerSize = 20; // 角落吸附区域大小（像素）
-    
+    private int _edgeMarginTop = 5;
+    private int _edgeMarginBottom = 5;
+    private int _edgeMarginLeft = 5;
+    private int _edgeMarginRight = 5;
+    private int _cornerSize = 20;
+    private int _snapModifiers = 0;
+
+    // 性能优化：帧率限制
+    private DateTime _lastUpdateTime = DateTime.MinValue;
+    private readonly int _updateIntervalMs = 16; // ~60fps
+    private SnapArea? _lastSnapArea;
+
     // 事件
     public event EventHandler<SnapEventArgs>? SnapTriggered;
     public event EventHandler? DragStarted;
@@ -36,12 +49,19 @@ public class SnappingManager : IDisposable
         _history = history;
         _mouseHook = new MouseHookService();
         _dragState = new DragState();
-        _footprint = new FootprintWindow();
-        
+
         // 订阅鼠标事件
         _mouseHook.MouseDown += OnMouseDown;
         _mouseHook.MouseUp += OnMouseUp;
         _mouseHook.MouseMove += OnMouseMove;
+    }
+
+    /// <summary>
+    /// 设置 WindowManager 实例（用于执行吸附操作）
+    /// </summary>
+    public void SetWindowManager(WindowManager windowManager)
+    {
+        _windowManager = windowManager;
     }
 
     /// <summary>
@@ -50,16 +70,24 @@ public class SnappingManager : IDisposable
     public bool Enable()
     {
         if (_isEnabled) return true;
-        
+
         LoadConfig();
-        
+
+        // 检查是否启用了拖拽吸附
+        var config = _configService?.Load();
+        if (config?.DragToSnap == false)
+        {
+            Console.WriteLine("[SnappingManager] 拖拽吸附已禁用（配置）");
+            return false;
+        }
+
         if (_mouseHook.InstallHook())
         {
             _isEnabled = true;
             Console.WriteLine("[SnappingManager] 拖拽吸附已启用");
             return true;
         }
-        
+
         return false;
     }
 
@@ -82,10 +110,14 @@ public class SnappingManager : IDisposable
     private void LoadConfig()
     {
         var config = _configService?.Load();
-        if (config?.SnapAreas != null)
-        {
-            // 可以在这里加载更多配置
-        }
+        if (config == null) return;
+
+        _edgeMarginTop = config.SnapEdgeMarginTop;
+        _edgeMarginBottom = config.SnapEdgeMarginBottom;
+        _edgeMarginLeft = config.SnapEdgeMarginLeft;
+        _edgeMarginRight = config.SnapEdgeMarginRight;
+        _cornerSize = config.CornerSnapAreaSize;
+        _snapModifiers = config.SnapModifiers;
     }
 
     /// <summary>
@@ -94,7 +126,7 @@ public class SnappingManager : IDisposable
     private void OnMouseDown(object? sender, MouseHookEventArgs e)
     {
         // 只处理左键
-        if (e.DragButton != System.Windows.Forms.MouseButtons.Left)
+        if (e.Button != System.Windows.Forms.MouseButtons.Left)
             return;
 
         // 获取光标下的窗口
@@ -107,7 +139,7 @@ public class SnappingManager : IDisposable
 
         // 获取窗口矩形
         var (x, y, w, h) = _win32.GetWindowRect(hwnd);
-        
+
         // 开始拖拽
         _dragState.Reset();
         _dragState.IsDragging = true;
@@ -116,10 +148,27 @@ public class SnappingManager : IDisposable
         _dragState.InitialWindowRect = new WindowRect(x, y, w, h);
         _dragState.DragStartTime = DateTime.Now;
         _dragState.DragButton = MouseButton.Left;
-        _dragState.OriginalRect = new WindowRect(x, y, w, h);
-        
+
+        // Unsnap 恢复：检测窗口是否被程序调整过
+        // 如果是，从历史记录获取原始尺寸保存到 OriginalRect
+        var config = _configService?.Load();
+        if (config?.UnsnapRestore == true && _history.IsProgramAdjusted(hwnd))
+        {
+            if (_history.TryGetRestoreRect(hwnd, out var restoreRect))
+            {
+                _dragState.OriginalRect = new WindowRect(
+                    restoreRect.X, restoreRect.Y, restoreRect.W, restoreRect.H);
+                Console.WriteLine($"[SnappingManager] Unsnap: 检测到已吸附窗口，保存原始位置 ({restoreRect.X}, {restoreRect.Y}, {restoreRect.W}, {restoreRect.H})");
+            }
+        }
+        else
+        {
+            // 保存当前位置作为原始位置
+            _dragState.OriginalRect = new WindowRect(x, y, w, h);
+        }
+
         DragStarted?.Invoke(this, EventArgs.Empty);
-        
+
         Console.WriteLine($"[SnappingManager] 开始拖拽窗口: {hwnd}");
     }
 
@@ -130,6 +179,13 @@ public class SnappingManager : IDisposable
     {
         if (!_dragState.IsDragging) return;
 
+        // 帧率限制：检查是否应该更新
+        var now = DateTime.Now;
+        var elapsed = (now - _lastUpdateTime).TotalMilliseconds;
+        if (elapsed < _updateIntervalMs)
+            return;
+        _lastUpdateTime = now;
+
         _dragState.CurrentMousePos = e.Point;
 
         // 检查拖拽距离，如果太小可能是点击而不是拖拽
@@ -138,22 +194,79 @@ public class SnappingManager : IDisposable
 
         // 计算吸附区域
         var snapArea = CalculateSnapArea(e.Point);
-        
+
+        // 检测吸附区域是否变化
+        bool snapAreaChanged = !SnapAreaEquals(snapArea, _lastSnapArea);
+
         if (snapArea != null)
         {
             _dragState.CurrentSnapArea = snapArea;
-            
+
             // 显示预览窗口
-            var previewRect = CalculatePreviewRect(snapArea);
-            _footprint.ShowPreview(previewRect, snapArea.Name);
-            
-            Console.WriteLine($"[SnappingManager] 检测到吸附区域: {snapArea.Name}");
+            if (snapAreaChanged)
+            {
+                ShowSnapPreview(snapArea);
+                Console.WriteLine($"[SnappingManager] 检测到吸附区域: {snapArea.Name}");
+            }
         }
         else
         {
             _dragState.CurrentSnapArea = null;
-            _footprint.HidePreview();
+
+            // 隐藏预览窗口
+            if (_lastSnapArea != null)
+            {
+                Views.FootprintWindow.Instance.Hide();
+            }
         }
+
+        _lastSnapArea = snapArea;
+    }
+
+    /// <summary>
+    /// 显示吸附预览窗口
+    /// </summary>
+    private void ShowSnapPreview(SnapArea snapArea)
+    {
+        if (_windowManager == null) return;
+
+        var hwnd = _dragState.DraggedWindow;
+        if (hwnd == 0) return;
+
+        // 获取目标工作区
+        var workArea = GetWorkAreaFromPoint(_dragState.CurrentMousePos);
+        if (!workArea.HasValue) return;
+
+        // 计算预览窗口位置
+        var calculator = new CalculatorFactory(_configService).GetCalculator(snapArea.Action);
+        if (calculator == null) return;
+
+        var previewRect = calculator.Calculate(workArea.Value, default, snapArea.Action);
+
+        // 显示预览
+        var footprint = Views.FootprintWindow.Instance;
+        var config = _configService?.Load();
+
+        // 配置预览窗口
+        footprint.Configure(
+            alpha: config?.FootprintAlpha ?? 0.3f,
+            borderWidth: config?.FootprintBorderWidth ?? 2,
+            enableFade: config?.FootprintFade ?? true,
+            animationDuration: config?.FootprintAnimationDuration ?? 150
+        );
+
+        // 转换 WindowRect 到 System.Drawing.Rectangle
+        footprint.ShowPreview(previewRect.X, previewRect.Y, previewRect.Width, previewRect.Height);
+    }
+
+    /// <summary>
+    /// 比较两个吸附区域是否相同
+    /// </summary>
+    private static bool SnapAreaEquals(SnapArea? a, SnapArea? b)
+    {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
+        return a.Action == b.Action && a.Type == b.Type;
     }
 
     /// <summary>
@@ -163,20 +276,45 @@ public class SnappingManager : IDisposable
     {
         if (!_dragState.IsDragging) return;
 
+        var hwnd = _dragState.DraggedWindow;
+
         // 检查是否是有效拖拽（持续时间 > 100ms 或距离 > 10px）
-        bool isValidDrag = _dragState.GetDragDurationMs() > 100 || 
+        bool isValidDrag = _dragState.GetDragDurationMs() > 100 ||
                           _dragState.GetDragDistance() > 10;
+
+        var config = _configService?.Load();
 
         if (isValidDrag && _dragState.CurrentSnapArea != null)
         {
             // 执行吸附
             ExecuteSnap(_dragState.CurrentSnapArea);
         }
+        else if (isValidDrag && config?.UnsnapRestore == true && _dragState.OriginalRect.HasValue)
+        {
+            // Unsnap 恢复：拖拽结束但未吸附，恢复原始尺寸
+            var originalRect = _dragState.OriginalRect.Value;
+
+            // 检查窗口当前位置是否与原始位置不同（说明用户确实拖拽了）
+            var (currentX, currentY, currentW, currentH) = _win32.GetWindowRect(hwnd);
+            bool positionChanged = Math.Abs(currentX - originalRect.X) > 5 ||
+                                   Math.Abs(currentY - originalRect.Y) > 5;
+
+            if (positionChanged)
+            {
+                // 恢复窗口到原始尺寸
+                _win32.SetWindowRect(hwnd, originalRect.X, originalRect.Y, originalRect.Width, originalRect.Height);
+
+                // 清除程序调整标记
+                _history.ClearProgramAdjustedMark(hwnd);
+
+                Console.WriteLine($"[SnappingManager] Unsnap 恢复: 恢复窗口到原始位置 ({originalRect.X}, {originalRect.Y}, {originalRect.Width}, {originalRect.Height})");
+            }
+        }
 
         DragEnded?.Invoke(this, EventArgs.Empty);
-        
-        Console.WriteLine($"[SnappingManager] 结束拖拽窗口: {_dragState.DraggedWindow}");
-        
+
+        Console.WriteLine($"[SnappingManager] 结束拖拽窗口: {hwnd}");
+
         _dragState.Reset();
     }
 
@@ -187,7 +325,7 @@ public class SnappingManager : IDisposable
     {
         // 获取光标所在的屏幕
         var workArea = GetWorkAreaFromPoint(cursorPos);
-        if (workArea == null) return null;
+        if (!workArea.HasValue) return null;
 
         // 检查屏幕边缘
         var snapArea = CheckScreenEdges(cursorPos, workArea);
@@ -203,14 +341,16 @@ public class SnappingManager : IDisposable
     /// <summary>
     /// 检查屏幕边缘吸附
     /// </summary>
-    private SnapArea? CheckScreenEdges(Point cursorPos, WorkArea workArea)
+    private SnapArea? CheckScreenEdges(Point cursorPos, WorkArea? workArea)
     {
+        if (workArea == null) return null;
+
         // 左边缘
-        if (cursorPos.X >= workArea.Left && cursorPos.X <= workArea.Left + _edgeMargin)
+        if (cursorPos.X >= workArea.Value.Left && cursorPos.X <= workArea.Value.Left + _edgeMarginLeft)
         {
             return new SnapArea
             {
-                Bounds = new Rectangle(workArea.Left, workArea.Top, _edgeMargin, workArea.Height),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Top, _edgeMarginLeft, workArea.Value.Height),
                 Action = WindowAction.LeftHalf,
                 Type = SnapAreaType.Edge,
                 Name = "Left Edge"
@@ -218,11 +358,11 @@ public class SnappingManager : IDisposable
         }
 
         // 右边缘
-        if (cursorPos.X >= workArea.Right - _edgeMargin && cursorPos.X <= workArea.Right)
+        if (cursorPos.X >= workArea.Value.Right - _edgeMarginRight && cursorPos.X <= workArea.Value.Right)
         {
             return new SnapArea
             {
-                Bounds = new Rectangle(workArea.Right - _edgeMargin, workArea.Top, _edgeMargin, workArea.Height),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Right - _edgeMarginRight, workArea.Value.Top, _edgeMarginRight, workArea.Value.Height),
                 Action = WindowAction.RightHalf,
                 Type = SnapAreaType.Edge,
                 Name = "Right Edge"
@@ -230,23 +370,23 @@ public class SnappingManager : IDisposable
         }
 
         // 上边缘
-        if (cursorPos.Y >= workArea.Top && cursorPos.Y <= workArea.Top + _edgeMargin)
+        if (cursorPos.Y >= workArea.Value.Top && cursorPos.Y <= workArea.Value.Top + _edgeMarginTop)
         {
             return new SnapArea
             {
-                Bounds = new Rectangle(workArea.Left, workArea.Top, workArea.Width, _edgeMargin),
-                Action = WindowAction.TopHalf,
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Top, workArea.Value.Width, _edgeMarginTop),
+                Action = WindowAction.Maximize,
                 Type = SnapAreaType.Edge,
                 Name = "Top Edge"
             };
         }
 
         // 下边缘
-        if (cursorPos.Y >= workArea.Bottom - _edgeMargin && cursorPos.Y <= workArea.Bottom)
+        if (cursorPos.Y >= workArea.Value.Bottom - _edgeMarginBottom && cursorPos.Y <= workArea.Value.Bottom)
         {
             return new SnapArea
             {
-                Bounds = new Rectangle(workArea.Left, workArea.Bottom - _edgeMargin, workArea.Width, _edgeMargin),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Bottom - _edgeMarginBottom, workArea.Value.Width, _edgeMarginBottom),
                 Action = WindowAction.BottomHalf,
                 Type = SnapAreaType.Edge,
                 Name = "Bottom Edge"
@@ -259,15 +399,17 @@ public class SnappingManager : IDisposable
     /// <summary>
     /// 检查屏幕角落吸附
     /// </summary>
-    private SnapArea? CheckScreenCorners(Point cursorPos, WorkArea workArea)
+    private SnapArea? CheckScreenCorners(Point cursorPos, WorkArea? workArea)
     {
+        if (workArea == null) return null;
+        
         // 左上角
-        if (cursorPos.X <= workArea.Left + _cornerSize && 
-            cursorPos.Y <= workArea.Top + _cornerSize)
+        if (cursorPos.X <= workArea.Value.Left + _cornerSize && 
+            cursorPos.Y <= workArea.Value.Top + _cornerSize)
         {
             return new SnapArea
             {
-                Bounds = new Rectangle(workArea.Left, workArea.Top, _cornerSize, _cornerSize),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Top, _cornerSize, _cornerSize),
                 Action = WindowAction.TopLeft,
                 Type = SnapAreaType.Corner,
                 Name = "Top Left Corner"
@@ -275,12 +417,12 @@ public class SnappingManager : IDisposable
         }
 
         // 右上角
-        if (cursorPos.X >= workArea.Right - _cornerSize && 
-            cursorPos.Y <= workArea.Top + _cornerSize)
+        if (cursorPos.X >= workArea.Value.Right - _cornerSize && 
+            cursorPos.Y <= workArea.Value.Top + _cornerSize)
         {
             return new SnapArea
             {
-                Bounds = new Rectangle(workArea.Right - _cornerSize, workArea.Top, _cornerSize, _cornerSize),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Right - _cornerSize, workArea.Value.Top, _cornerSize, _cornerSize),
                 Action = WindowAction.TopRight,
                 Type = SnapAreaType.Corner,
                 Name = "Top Right Corner"
@@ -288,12 +430,12 @@ public class SnappingManager : IDisposable
         }
 
         // 左下角
-        if (cursorPos.X <= workArea.Left + _cornerSize && 
-            cursorPos.Y >= workArea.Bottom - _cornerSize)
+        if (cursorPos.X <= workArea.Value.Left + _cornerSize && 
+            cursorPos.Y >= workArea.Value.Bottom - _cornerSize)
         {
             return new SnapArea
             {
-                Bounds = new Rectangle(workArea.Left, workArea.Bottom - _cornerSize, _cornerSize, _cornerSize),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Left, workArea.Value.Bottom - _cornerSize, _cornerSize, _cornerSize),
                 Action = WindowAction.BottomLeft,
                 Type = SnapAreaType.Corner,
                 Name = "Bottom Left Corner"
@@ -301,12 +443,12 @@ public class SnappingManager : IDisposable
         }
 
         // 右下角
-        if (cursorPos.X >= workArea.Right - _cornerSize && 
-            cursorPos.Y >= workArea.Bottom - _cornerSize)
+        if (cursorPos.X >= workArea.Value.Right - _cornerSize && 
+            cursorPos.Y >= workArea.Value.Bottom - _cornerSize)
         {
             return new SnapArea
             {
-                Bounds = new Rectangle(workArea.Right - _cornerSize, workArea.Bottom - _cornerSize, _cornerSize, _cornerSize),
+                Bounds = new System.Drawing.Rectangle(workArea.Value.Right - _cornerSize, workArea.Value.Bottom - _cornerSize, _cornerSize, _cornerSize),
                 Action = WindowAction.BottomRight,
                 Type = SnapAreaType.Corner,
                 Name = "Bottom Right Corner"
@@ -317,55 +459,15 @@ public class SnappingManager : IDisposable
     }
 
     /// <summary>
-    /// 计算预览窗口位置
-    /// </summary>
-    private Rectangle CalculatePreviewRect(SnapArea snapArea)
-    {
-        var workArea = GetWorkAreaFromPoint(_dragState.CurrentMousePos);
-        if (workArea == null) return Rectangle.Empty;
-
-        // 根据操作类型计算预览位置
-        switch (snapArea.Action)
-        {
-            case WindowAction.LeftHalf:
-                return new Rectangle(workArea.Left, workArea.Top, workArea.Width / 2, workArea.Height);
-            
-            case WindowAction.RightHalf:
-                return new Rectangle(workArea.Left + workArea.Width / 2, workArea.Top, workArea.Width / 2, workArea.Height);
-            
-            case WindowAction.TopHalf:
-                return new Rectangle(workArea.Left, workArea.Top, workArea.Width, workArea.Height / 2);
-            
-            case WindowAction.BottomHalf:
-                return new Rectangle(workArea.Left, workArea.Top + workArea.Height / 2, workArea.Width, workArea.Height / 2);
-            
-            case WindowAction.TopLeft:
-                return new Rectangle(workArea.Left, workArea.Top, workArea.Width / 2, workArea.Height / 2);
-            
-            case WindowAction.TopRight:
-                return new Rectangle(workArea.Left + workArea.Width / 2, workArea.Top, workArea.Width / 2, workArea.Height / 2);
-            
-            case WindowAction.BottomLeft:
-                return new Rectangle(workArea.Left, workArea.Top + workArea.Height / 2, workArea.Width / 2, workArea.Height / 2);
-            
-            case WindowAction.BottomRight:
-                return new Rectangle(workArea.Left + workArea.Width / 2, workArea.Top + workArea.Height / 2, workArea.Width / 2, workArea.Height / 2);
-            
-            default:
-                return snapArea.Bounds;
-        }
-    }
-
-    /// <summary>
     /// 获取点所在的屏幕工作区
     /// </summary>
     private WorkArea? GetWorkAreaFromPoint(Point point)
     {
         try
         {
-            var hMonitor = PInvoke.MonitorFromPoint(point, PInvoke.MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
-            var mi = new Windows.Win32.Graphics.Gdi.MONITORINFO();
-            mi.cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<Windows.Win32.Graphics.Gdi.MONITORINFO>();
+            var hMonitor = PInvoke.MonitorFromPoint(point, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
+            var mi = new MONITORINFO();
+            mi.cbSize = (uint)Marshal.SizeOf<MONITORINFO>();
             
             if (PInvoke.GetMonitorInfo(hMonitor, ref mi))
             {
@@ -390,25 +492,42 @@ public class SnappingManager : IDisposable
         if (hwnd == 0) return;
 
         // 保存原始位置（用于恢复）
-        if (_dragState.OriginalRect != null)
+        if (_dragState.OriginalRect.HasValue)
         {
-            _history.SaveRestoreRect(hwnd, 
-                _dragState.OriginalRect.X, 
-                _dragState.OriginalRect.Y, 
-                _dragState.OriginalRect.Width, 
-                _dragState.OriginalRect.Height);
+            var orig = _dragState.OriginalRect.Value;
+            _history.SaveRestoreRect(hwnd,
+                orig.X,
+                orig.Y,
+                orig.Width,
+                orig.Height);
         }
 
-        // 触发吸附事件
-        SnapTriggered?.Invoke(this, new SnapEventArgs
-        {
-            WindowHandle = hwnd,
-            Action = snapArea.Action,
-            SnapArea = snapArea
-        });
+        // 标记窗口为由程序调整
+        _history.MarkAsProgramAdjusted(hwnd);
 
-        Console.WriteLine($"[SnappingManager] 执行吸附: {snapArea.Name} -> {snapArea.Action}");
+        // 执行窗口操作
+        if (_windowManager != null)
+        {
+            _windowManager.Execute(snapArea.Action, hwnd);
+            Console.WriteLine($"[SnappingManager] 执行吸附: {snapArea.Name} -> {snapArea.Action}");
+        }
+        else
+        {
+            // 如果没有 WindowManager，触发事件让外部处理
+            SnapTriggered?.Invoke(this, new SnapEventArgs
+            {
+                WindowHandle = hwnd,
+                Action = snapArea.Action,
+                SnapArea = snapArea
+            });
+            Console.WriteLine($"[SnappingManager] 触发吸附事件: {snapArea.Name} -> {snapArea.Action}");
+        }
     }
+
+    // P/Invoke for IsWindowVisible
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool IsWindowVisible(IntPtr hWnd);
 
     /// <summary>
     /// 检查窗口是否适合拖拽
@@ -416,7 +535,7 @@ public class SnappingManager : IDisposable
     private bool IsValidWindowForDragging(nint hwnd)
     {
         // 检查窗口是否可见
-        if (!PInvoke.IsWindowVisible(new Windows.Win32.Foundation.HWND(hwnd)))
+        if (!IsWindowVisible((IntPtr)hwnd))
             return false;
 
         // 检查窗口是否有标题栏（排除桌面等）
@@ -429,7 +548,6 @@ public class SnappingManager : IDisposable
     {
         Disable();
         _mouseHook?.Dispose();
-        _footprint?.Dispose();
     }
 }
 

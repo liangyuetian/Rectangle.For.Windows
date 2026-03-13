@@ -181,6 +181,97 @@ public class AppConfig
     /// </summary>
     public bool MoveCursorAcrossDisplays { get; set; } = false;
 
+    // === 拖拽吸附预览窗口配置 ===
+
+    /// <summary>
+    /// 预览窗口透明度（0.1 - 1.0）
+    /// </summary>
+    public float FootprintAlpha { get; set; } = 0.3f;
+
+    /// <summary>
+    /// 预览窗口边框宽度（像素）
+    /// </summary>
+    public int FootprintBorderWidth { get; set; } = 2;
+
+    /// <summary>
+    /// 预览窗口填充颜色（ARGB 格式）
+    /// </summary>
+    public int FootprintColor { get; set; } = -16711614; // ARGB(0, 120, 212) 蓝色
+
+    /// <summary>
+    /// 预览窗口边框颜色（ARGB 格式）
+    /// </summary>
+    public int FootprintBorderColor { get; set; } = -16711614; // ARGB(0, 120, 212) 蓝色
+
+    /// <summary>
+    /// 是否启用预览窗口淡入淡出动画
+    /// </summary>
+    public bool FootprintFade { get; set; } = true;
+
+    /// <summary>
+    /// 预览窗口动画时长（毫秒，50-500）
+    /// </summary>
+    public int FootprintAnimationDuration { get; set; } = 150;
+
+    /// <summary>
+    /// 是否启用 Unsnap 恢复功能（拖拽已吸附窗口时恢复原始尺寸）
+    /// </summary>
+    public bool UnsnapRestore { get; set; } = true;
+
+    // === 拖拽吸附配置 ===
+
+    /// <summary>
+    /// 是否启用拖拽吸附
+    /// </summary>
+    public bool DragToSnap { get; set; } = true;
+
+    /// <summary>
+    /// 屏幕上边缘吸附区域大小（像素）
+    /// </summary>
+    public int SnapEdgeMarginTop { get; set; } = 5;
+
+    /// <summary>
+    /// 屏幕下边缘吸附区域大小（像素）
+    /// </summary>
+    public int SnapEdgeMarginBottom { get; set; } = 5;
+
+    /// <summary>
+    /// 屏幕左边缘吸附区域大小（像素）
+    /// </summary>
+    public int SnapEdgeMarginLeft { get; set; } = 5;
+
+    /// <summary>
+    /// 屏幕右边缘吸附区域大小（像素）
+    /// </summary>
+    public int SnapEdgeMarginRight { get; set; } = 5;
+
+    /// <summary>
+    /// 角落吸附区域大小（像素）
+    /// </summary>
+    public int CornerSnapAreaSize { get; set; } = 20;
+
+    /// <summary>
+    /// 吸附所需的修饰键（Ctrl=2, Alt=1, Shift=4, Win=8，0=无需修饰键）
+    /// </summary>
+    public int SnapModifiers { get; set; } = 0;
+
+    /// <summary>
+    /// 吸附时是否触发触觉反馈
+    /// </summary>
+    public bool HapticFeedbackOnSnap { get; set; } = false;
+
+    // === 指定尺寸配置 ===
+
+    /// <summary>
+    /// 指定窗口宽度（像素）
+    /// </summary>
+    public int SpecifiedWidth { get; set; } = 1680;
+
+    /// <summary>
+    /// 指定窗口高度（像素）
+    /// </summary>
+    public int SpecifiedHeight { get; set; } = 1050;
+
     private static List<string> GetDefaultIgnoredApps()
     {
         return new List<string>
