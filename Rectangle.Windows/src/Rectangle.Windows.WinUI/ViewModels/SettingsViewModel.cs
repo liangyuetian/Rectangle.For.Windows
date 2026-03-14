@@ -20,6 +20,8 @@ namespace Rectangle.Windows.WinUI.ViewModels
         public ObservableCollection<ShortcutItem> ThirdShortcuts { get; } = new();
         public ObservableCollection<ShortcutItem> FourthShortcuts { get; } = new();
         public ObservableCollection<ShortcutItem> SixthShortcuts { get; } = new();
+        public ObservableCollection<ShortcutItem> EighthShortcuts { get; } = new();
+        public ObservableCollection<ShortcutItem> NinthShortcuts { get; } = new();
         public ObservableCollection<ShortcutItem> MaximizeShortcuts { get; } = new();
         public ObservableCollection<ShortcutItem> ResizeShortcuts { get; } = new();
         public ObservableCollection<ShortcutItem> MoveShortcuts { get; } = new();
@@ -97,6 +99,25 @@ namespace Rectangle.Windows.WinUI.ViewModels
             SixthShortcuts.Add(new ShortcutItem { Action = "BottomCenterSixth", DisplayName = "中下 1/6", IconGlyph = "\uE7C4" });
             SixthShortcuts.Add(new ShortcutItem { Action = "BottomRightSixth",  DisplayName = "右下 1/6", IconGlyph = "\uE747" });
 
+            EighthShortcuts.Add(new ShortcutItem { Action = "TopLeftEighth",     DisplayName = "左上 1/8", IconGlyph = "\uE744" });
+            EighthShortcuts.Add(new ShortcutItem { Action = "TopCenterLeftEighth",  DisplayName = "中上左 1/8", IconGlyph = "\uE7C4" });
+            EighthShortcuts.Add(new ShortcutItem { Action = "TopCenterRightEighth", DisplayName = "中上右 1/8", IconGlyph = "\uE7C4" });
+            EighthShortcuts.Add(new ShortcutItem { Action = "TopRightEighth",    DisplayName = "右上 1/8", IconGlyph = "\uE745" });
+            EighthShortcuts.Add(new ShortcutItem { Action = "BottomLeftEighth",  DisplayName = "左下 1/8", IconGlyph = "\uE746" });
+            EighthShortcuts.Add(new ShortcutItem { Action = "BottomCenterLeftEighth",  DisplayName = "中下左 1/8", IconGlyph = "\uE7C4" });
+            EighthShortcuts.Add(new ShortcutItem { Action = "BottomCenterRightEighth", DisplayName = "中下右 1/8", IconGlyph = "\uE7C4" });
+            EighthShortcuts.Add(new ShortcutItem { Action = "BottomRightEighth", DisplayName = "右下 1/8", IconGlyph = "\uE747" });
+
+            NinthShortcuts.Add(new ShortcutItem { Action = "TopLeftNinth",    DisplayName = "左上 1/9",  IconGlyph = "\uE744" });
+            NinthShortcuts.Add(new ShortcutItem { Action = "TopCenterNinth",  DisplayName = "中上 1/9",  IconGlyph = "\uE7C4" });
+            NinthShortcuts.Add(new ShortcutItem { Action = "TopRightNinth",   DisplayName = "右上 1/9",  IconGlyph = "\uE745" });
+            NinthShortcuts.Add(new ShortcutItem { Action = "MiddleLeftNinth",   DisplayName = "左中 1/9",  IconGlyph = "\uE744" });
+            NinthShortcuts.Add(new ShortcutItem { Action = "MiddleCenterNinth", DisplayName = "正中 1/9",  IconGlyph = "\uE7C4" });
+            NinthShortcuts.Add(new ShortcutItem { Action = "MiddleRightNinth",  DisplayName = "右中 1/9",  IconGlyph = "\uE745" });
+            NinthShortcuts.Add(new ShortcutItem { Action = "BottomLeftNinth",   DisplayName = "左下 1/9",  IconGlyph = "\uE746" });
+            NinthShortcuts.Add(new ShortcutItem { Action = "BottomCenterNinth", DisplayName = "中下 1/9",  IconGlyph = "\uE7C4" });
+            NinthShortcuts.Add(new ShortcutItem { Action = "BottomRightNinth",  DisplayName = "右下 1/9",  IconGlyph = "\uE747" });
+
             MaximizeShortcuts.Add(new ShortcutItem { Action = "Maximize",       DisplayName = "最大化",     IconGlyph = "\uE739" });
             MaximizeShortcuts.Add(new ShortcutItem { Action = "AlmostMaximize", DisplayName = "接近最大化", IconGlyph = "\uE73A" });
             MaximizeShortcuts.Add(new ShortcutItem { Action = "MaximizeHeight", DisplayName = "最大化高度", IconGlyph = "\uE73B" });
@@ -129,6 +150,8 @@ namespace Rectangle.Windows.WinUI.ViewModels
                 UpdateShortcutCollection(ThirdShortcuts, merged);
                 UpdateShortcutCollection(FourthShortcuts, merged);
                 UpdateShortcutCollection(SixthShortcuts, merged);
+                UpdateShortcutCollection(EighthShortcuts, merged);
+                UpdateShortcutCollection(NinthShortcuts, merged);
                 UpdateShortcutCollection(MaximizeShortcuts, merged);
                 UpdateShortcutCollection(ResizeShortcuts, merged);
                 UpdateShortcutCollection(MoveShortcuts, merged);
@@ -210,8 +233,8 @@ namespace Rectangle.Windows.WinUI.ViewModels
         private void UpdateShortcutInCollections(string action, string text)
         {
             foreach (var col in new[] { HalfScreenShortcuts, CornerShortcuts, ThirdShortcuts,
-                FourthShortcuts, SixthShortcuts, MaximizeShortcuts, ResizeShortcuts,
-                MoveShortcuts, DisplayShortcuts, OtherShortcuts })
+                FourthShortcuts, SixthShortcuts, EighthShortcuts, NinthShortcuts,
+                MaximizeShortcuts, ResizeShortcuts, MoveShortcuts, DisplayShortcuts, OtherShortcuts })
             {
                 foreach (var item in col)
                     if (item.Action == action) { item.ShortcutText = text; break; }
