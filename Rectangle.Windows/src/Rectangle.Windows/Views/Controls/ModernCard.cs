@@ -21,8 +21,9 @@ public class ModernCard : Panel
         ControlAdded += (s, e) => WireHoverEvents(e.Control);
     }
 
-    private void WireHoverEvents(Control target)
+    private void WireHoverEvents(Control? target)
     {
+        if (target is null) return;
         target.MouseEnter += (s, e) => { _isHovered = true; Invalidate(); };
         target.MouseLeave += (s, e) => { _isHovered = false; Invalidate(); };
         foreach (Control c in target.Controls)

@@ -100,7 +100,7 @@ public class CalculatorFactory
             // 居中
             [WindowAction.Center] = new CenterCalculator(),
             [WindowAction.CenterHalf] = new CenterHalfCalculator(),
-            [WindowAction.AlmostMaximize] = new AlmostMaximizeCalculator(configService),
+            [WindowAction.AlmostMaximize] = new AlmostMaximizeCalculator(configService!),
             [WindowAction.MaximizeHeight] = new MaximizeHeightCalculator(),
             [WindowAction.Larger] = new LargerCalculator(),
             [WindowAction.Smaller] = new SmallerCalculator(),

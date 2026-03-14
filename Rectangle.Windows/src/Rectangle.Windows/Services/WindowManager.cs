@@ -690,7 +690,14 @@ public class WindowManager
         }
 
         // 使用默认工作区
-        return new WorkArea(0, 0, System.Windows.Forms.Screen.PrimaryScreen.WorkingArea.Width,
-            System.Windows.Forms.Screen.PrimaryScreen.WorkingArea.Height);
+        var primaryScreen = System.Windows.Forms.Screen.PrimaryScreen;
+        if (primaryScreen is not null)
+        {
+            return new WorkArea(0, 0, primaryScreen.WorkingArea.Width,
+                primaryScreen.WorkingArea.Height);
+        }
+
+        // 如果没有主显示器，返回默认值
+        return new WorkArea(0, 0, 1920, 1080);
     }
 }

@@ -375,7 +375,7 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
                 FormatFlags = StringFormatFlags.NoWrap
             };
 
-            g.DrawString(menuItem.ShortcutKeyDisplayString, font, shortcutBrush, shortcutRect, shortcutFormat);
+            g.DrawString(menuItem!.ShortcutKeyDisplayString, font, shortcutBrush, shortcutRect, shortcutFormat);
         }
     }
 
@@ -416,6 +416,7 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
 
     protected override void OnRenderArrow(ToolStripArrowRenderEventArgs e)
     {
+        if (e.Item is null) return;
         e.ArrowColor = e.Item.Enabled ? TextColor : DisabledColor;
         base.OnRenderArrow(e);
     }
