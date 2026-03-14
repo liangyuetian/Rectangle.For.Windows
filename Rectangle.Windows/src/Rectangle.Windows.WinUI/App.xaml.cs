@@ -7,6 +7,7 @@ namespace Rectangle.Windows.WinUI
     /// </summary>
     public partial class App : Application
     {
+        public static Window? MainWindow { get; private set; }
         private Window window = Window.Current;
 
         /// <summary>
@@ -26,6 +27,7 @@ namespace Rectangle.Windows.WinUI
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
             window ??= new Window();
+            MainWindow = window;
 
             if (window.Content is not Frame rootFrame)
             {
