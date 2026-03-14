@@ -19,7 +19,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 1 — 迁移 NativeMethods.txt
+## ~~Step 1 — 迁移 NativeMethods.txt~~ ✅ 已完成
 
 **操作：** 将 `WinUI.back/NativeMethods.txt` 复制到新项目根目录，覆盖（如有）。
 
@@ -30,7 +30,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 2 — 迁移 Core 层（无依赖的基础类型）
+## ~~Step 2 — 迁移 Core 层（无依赖的基础类型）~~ ✅ 已完成
 
 **操作：** 复制以下文件到新项目 `Core/` 目录（需新建目录）：
 
@@ -46,7 +46,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 3 — 迁移 Core/Enums.cs（其余枚举）
+## ~~Step 3 — 迁移 Core/Enums.cs（其余枚举）~~ ✅ 已完成
 
 **操作：** 将 `Enums.cs` 中除 `WorkArea` struct 之外的枚举迁移到新项目：
 - `SubsequentExecutionMode`
@@ -61,7 +61,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 4 — 迁移 Core/Calculators
+## ~~Step 4 — 迁移 Core/Calculators~~ ✅ 已完成（与 Step 2 合并）
 
 **操作：** 复制整个 `Core/Calculators/` 目录到新项目：
 
@@ -76,7 +76,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 5 — 迁移 Services/Logger.cs
+## ~~Step 5 — 迁移 Services/Logger.cs~~ ✅ 已完成
 
 **操作：** 复制 `Services/Logger.cs` 到新项目 `Services/` 目录（需新建目录）。
 
@@ -86,7 +86,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 6 — 迁移 Services/ConfigService.cs
+## ~~Step 6 — 迁移 Services/ConfigService.cs~~ ✅ 已完成
 
 **操作：** 复制 `Services/ConfigService.cs`（包含 `AppConfig`、`ShortcutConfig`、`SnapAreaConfig` 等所有配置类）。
 
@@ -96,7 +96,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 7 — 迁移 Services/Win32WindowService.cs
+## ~~Step 7 — 迁移 Services/Win32WindowService.cs~~ ✅ 已完成
 
 **操作：** 复制 `Services/Win32WindowService.cs`。
 
@@ -106,7 +106,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 8 — 迁移 Services/WindowManager.cs
+## ~~Step 8 — 迁移 Services/WindowManager.cs~~ ✅ 已完成
 
 **操作：** 复制 `Services/WindowManager.cs`。
 
@@ -116,7 +116,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 9 — 迁移 Services/HotkeyManager.cs
+## ~~Step 9 — 迁移 Services/HotkeyManager.cs~~ ✅ 已完成
 
 **操作：** 复制 `Services/HotkeyManager.cs`。
 
@@ -126,7 +126,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 10 — 迁移 Services/ThemeService.cs
+## ~~Step 10 — 迁移 Services/ThemeService.cs~~ ✅ 已完成
 
 **操作：** 复制 `Services/ThemeService.cs`。
 
@@ -136,7 +136,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 11 — 迁移 ViewModels 层
+## ~~Step 11 — 迁移 ViewModels 层~~ ✅ 已完成
 
 **操作：** 新建 `ViewModels/` 目录，复制：
 
@@ -150,7 +150,7 @@ dotnet build Rectangle.Windows/src/Rectangle.Windows.WinUI/Rectangle.Windows.Win
 
 ---
 
-## Step 12 — 迁移 Styles/ThemeResources.xaml
+## ~~Step 12 — 迁移 Styles/ThemeResources.xaml~~ ✅ 已完成（资源内联到 App.xaml，独立文件有 XAML 编译器兼容问题）
 
 **操作：** 新建 `Styles/` 目录，复制 `Styles/ThemeResources.xaml`。
 
