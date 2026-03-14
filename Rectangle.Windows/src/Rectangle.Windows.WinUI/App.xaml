@@ -90,6 +90,18 @@
                 <Setter Property="FontWeight" Value="SemiBold"/>
                 <Setter Property="Margin" Value="0,0,0,12"/>
             </Style>
+
+            <!-- 恢复默认按钮样式 -->
+            <Style x:Key="RestoreButtonStyle" TargetType="Button">
+                <Setter Property="Width" Value="150"/>
+                <Setter Property="Height" Value="36"/>
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundBrush}"/>
+                <Setter Property="BorderBrush" Value="{ThemeResource CardBorderBrush}"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Setter Property="CornerRadius" Value="6"/>
+                <Setter Property="HorizontalAlignment" Value="Left"/>
+                <Setter Property="Margin" Value="0,24,0,0"/>
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
