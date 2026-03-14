@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Rectangle.Windows.WinUI.Core;
 using System;
+using System.Collections.Generic;
 
 namespace Rectangle.Windows.WinUI.Services
 {
@@ -13,6 +14,26 @@ namespace Rectangle.Windows.WinUI.Services
         private readonly WindowManager _windowManager;
         private readonly Action _showSettingsCallback;
 
+        private static readonly Dictionary<string, WindowAction> _tagToAction = new()
+        {
+            ["LeftHalf"]        = WindowAction.LeftHalf,
+            ["RightHalf"]       = WindowAction.RightHalf,
+            ["Maximize"]        = WindowAction.Maximize,
+            ["Center"]          = WindowAction.Center,
+            ["Restore"]         = WindowAction.Restore,
+            ["TopLeft"]         = WindowAction.TopLeft,
+            ["TopRight"]        = WindowAction.TopRight,
+            ["BottomLeft"]      = WindowAction.BottomLeft,
+            ["BottomRight"]     = WindowAction.BottomRight,
+            ["TopHalf"]         = WindowAction.TopHalf,
+            ["BottomHalf"]      = WindowAction.BottomHalf,
+            ["FirstThird"]      = WindowAction.FirstThird,
+            ["CenterThird"]     = WindowAction.CenterThird,
+            ["LastThird"]       = WindowAction.LastThird,
+            ["NextDisplay"]     = WindowAction.NextDisplay,
+            ["PreviousDisplay"] = WindowAction.PreviousDisplay,
+        };
+
         public TrayIconService(WindowManager windowManager, Action showSettingsCallback)
         {
             _windowManager = windowManager;
@@ -21,69 +42,51 @@ namespace Rectangle.Windows.WinUI.Services
 
         public void Initialize()
         {
-            // 必须从 XAML Resources 取出，不能 new TaskbarIcon()
-            _taskbarIcon = (TaskbarIcon)Application.Current.Resources["TrayIcon"];
+            try
+            {
+                // 从 XAML Resources 取出（必须这样，不能 new TaskbarIcon()）
+                _taskbarIcon = (TaskbarIcon)Application.Current.Resources["TrayIcon"];
 
-            // 绑定命令
-            var showCmd = (XamlUICommand)Application.Current.Resources["ShowSettingsCommand"];
-            showCmd.ExecuteRequested += (_, _) => _showSettingsCallback();
+                // 绑定命令
+                var showCmd = (XamlUICommand)Application.Current.Resources["ShowSettingsCommand"];
+                showCmd.ExecuteRequested += (_, _) => _showSettingsCallback();
 
-            var exitCmd = (XamlUICommand)Application.Current.Resources["ExitCommand"];
-            exitCmd.ExecuteRequested += (_, _) => Exit();
+                var exitCmd = (XamlUICommand)Application.Current.Resources["ExitCommand"];
+                exitCmd.ExecuteRequested += (_, _) =>
+                {
+                    _taskbarIcon?.Dispose();
+                    Environment.Exit(0);
+                };
 
-            // 绑定菜单项点击事件
-            BindMenuItems();
+                // 通过 Tag 绑定菜单项
+                if (_taskbarIcon.ContextFlyout is MenuFlyout flyout)
+                {
+                    foreach (var item in flyout.Items)
+                    {
+                        if (item is MenuFlyoutItem mfi &&
+                            mfi.Tag is string tag &&
+                            _tagToAction.TryGetValue(tag, out var action))
+                        {
+                            var captured = action;
+                            mfi.Click += (_, _) => _windowManager.Execute(captured);
+                        }
+                    }
+                }
 
-            // ForceCreate 让托盘图标在无窗口时也能工作
-            _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
-        }
+                // ForceCreate 让托盘图标在无可见窗口时也能工作
+                _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
 
-        private void BindMenuItems()
-        {
-            if (_taskbarIcon?.ContextFlyout is not MenuFlyout flyout) return;
-
-            BindItem(flyout, "LeftHalf",       WindowAction.LeftHalf);
-            BindItem(flyout, "RightHalf",      WindowAction.RightHalf);
-            BindItem(flyout, "Maximize",       WindowAction.Maximize);
-            BindItem(flyout, "Center",         WindowAction.Center);
-            BindItem(flyout, "Restore",        WindowAction.Restore);
-            BindItem(flyout, "TopLeft",        WindowAction.TopLeft);
-            BindItem(flyout, "TopRight",       WindowAction.TopRight);
-            BindItem(flyout, "BottomLeft",     WindowAction.BottomLeft);
-            BindItem(flyout, "BottomRight",    WindowAction.BottomRight);
-            BindItem(flyout, "TopHalf",        WindowAction.TopHalf);
-            BindItem(flyout, "BottomHalf",     WindowAction.BottomHalf);
-            BindItem(flyout, "FirstThird",     WindowAction.FirstThird);
-            BindItem(flyout, "CenterThird",    WindowAction.CenterThird);
-            BindItem(flyout, "LastThird",      WindowAction.LastThird);
-            BindItem(flyout, "NextDisplay",    WindowAction.NextDisplay);
-            BindItem(flyout, "PreviousDisplay",WindowAction.PreviousDisplay);
-        }
-
-        private void BindItem(MenuFlyout flyout, string name, WindowAction action)
-        {
-            var item = FindItem(flyout, name);
-            if (item != null)
-                item.Click += (_, _) => _windowManager.Execute(action);
-        }
-
-        private static MenuFlyoutItem? FindItem(MenuFlyout flyout, string name)
-        {
-            foreach (var item in flyout.Items)
-                if (item is MenuFlyoutItem mfi && mfi.Name == name)
-                    return mfi;
-            return null;
+                Logger.Info("TrayIconService", "托盘图标初始化成功");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("TrayIconService", $"托盘图标初始化失败: {ex}");
+            }
         }
 
         public void ShowNotification(string title, string message)
         {
             _taskbarIcon?.ShowNotification(title, message);
-        }
-
-        private void Exit()
-        {
-            _taskbarIcon?.Dispose();
-            Application.Current.Exit();
         }
 
         public void Dispose()

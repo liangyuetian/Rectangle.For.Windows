@@ -10,31 +10,30 @@
         x:Key="TrayIcon"
         ToolTipText="Rectangle - 窗口管理工具"
         IconSource="Assets/AppIcon.ico"
-        ContextMenuMode="SecondWindow"
         NoLeftClickDelay="True"
         LeftClickCommand="{StaticResource ShowSettingsCommand}">
         <tb:TaskbarIcon.ContextFlyout>
             <MenuFlyout>
-                <MenuFlyoutItem Text="左半屏"   x:Name="LeftHalf" />
-                <MenuFlyoutItem Text="右半屏"   x:Name="RightHalf" />
-                <MenuFlyoutItem Text="最大化"   x:Name="Maximize" />
-                <MenuFlyoutItem Text="居中"     x:Name="Center" />
-                <MenuFlyoutItem Text="恢复"     x:Name="Restore" />
+                <MenuFlyoutItem Text="左半屏"       Tag="LeftHalf" />
+                <MenuFlyoutItem Text="右半屏"       Tag="RightHalf" />
+                <MenuFlyoutItem Text="最大化"       Tag="Maximize" />
+                <MenuFlyoutItem Text="居中"         Tag="Center" />
+                <MenuFlyoutItem Text="恢复"         Tag="Restore" />
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem Text="左上"     x:Name="TopLeft" />
-                <MenuFlyoutItem Text="右上"     x:Name="TopRight" />
-                <MenuFlyoutItem Text="左下"     x:Name="BottomLeft" />
-                <MenuFlyoutItem Text="右下"     x:Name="BottomRight" />
+                <MenuFlyoutItem Text="左上"         Tag="TopLeft" />
+                <MenuFlyoutItem Text="右上"         Tag="TopRight" />
+                <MenuFlyoutItem Text="左下"         Tag="BottomLeft" />
+                <MenuFlyoutItem Text="右下"         Tag="BottomRight" />
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem Text="上半屏"   x:Name="TopHalf" />
-                <MenuFlyoutItem Text="下半屏"   x:Name="BottomHalf" />
+                <MenuFlyoutItem Text="上半屏"       Tag="TopHalf" />
+                <MenuFlyoutItem Text="下半屏"       Tag="BottomHalf" />
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem Text="左首 1/3" x:Name="FirstThird" />
-                <MenuFlyoutItem Text="中间 1/3" x:Name="CenterThird" />
-                <MenuFlyoutItem Text="右首 1/3" x:Name="LastThird" />
+                <MenuFlyoutItem Text="左首 1/3"     Tag="FirstThird" />
+                <MenuFlyoutItem Text="中间 1/3"     Tag="CenterThird" />
+                <MenuFlyoutItem Text="右首 1/3"     Tag="LastThird" />
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem Text="下一个显示器" x:Name="NextDisplay" />
-                <MenuFlyoutItem Text="上一个显示器" x:Name="PreviousDisplay" />
+                <MenuFlyoutItem Text="下一个显示器" Tag="NextDisplay" />
+                <MenuFlyoutItem Text="上一个显示器" Tag="PreviousDisplay" />
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Command="{StaticResource ShowSettingsCommand}" />
                 <MenuFlyoutSeparator />
