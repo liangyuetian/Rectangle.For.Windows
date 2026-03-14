@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ContentDialog
+    x:Class="Rectangle.Windows.WinUI.Views.Controls.ShortcutCaptureDialog"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="记录快捷键"
+    PrimaryButtonText="取消"
+    DefaultButton="Primary">
+
+    <Grid Width="300">
+        <StackPanel Spacing="16" HorizontalAlignment="Center">
+            <TextBlock Text="请按下新的快捷键组合" FontSize="16" HorizontalAlignment="Center"/>
+            <TextBlock Text="例如: Ctrl+Alt+左箭头" FontSize="14"
+                       Foreground="{StaticResource SecondaryTextBrush}"
+                       HorizontalAlignment="Center"/>
+            <Border Background="{ThemeResource InputBackgroundBrush}"
+                    BorderBrush="{ThemeResource CardBorderBrush}"
+                    BorderThickness="1" CornerRadius="6" Padding="16,12"
+                    MinWidth="200" HorizontalAlignment="Center">
+                <TextBlock x:Name="PreviewText" Text="等待输入..."
+                           HorizontalAlignment="Center" FontSize="14"
+                           Foreground="{StaticResource SecondaryTextBrush}"/>
+            </Border>
+            <TextBlock Text="按 Escape 取消" FontSize="12"
+                       Foreground="{StaticResource SecondaryTextBrush}"
+                       HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Grid>
+</ContentDialog>
