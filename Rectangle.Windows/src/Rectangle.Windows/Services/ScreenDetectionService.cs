@@ -55,7 +55,7 @@ public class ScreenDetectionService
     /// <summary>
     /// 根据配置获取目标屏幕工作区
     /// </summary>
-    public WorkArea GetTargetWorkArea(nint hwnd, ConfigService configService)
+    public WorkArea GetTargetWorkArea(nint hwnd, ConfigService? configService)
     {
         var config = configService?.Load();
         
