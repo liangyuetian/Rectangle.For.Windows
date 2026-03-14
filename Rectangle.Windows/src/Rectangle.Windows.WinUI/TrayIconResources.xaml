@@ -1,0 +1,46 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:tb="using:H.NotifyIcon">
+
+    <XamlUICommand x:Key="ShowSettingsCommand" Label="偏好设置..." />
+    <XamlUICommand x:Key="ExitCommand" Label="退出" />
+
+    <tb:TaskbarIcon
+        x:Key="TrayIcon"
+        ToolTipText="Rectangle - 窗口管理工具"
+        IconSource="Assets/AppIcon.ico"
+        ContextMenuMode="SecondWindow"
+        NoLeftClickDelay="True"
+        LeftClickCommand="{StaticResource ShowSettingsCommand}">
+        <tb:TaskbarIcon.ContextFlyout>
+            <MenuFlyout>
+                <MenuFlyoutItem Text="左半屏"   x:Name="LeftHalf" />
+                <MenuFlyoutItem Text="右半屏"   x:Name="RightHalf" />
+                <MenuFlyoutItem Text="最大化"   x:Name="Maximize" />
+                <MenuFlyoutItem Text="居中"     x:Name="Center" />
+                <MenuFlyoutItem Text="恢复"     x:Name="Restore" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="左上"     x:Name="TopLeft" />
+                <MenuFlyoutItem Text="右上"     x:Name="TopRight" />
+                <MenuFlyoutItem Text="左下"     x:Name="BottomLeft" />
+                <MenuFlyoutItem Text="右下"     x:Name="BottomRight" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="上半屏"   x:Name="TopHalf" />
+                <MenuFlyoutItem Text="下半屏"   x:Name="BottomHalf" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="左首 1/3" x:Name="FirstThird" />
+                <MenuFlyoutItem Text="中间 1/3" x:Name="CenterThird" />
+                <MenuFlyoutItem Text="右首 1/3" x:Name="LastThird" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Text="下一个显示器" x:Name="NextDisplay" />
+                <MenuFlyoutItem Text="上一个显示器" x:Name="PreviousDisplay" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Command="{StaticResource ShowSettingsCommand}" />
+                <MenuFlyoutSeparator />
+                <MenuFlyoutItem Command="{StaticResource ExitCommand}" />
+            </MenuFlyout>
+        </tb:TaskbarIcon.ContextFlyout>
+    </tb:TaskbarIcon>
+
+</ResourceDictionary>
