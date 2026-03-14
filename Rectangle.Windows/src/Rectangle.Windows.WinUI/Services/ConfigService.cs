@@ -177,6 +177,8 @@ namespace Rectangle.Windows.WinUI.Services
         public int SpecifiedWidth { get; set; } = 1680;
         public int SpecifiedHeight { get; set; } = 1050;
         public string Theme { get; set; } = "Default";
+        public bool CheckForUpdates { get; set; } = true;
+        public DateTime LastUpdateCheck { get; set; } = DateTime.MinValue;
         public AnimationConfig Animation { get; set; } = new();
         public HistoryConfig History { get; set; } = new();
         public EdgeIndicatorSettings EdgeIndicator { get; set; } = new();

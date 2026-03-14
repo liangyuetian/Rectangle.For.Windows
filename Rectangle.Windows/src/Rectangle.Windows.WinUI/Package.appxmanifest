@@ -15,7 +15,7 @@
   <mp:PhoneIdentity PhoneProductId="fef49b55-ac5c-4443-a12e-8beacd3e595d" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Rectangle.Windows.WinUI</DisplayName>
+    <DisplayName>Rectangle</DisplayName>
     <PublisherDisplayName>User Name</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -34,8 +34,8 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="$targetentrypoint$">
       <uap:VisualElements
-        DisplayName="Rectangle.Windows.WinUI"
-        Description="Rectangle.Windows.WinUI"
+        DisplayName="Rectangle"
+        Description="Rectangle - Window Manager"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">
