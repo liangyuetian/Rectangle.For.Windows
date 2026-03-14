@@ -18,6 +18,13 @@ namespace Rectangle.Windows.WinUI.Views
         private async void GeneralSettingsPage_Loaded(object sender, RoutedEventArgs e)
         {
             await ViewModel.LoadSettingsAsync();
+            LogLevelComboBox.SelectedIndex = ViewModel.LogLevel;
+            LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
+            ViewModel.PropertyChanged += (s, e) =>
+            {
+                if (e.PropertyName == nameof(ViewModel.LogToFile))
+                    LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
+            };
         }
 
         private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -75,16 +82,6 @@ namespace Rectangle.Windows.WinUI.Views
             };
 
             await dialog.ShowAsync();
-        }
-        private void LaunchOnLoginToggle_Toggled(object sender, RoutedEventArgs e)
-        {
-            // 这里写你的逻辑，例如：
-            var toggle = sender as ToggleSwitch;
-            if (toggle != null)
-            {
-                ViewModel.LaunchOnLogin = toggle.IsOn;  // 示例：同步到 ViewModel
-                // 或调用服务设置开机自启
-            }
         }
     }
 }

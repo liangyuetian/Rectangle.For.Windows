@@ -6,6 +6,9 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:vm="using:Rectangle.Windows.WinUI.ViewModels"
+    xmlns:local="using:Rectangle.Windows.WinUI.Views"
+    x:DataType="local:GeneralSettingsPage"
+    DataContext="{Binding ViewModel}"
     mc:Ignorable="d">
 
     <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -52,8 +55,7 @@
                     <ToggleSwitch Header="登录时打开"
                                  OffContent="关闭"
                                  OnContent="开启"
-                                 x:Name="LaunchOnLoginToggle"
-                                 Toggled="LaunchOnLoginToggle_Toggled"/>
+                                 IsOn="{x:Bind ViewModel.LaunchOnLogin, Mode=TwoWay}"/>
 
                     <TextBlock Text="系统启动时自动运行 Rectangle"
                               Foreground="{StaticResource SecondaryTextBrush}"
@@ -101,8 +103,7 @@
                               Margin="0,-8,0,0"/>
 
                     <!-- 日志级别 -->
-                    <!-- <Grid ColumnDefinitions="*,Auto" IsEnabled="{x:Bind ViewModel.LogToFile, Mode=OneWay}">
-                        <TextBlock Grid.Column="0"
+                    <Grid x:Name="LogLevelGrid" ColumnDefinitions="*,Auto">                        <TextBlock Grid.Column="0"
                                   Text="日志级别"
                                   VerticalAlignment="Center"/>
                         <ComboBox x:Name="LogLevelComboBox"
@@ -114,7 +115,7 @@
                             <ComboBoxItem Content="警告"/>
                             <ComboBoxItem Content="错误"/>
                         </ComboBox>
-                    </Grid> -->
+                    </Grid>
                     <Border Background="{ThemeResource CardBorderBrush}"
                            Height="1"
                            Margin="0,8"/>
