@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <Application
     x:Class="Rectangle.Windows.WinUI.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -11,11 +11,39 @@
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
-                <ResourceDictionary Source="ms-appx:///Styles/ThemeResources.xaml" />
+                <!-- Other merged dictionaries here -->
             </ResourceDictionary.MergedDictionaries>
+            <!-- Other app resources here -->
+            <Color x:Key="Primary">#512BD4</Color>
 
-            <!-- 应用级别的资源覆盖 -->
-            <SolidColorBrush x:Key="ApplicationPageBackgroundThemeBrush" Color="#181818"/>
+            <SolidColorBrush x:Key="PrimaryBrush" Color="{StaticResource Primary}" />
+            <SolidColorBrush x:Key="WhiteBrush" Color="White" />
+            <SolidColorBrush x:Key="BlackBrush" Color="Black" />
+
+            <x:Double x:Key="AppFontSize">14</x:Double>
+
+            <Style x:Key="MyLabel" TargetType="TextBlock">
+                <Setter Property="Foreground"
+                        Value="{StaticResource PrimaryBrush}" />
+            </Style>
+
+            <Style x:Key="Action" TargetType="Button">
+                <Setter Property="FontSize"
+                        Value="{StaticResource AppFontSize}" />
+                <Setter Property="Padding"
+                        Value="14,10" />
+            </Style>
+
+            <Style x:Key="PrimaryAction"
+                   TargetType="Button"
+                   BasedOn="{StaticResource Action}">
+                <Setter Property="Background"
+                        Value="{StaticResource PrimaryBrush}" />
+                <Setter Property="CornerRadius"
+                        Value="8" />
+                <Setter Property="Foreground"
+                        Value="{StaticResource WhiteBrush}" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
