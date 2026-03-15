@@ -10,7 +10,7 @@ namespace Rectangle.Windows.WinUI.Services;
 /// 跟踪最近活跃的有效窗口句柄。
 /// 只有真正的应用程序窗口才会被记录，排除状态栏、任务栏、托盘菜单等系统窗口。
 /// </summary>
-public class LastActiveWindowService : IDisposable
+public unsafe class LastActiveWindowService : IDisposable
 {
     private nint _lastValidWindowHwnd;
     private bool _disposed;
@@ -44,7 +44,7 @@ public class LastActiveWindowService : IDisposable
     /// <summary>
     /// 恢复窗口跟踪
     /// </summary>
-    public unsafe void ResumeTracking()
+    public void ResumeTracking()
     {
         lock (_lock)
         {
@@ -62,7 +62,7 @@ public class LastActiveWindowService : IDisposable
         }
     }
 
-    private unsafe void StartTracking()
+    private void StartTracking()
     {
         // 获取当前前台窗口
         var current = (nint)PInvoke.GetForegroundWindow().Value;
@@ -100,7 +100,7 @@ public class LastActiveWindowService : IDisposable
         }
     }
 
-    private unsafe void OnForegroundWindowChanged(HWINEVENTHOOK hWinEventHook, uint eventType, HWND hwnd, int idObject, int idChild, uint idEventThread, uint dwmsEventTime)
+    private void OnForegroundWindowChanged(HWINEVENTHOOK hWinEventHook, uint eventType, HWND hwnd, int idObject, int idChild, uint idEventThread, uint dwmsEventTime)
     {
         if (_isPaused)
         {
@@ -133,7 +133,7 @@ public class LastActiveWindowService : IDisposable
     /// <summary>
     /// 判断窗口是否是有效的应用程序窗口
     /// </summary>
-    private unsafe bool IsValidWindow(nint hwnd)
+    private bool IsValidWindow(nint hwnd)
     {
         if (hwnd == 0) return false;
 
@@ -207,7 +207,7 @@ public class LastActiveWindowService : IDisposable
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")]
     private static extern nint GetWindowLong64(IntPtr hWnd, int nIndex);
 
-    private static unsafe nint GetWindowLong(HWND hWnd, int nIndex)
+    private static nint GetWindowLong(HWND hWnd, int nIndex)
     {
         if (IntPtr.Size == 8)
             return GetWindowLong64((nint)hWnd.Value, nIndex);
@@ -215,7 +215,7 @@ public class LastActiveWindowService : IDisposable
             return GetWindowLong32((nint)hWnd.Value, nIndex);
     }
 
-    private unsafe string GetWindowClassName(HWND hWnd)
+    private string GetWindowClassName(HWND hWnd)
     {
         try
         {
@@ -269,7 +269,7 @@ public class LastActiveWindowService : IDisposable
         return false;
     }
 
-    private unsafe string GetProcessName(nint hwnd)
+    private string GetProcessName(nint hwnd)
     {
         try
         {
@@ -333,7 +333,7 @@ public class LastActiveWindowService : IDisposable
     /// <summary>
     /// 获取目标窗口（用于窗口操作）
     /// </summary>
-    public unsafe nint GetTargetWindow()
+    public nint GetTargetWindow()
     {
         lock (_lock)
         {

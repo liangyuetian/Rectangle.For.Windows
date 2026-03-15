@@ -42,6 +42,17 @@ namespace Rectangle.Windows.WinUI.Services
         static extern uint TrackPopupMenu(nint hMenu, uint uFlags, int x, int y, int nReserved, nint hWnd, nint prcRect);
         [DllImport("user32.dll")]
         static extern bool SetMenuItemBitmaps(nint hMenu, uint uPosition, uint uFlags, nint hBitmapUnchecked, nint hBitmapChecked);
+        [DllImport("user32.dll", SetLastError = true)]
+        static extern bool SetMenuItemInfo(nint hMenu, uint uItem, bool fByPosition, ref MENUITEMINFOW lpmii);
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct MENUITEMINFOW
+        {
+            public uint cbSize, fMask, fType, fState, wID;
+            public nint hSubMenu, hbmpChecked, hbmpUnchecked, dwItemData, dwTypeData;
+            public uint cch;
+            public nint hbmpItem;
+        }
+        private const uint MIIM_BITMAP = 0x00000080;
         [DllImport("user32.dll")]
         static extern bool SetForegroundWindow(nint hWnd);
         [DllImport("user32.dll")]
@@ -222,11 +233,14 @@ namespace Rectangle.Windows.WinUI.Services
             var hBmp = LoadIconBitmap(actionName);
             if (hBmp != nint.Zero)
             {
-                var result = SetMenuItemBitmaps(menu, id, MF_BYCOMMAND, hBmp, hBmp);
-                if (!result)
+                var mii = new MENUITEMINFOW
                 {
+                    cbSize = (uint)Marshal.SizeOf<MENUITEMINFOW>(),
+                    fMask = MIIM_BITMAP,
+                    hbmpItem = hBmp
+                };
+                if (!SetMenuItemInfo(menu, id, false, ref mii))
                     Logger.Warning("TrayIcon", $"设置菜单图标失败: {actionName}");
-                }
             }
         }
 
@@ -235,13 +249,20 @@ namespace Rectangle.Windows.WinUI.Services
         private void AppendMenuWithIcon(nint parentMenu, nint submenu, string label, string iconActionName)
         {
             AppendMenuW(parentMenu, MF_POPUP, submenu, label);
-            // 子菜单项使用位置索引（最后添加的项）来设置图标
             var hBmp = LoadIconBitmap(iconActionName);
             if (hBmp != nint.Zero)
             {
                 int position = GetMenuItemCount(parentMenu) - 1;
                 if (position >= 0)
-                    SetMenuItemBitmaps(parentMenu, (uint)position, MF_BYPOSITION, hBmp, hBmp);
+                {
+                    var mii = new MENUITEMINFOW
+                    {
+                        cbSize = (uint)Marshal.SizeOf<MENUITEMINFOW>(),
+                        fMask = MIIM_BITMAP,
+                        hbmpItem = hBmp
+                    };
+                    SetMenuItemInfo(parentMenu, (uint)position, true, ref mii);
+                }
             }
         }
 
@@ -278,30 +299,20 @@ namespace Rectangle.Windows.WinUI.Services
                     return nint.Zero;
                 }
 
-                // 加载原始图片
                 using var src = new System.Drawing.Bitmap(path);
-
-                // 创建 16x16 的标准位图（使用 24bppRgb 格式，兼容性更好）
-                using var scaled = new System.Drawing.Bitmap(16, 16, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                using var scaled = new System.Drawing.Bitmap(16, 16, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
                 using (var g = System.Drawing.Graphics.FromImage(scaled))
                 {
                     g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    // 填充白色背景
-                    g.Clear(System.Drawing.Color.White);
+                    g.Clear(System.Drawing.Color.Transparent);
                     g.DrawImage(src, 0, 0, 16, 16);
                 }
 
-                // 获取位图句柄
-                var hBmp = scaled.GetHbitmap();
+                var hBmp = CreatePremultipliedDIB(scaled);
                 if (hBmp == nint.Zero)
-                {
-                    Logger.Warning("TrayIcon", $"无法获取位图句柄: {file}");
-                    return nint.Zero;
-                }
-
-                _hBitmaps.Add(hBmp);
-                Logger.Debug("TrayIcon", $"已加载图标: {file}");
+                    Logger.Warning("TrayIcon", $"无法创建 DIB 位图: {file}");
+                else
+                    _hBitmaps.Add(hBmp);
                 return hBmp;
             }
             catch (Exception ex)
@@ -310,6 +321,72 @@ namespace Rectangle.Windows.WinUI.Services
                 return nint.Zero;
             }
         }
+
+        private static unsafe nint CreatePremultipliedDIB(System.Drawing.Bitmap src)
+        {
+            int w = src.Width, h = src.Height;
+            var bmi = new BITMAPV5HEADER
+            {
+                bV5Size        = (uint)sizeof(BITMAPV5HEADER),
+                bV5Width       = w,
+                bV5Height      = -h,
+                bV5Planes      = 1,
+                bV5BitCount    = 32,
+                bV5Compression = BI_BITFIELDS,
+                bV5RedMask     = 0x00FF0000,
+                bV5GreenMask   = 0x0000FF00,
+                bV5BlueMask    = 0x000000FF,
+                bV5AlphaMask   = 0xFF000000,
+                bV5Endpoints   = new byte[36],
+            };
+            var hdc = GetDC(nint.Zero);
+            var hBmp = CreateDIBSection(hdc, ref bmi, 0, out void* bits, nint.Zero, 0);
+            ReleaseDC(nint.Zero, hdc);
+            if (hBmp == nint.Zero || bits == null) return nint.Zero;
+
+            var rect = new System.Drawing.Rectangle(0, 0, w, h);
+            var data = src.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly,
+                                    System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+            try
+            {
+                var dst = (uint*)bits;
+                var srcPtr = (uint*)data.Scan0;
+                for (int i = 0; i < w * h; i++)
+                {
+                    uint px = srcPtr[i];
+                    uint a = px >> 24;
+                    uint r = (px >> 16) & 0xFF;
+                    uint g2 = (px >> 8) & 0xFF;
+                    uint b = px & 0xFF;
+                    // 预乘 alpha
+                    dst[i] = (a << 24) | ((r * a / 255) << 16) | ((g2 * a / 255) << 8) | (b * a / 255);
+                }
+            }
+            finally { src.UnlockBits(data); }
+            return hBmp;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct BITMAPV5HEADER
+        {
+            public uint bV5Size;
+            public int bV5Width, bV5Height;
+            public ushort bV5Planes, bV5BitCount;
+            public uint bV5Compression, bV5SizeImage;
+            public int bV5XPelsPerMeter, bV5YPelsPerMeter;
+            public uint bV5ClrUsed, bV5ClrImportant;
+            public uint bV5RedMask, bV5GreenMask, bV5BlueMask, bV5AlphaMask;
+            public uint bV5CSType;
+            [MarshalAs(UnmanagedType.ByValArray, SizeConst = 36)] public byte[] bV5Endpoints;
+            public uint bV5GammaRed, bV5GammaGreen, bV5GammaBlue;
+            public uint bV5Intent, bV5ProfileData, bV5ProfileSize, bV5Reserved;
+        }
+        private const uint BI_BITFIELDS = 3;
+
+        [DllImport("gdi32.dll")]
+        private static extern unsafe nint CreateDIBSection(nint hdc, ref BITMAPV5HEADER pbmi, uint usage, out void* ppvBits, nint hSection, uint offset);
+        [DllImport("user32.dll")] private static extern nint GetDC(nint hWnd);
+        [DllImport("user32.dll")] private static extern int ReleaseDC(nint hWnd, nint hDC);
 
         // ── 快捷键 ────────────────────────────────────────────────
 
