@@ -120,12 +120,19 @@ namespace Rectangle.Windows.WinUI.Services
                 ["SecondFourth"]      = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["ThirdFourth"]       = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["LastFourth"]        = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
+                ["FirstThreeFourths"] = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
+                ["CenterThreeFourths"]= new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
+                ["LastThreeFourths"]  = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["TopLeftSixth"]      = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["TopCenterSixth"]    = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["TopRightSixth"]     = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["BottomLeftSixth"]   = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["BottomCenterSixth"] = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["BottomRightSixth"]  = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
+                ["MoveLeft"]          = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
+                ["MoveRight"]         = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
+                ["MoveUp"]            = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
+                ["MoveDown"]          = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
             };
         }
     }
