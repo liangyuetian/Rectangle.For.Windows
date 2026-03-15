@@ -101,4 +101,14 @@ public unsafe class Win32WindowService
         try { return System.Diagnostics.Process.GetProcessById((int)processId).ProcessName; }
         catch { return "未知"; }
     }
+
+    public WorkArea GetWorkAreaFromCursor()
+    {
+        PInvoke.GetCursorPos(out var pt);
+        var hMonitor = PInvoke.MonitorFromPoint(pt, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
+        var mi = new MONITORINFO { cbSize = (uint)Marshal.SizeOf<MONITORINFO>() };
+        PInvoke.GetMonitorInfo(hMonitor, ref mi);
+        var r = mi.rcWork;
+        return new WorkArea(r.left, r.top, r.right, r.bottom);
+    }
 }
