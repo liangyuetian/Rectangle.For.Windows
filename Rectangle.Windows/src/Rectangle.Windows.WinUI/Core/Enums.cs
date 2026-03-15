@@ -21,17 +21,6 @@ public enum TodoSidebarSide
 }
 
 /// <summary>
-/// 拖拽状态
-/// </summary>
-public enum DragState
-{
-    None = 0,
-    Started = 1,
-    InProgress = 2,
-    Ended = 3
-}
-
-/// <summary>
 /// 窗口动作类型
 /// </summary>
 public enum WindowActionType
