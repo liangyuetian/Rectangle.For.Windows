@@ -76,6 +76,13 @@ namespace Rectangle.Windows.WinUI.Services
             var formatted = FormatLogEntry(entry);
             System.Diagnostics.Debug.WriteLine(formatted);
 
+            // 同时输出到控制台（如果可用）
+            try
+            {
+                Console.WriteLine(formatted);
+            }
+            catch { /* 控制台可能不可用 */ }
+
             if (_logToFile)
                 WriteToFile(formatted);
         }

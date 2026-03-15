@@ -35,11 +35,59 @@ public enum WindowAction
     BottomLeftSixth,
     BottomCenterSixth,
     BottomRightSixth,
+    // 九等分
+    TopLeftNinth,
+    TopCenterNinth,
+    TopRightNinth,
+    MiddleLeftNinth,
+    MiddleCenterNinth,
+    MiddleRightNinth,
+    BottomLeftNinth,
+    BottomCenterNinth,
+    BottomRightNinth,
+    // 八等分
+    TopLeftEighth,
+    TopCenterLeftEighth,
+    TopCenterRightEighth,
+    TopRightEighth,
+    BottomLeftEighth,
+    BottomCenterLeftEighth,
+    BottomCenterRightEighth,
+    BottomRightEighth,
+    // 角落三分之一
+    TopLeftThird,
+    TopRightThird,
+    BottomLeftThird,
+    BottomRightThird,
+    // 垂直三分之一
+    TopVerticalThird,
+    MiddleVerticalThird,
+    BottomVerticalThird,
+    TopVerticalTwoThirds,
+    BottomVerticalTwoThirds,
+    // 居中显著
+    CenterProminently,
     // 移动到边缘
     MoveLeft,
     MoveRight,
     MoveUp,
     MoveDown,
+    // 双倍/减半尺寸
+    DoubleHeightUp,
+    DoubleHeightDown,
+    DoubleWidthLeft,
+    DoubleWidthRight,
+    HalveHeightUp,
+    HalveHeightDown,
+    HalveWidthLeft,
+    HalveWidthRight,
+    // 单独调整宽度/高度
+    LargerWidth,
+    SmallerWidth,
+    LargerHeight,
+    SmallerHeight,
+    // 指定尺寸
+    Specified,
     // 最大化与缩放
     Maximize,
     AlmostMaximize,
@@ -51,6 +99,9 @@ public enum WindowAction
     // 显示器
     NextDisplay,
     PreviousDisplay,
+    // Todo 模式
+    LeftTodo,
+    RightTodo,
     // 撤销/重做
     Undo,
     Redo

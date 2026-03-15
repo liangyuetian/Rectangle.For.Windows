@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\Users\\\\PT\\\\Documents\\\\code\\\\Rectangle.For.Windows\\\\Rectangle.Windows\\\\src\\\\Rectangle.Windows\" && dotnet publish -c Release -o publish)",
+      "Bash(cd \"C:\\\\Users\\\\PT\\\\Documents\\\\code\\\\Rectangle.For.Windows\\\\Rectangle.Windows\\\\src\\\\Rectangle.Windows\" && dotnet build 2>&1 | head -80)",
+      "Bash(cd \"C:\\\\Users\\\\PT\\\\Documents\\\\code\\\\Rectangle.For.Windows\\\\Rectangle.Windows\\\\src\\\\Rectangle.Windows\" && dotnet build 2>&1 | head -60)",
+      "Bash(cd \"C:\\\\Users\\\\PT\\\\Documents\\\\code\\\\Rectangle.For.Windows\\\\Rectangle.Windows\\\\src\\\\Rectangle.Windows\" && dotnet build 2>&1)",
+      "Bash(cd \"C:\\\\Users\\\\PT\\\\Documents\\\\code\\\\Rectangle.For.Windows\\\\Rectangle.Windows\\\\src\\\\Rectangle.Windows\" && dotnet publish -c Release -o publish 2>&1)",
+      "Bash(dotnet --list-sdks)"
+    ]
+  }
+}

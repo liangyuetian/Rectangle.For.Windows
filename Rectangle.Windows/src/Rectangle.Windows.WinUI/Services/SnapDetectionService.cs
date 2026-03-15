@@ -124,7 +124,7 @@ namespace Rectangle.Windows.WinUI.Services
             // TODO: 保存到 WindowHistory
 
             // 计算目标位置
-            var calculator = new CalculatorFactory().GetCalculator(action);
+            var calculator = new CalculatorFactory(_configService).GetCalculator(action);
             if (calculator != null)
             {
                 var target = calculator.Calculate(

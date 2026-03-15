@@ -81,7 +81,7 @@ namespace Rectangle.Windows.WinUI.Views
         public void UpdatePreview(WindowAction action, WindowRect workArea)
         {
             var config = _configService.Load();
-            var calculator = new CalculatorFactory().GetCalculator(action);
+            var calculator = new CalculatorFactory(_configService).GetCalculator(action);
             if (calculator != null)
             {
                 var rect = calculator.Calculate(

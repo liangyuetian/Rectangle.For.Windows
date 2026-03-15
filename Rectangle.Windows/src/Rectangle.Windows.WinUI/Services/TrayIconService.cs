@@ -29,6 +29,7 @@ namespace Rectangle.Windows.WinUI.Services
         private const uint MF_SEPARATOR = 0x00000800;
         private const uint MF_POPUP     = 0x00000010;
         private const uint MF_BYCOMMAND = 0x00000000;
+        private const uint MF_BYPOSITION = 0x00000400;
         private const uint TPM_RETURNCMD   = 0x0100;
         private const uint TPM_RIGHTBUTTON = 0x0002;
         private const uint TPM_NONOTIFY    = 0x0080;
@@ -157,7 +158,7 @@ namespace Rectangle.Windows.WinUI.Services
             Add(thirds, "左侧 2/3", "FirstTwoThirds",  WindowAction.FirstTwoThirds,  sc);
             Add(thirds, "中间 2/3", "CenterTwoThirds", WindowAction.CenterTwoThirds, sc);
             Add(thirds, "右侧 2/3", "LastTwoThirds",   WindowAction.LastTwoThirds,   sc);
-            AppendMenuW(_hMenu, MF_POPUP, thirds, "三等分");
+            AppendMenuWithIcon(_hMenu, thirds, "三等分", "FirstThird");
 
             var fourths = CreatePopupMenu();
             Add(fourths, "左 1/4",   "FirstFourth",        WindowAction.FirstFourth,        sc);
@@ -168,7 +169,7 @@ namespace Rectangle.Windows.WinUI.Services
             Add(fourths, "左 3/4",   "FirstThreeFourths",  WindowAction.FirstThreeFourths,  sc);
             Add(fourths, "中间 3/4", "CenterThreeFourths", WindowAction.CenterThreeFourths, sc);
             Add(fourths, "右 3/4",   "LastThreeFourths",   WindowAction.LastThreeFourths,   sc);
-            AppendMenuW(_hMenu, MF_POPUP, fourths, "四等分");
+            AppendMenuWithIcon(_hMenu, fourths, "四等分", "FirstFourth");
 
             var sixths = CreatePopupMenu();
             Add(sixths, "左上 1/6", "TopLeftSixth",      WindowAction.TopLeftSixth,      sc);
@@ -178,7 +179,7 @@ namespace Rectangle.Windows.WinUI.Services
             Add(sixths, "左下 1/6", "BottomLeftSixth",   WindowAction.BottomLeftSixth,   sc);
             Add(sixths, "下中 1/6", "BottomCenterSixth", WindowAction.BottomCenterSixth, sc);
             Add(sixths, "右下 1/6", "BottomRightSixth",  WindowAction.BottomRightSixth,  sc);
-            AppendMenuW(_hMenu, MF_POPUP, sixths, "六等分");
+            AppendMenuWithIcon(_hMenu, sixths, "六等分", "TopLeftSixth");
             Sep(_hMenu);
 
             Add(_hMenu, "最大化",     "Maximize",       WindowAction.Maximize,       sc);
@@ -213,14 +214,39 @@ namespace Rectangle.Windows.WinUI.Services
             uint id = _nextId++;
             _idToAction[id] = action;
             var shortcut = GetShortcutText(actionName, shortcuts);
-            var text = string.IsNullOrEmpty(shortcut) ? label : $"{label}\t{shortcut}";
+            // Win32 菜单使用 \t 分隔文本和快捷键，确保足够的空格
+            var text = string.IsNullOrEmpty(shortcut) ? label : $"{label}\t\t{shortcut}";
             AppendMenuW(menu, MF_STRING, (nint)id, text);
+
+            // 加载并设置图标
             var hBmp = LoadIconBitmap(actionName);
             if (hBmp != nint.Zero)
-                SetMenuItemBitmaps(menu, id, MF_BYCOMMAND, hBmp, hBmp);
+            {
+                var result = SetMenuItemBitmaps(menu, id, MF_BYCOMMAND, hBmp, hBmp);
+                if (!result)
+                {
+                    Logger.Warning("TrayIcon", $"设置菜单图标失败: {actionName}");
+                }
+            }
         }
 
         private static void Sep(nint menu) => AppendMenuW(menu, MF_SEPARATOR, 0, null);
+
+        private void AppendMenuWithIcon(nint parentMenu, nint submenu, string label, string iconActionName)
+        {
+            AppendMenuW(parentMenu, MF_POPUP, submenu, label);
+            // 子菜单项使用位置索引（最后添加的项）来设置图标
+            var hBmp = LoadIconBitmap(iconActionName);
+            if (hBmp != nint.Zero)
+            {
+                int position = GetMenuItemCount(parentMenu) - 1;
+                if (position >= 0)
+                    SetMenuItemBitmaps(parentMenu, (uint)position, MF_BYPOSITION, hBmp, hBmp);
+            }
+        }
+
+        [DllImport("user32.dll")]
+        static extern int GetMenuItemCount(nint hMenu);
 
         // ── 图标 ──────────────────────────────────────────────────
 
@@ -246,14 +272,43 @@ namespace Rectangle.Windows.WinUI.Services
             try
             {
                 var path = System.IO.Path.Combine(GetAssetsDir(), file);
-                if (!System.IO.File.Exists(path)) return nint.Zero;
+                if (!System.IO.File.Exists(path))
+                {
+                    Logger.Warning("TrayIcon", $"图标文件不存在: {path}");
+                    return nint.Zero;
+                }
+
+                // 加载原始图片
                 using var src = new System.Drawing.Bitmap(path);
-                using var scaled = new System.Drawing.Bitmap(src, new System.Drawing.Size(16, 16));
-                var hBmp = scaled.GetHbitmap(System.Drawing.Color.FromArgb(0, 0, 0, 0));
+
+                // 创建 16x16 的标准位图（使用 24bppRgb 格式，兼容性更好）
+                using var scaled = new System.Drawing.Bitmap(16, 16, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+                using (var g = System.Drawing.Graphics.FromImage(scaled))
+                {
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                    // 填充白色背景
+                    g.Clear(System.Drawing.Color.White);
+                    g.DrawImage(src, 0, 0, 16, 16);
+                }
+
+                // 获取位图句柄
+                var hBmp = scaled.GetHbitmap();
+                if (hBmp == nint.Zero)
+                {
+                    Logger.Warning("TrayIcon", $"无法获取位图句柄: {file}");
+                    return nint.Zero;
+                }
+
                 _hBitmaps.Add(hBmp);
+                Logger.Debug("TrayIcon", $"已加载图标: {file}");
                 return hBmp;
             }
-            catch { return nint.Zero; }
+            catch (Exception ex)
+            {
+                Logger.Error("TrayIcon", $"加载图标失败 {file}: {ex.Message}");
+                return nint.Zero;
+            }
         }
 
         // ── 快捷键 ────────────────────────────────────────────────
@@ -276,7 +331,9 @@ namespace Rectangle.Windows.WinUI.Services
             if ((cfg.ModifierFlags & 0x0004) != 0) parts.Add("Shift");
             if ((cfg.ModifierFlags & 0x0008) != 0) parts.Add("Win");
             parts.Add(VkToString(cfg.KeyCode));
-            return string.Join("+", parts);
+            // 使用更短的格式
+            var result = string.Join("+", parts);
+            return result.Length > 15 ? result[..15] : result;
         }
 
         private static string VkToString(int vk) => vk switch
