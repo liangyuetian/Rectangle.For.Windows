@@ -35,3 +35,8 @@ GetDC
 ReleaseDC
 EnumDisplayDevices
 SetForegroundWindow
+CreatePopupMenu
+InsertMenuItem
+TrackPopupMenu
+DestroyMenu
+SetMenuItemBitmaps

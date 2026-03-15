@@ -11,30 +11,82 @@
         ToolTipText="Rectangle - 窗口管理工具"
         IconSource="Assets/AppIcon.ico"
         NoLeftClickDelay="True"
+        ContextMenuMode="PopupMenu"
         LeftClickCommand="{StaticResource ShowSettingsCommand}">
         <tb:TaskbarIcon.ContextFlyout>
             <MenuFlyout>
-                <MenuFlyoutItem Text="左半屏"       Tag="LeftHalf" />
-                <MenuFlyoutItem Text="右半屏"       Tag="RightHalf" />
-                <MenuFlyoutItem Text="最大化"       Tag="Maximize" />
-                <MenuFlyoutItem Text="居中"         Tag="Center" />
-                <MenuFlyoutItem Text="恢复"         Tag="Restore" />
+                <!-- 半屏 -->
+                <MenuFlyoutItem Text="左半屏"   Tag="LeftHalf" />
+                <MenuFlyoutItem Text="右半屏"   Tag="RightHalf" />
+                <MenuFlyoutItem Text="中间半屏" Tag="CenterHalf" />
+                <MenuFlyoutItem Text="上半屏"   Tag="TopHalf" />
+                <MenuFlyoutItem Text="下半屏"   Tag="BottomHalf" />
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem Text="左上"         Tag="TopLeft" />
-                <MenuFlyoutItem Text="右上"         Tag="TopRight" />
-                <MenuFlyoutItem Text="左下"         Tag="BottomLeft" />
-                <MenuFlyoutItem Text="右下"         Tag="BottomRight" />
+
+                <!-- 四角 -->
+                <MenuFlyoutItem Text="左上" Tag="TopLeft" />
+                <MenuFlyoutItem Text="右上" Tag="TopRight" />
+                <MenuFlyoutItem Text="左下" Tag="BottomLeft" />
+                <MenuFlyoutItem Text="右下" Tag="BottomRight" />
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem Text="上半屏"       Tag="TopHalf" />
-                <MenuFlyoutItem Text="下半屏"       Tag="BottomHalf" />
+
+                <!-- 三等分 → 二级菜单 -->
+                <MenuFlyoutSubItem Text="三等分">
+                    <MenuFlyoutItem Text="左首 1/3" Tag="FirstThird" />
+                    <MenuFlyoutItem Text="中间 1/3" Tag="CenterThird" />
+                    <MenuFlyoutItem Text="右首 1/3" Tag="LastThird" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="左侧 2/3" Tag="FirstTwoThirds" />
+                    <MenuFlyoutItem Text="中间 2/3" Tag="CenterTwoThirds" />
+                    <MenuFlyoutItem Text="右侧 2/3" Tag="LastTwoThirds" />
+                </MenuFlyoutSubItem>
+
+                <!-- 四等分 → 二级菜单 -->
+                <MenuFlyoutSubItem Text="四等分">
+                    <MenuFlyoutItem Text="左 1/4"   Tag="FirstFourth" />
+                    <MenuFlyoutItem Text="中左 1/4" Tag="SecondFourth" />
+                    <MenuFlyoutItem Text="中右 1/4" Tag="ThirdFourth" />
+                    <MenuFlyoutItem Text="右 1/4"   Tag="LastFourth" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="左 3/4"   Tag="FirstThreeFourths" />
+                    <MenuFlyoutItem Text="中间 3/4" Tag="CenterThreeFourths" />
+                    <MenuFlyoutItem Text="右 3/4"   Tag="LastThreeFourths" />
+                </MenuFlyoutSubItem>
+
+                <!-- 六等分 → 二级菜单 -->
+                <MenuFlyoutSubItem Text="六等分">
+                    <MenuFlyoutItem Text="左上 1/6" Tag="TopLeftSixth" />
+                    <MenuFlyoutItem Text="上中 1/6" Tag="TopCenterSixth" />
+                    <MenuFlyoutItem Text="右上 1/6" Tag="TopRightSixth" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="左下 1/6" Tag="BottomLeftSixth" />
+                    <MenuFlyoutItem Text="下中 1/6" Tag="BottomCenterSixth" />
+                    <MenuFlyoutItem Text="右下 1/6" Tag="BottomRightSixth" />
+                </MenuFlyoutSubItem>
                 <MenuFlyoutSeparator />
-                <MenuFlyoutItem Text="左首 1/3"     Tag="FirstThird" />
-                <MenuFlyoutItem Text="中间 1/3"     Tag="CenterThird" />
-                <MenuFlyoutItem Text="右首 1/3"     Tag="LastThird" />
+
+                <!-- 最大化与缩放 -->
+                <MenuFlyoutItem Text="最大化"     Tag="Maximize" />
+                <MenuFlyoutItem Text="接近最大化" Tag="AlmostMaximize" />
+                <MenuFlyoutItem Text="最大化高度" Tag="MaximizeHeight" />
+                <MenuFlyoutItem Text="放大"       Tag="Larger" />
+                <MenuFlyoutItem Text="缩小"       Tag="Smaller" />
+                <MenuFlyoutItem Text="居中"       Tag="Center" />
+                <MenuFlyoutItem Text="恢复"       Tag="Restore" />
                 <MenuFlyoutSeparator />
+
+                <!-- 移动 -->
+                <MenuFlyoutItem Text="左移" Tag="MoveLeft" />
+                <MenuFlyoutItem Text="右移" Tag="MoveRight" />
+                <MenuFlyoutItem Text="上移" Tag="MoveUp" />
+                <MenuFlyoutItem Text="下移" Tag="MoveDown" />
+                <MenuFlyoutSeparator />
+
+                <!-- 显示器 -->
                 <MenuFlyoutItem Text="下一个显示器" Tag="NextDisplay" />
                 <MenuFlyoutItem Text="上一个显示器" Tag="PreviousDisplay" />
                 <MenuFlyoutSeparator />
+
                 <MenuFlyoutItem Command="{StaticResource ShowSettingsCommand}" />
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Command="{StaticResource ExitCommand}" />
