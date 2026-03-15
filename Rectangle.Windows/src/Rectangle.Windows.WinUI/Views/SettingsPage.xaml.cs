@@ -11,6 +11,7 @@ namespace Rectangle.Windows.WinUI.Views
 
         public SettingsPage()
         {
+            this.InitializeComponent();
             this.Loaded += SettingsPage_Loaded;
         }
 

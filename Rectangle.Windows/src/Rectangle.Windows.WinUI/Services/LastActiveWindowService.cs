@@ -120,6 +120,22 @@ public unsafe class LastActiveWindowService : IDisposable
             {
                 _lastValidWindowHwnd = newHwnd;
                 var processName = GetProcessName(newHwnd);
+                var windowTitle = GetWindowTitle(new HWND(newHwnd));
+                
+                // 简化标题显示：如果标题包含路径分隔符，只显示最后一部分
+                var displayTitle = windowTitle;
+                if (!string.IsNullOrEmpty(windowTitle))
+                {
+                    var lastSlash = Math.Max(windowTitle.LastIndexOf('/'), windowTitle.LastIndexOf('\\'));
+                    if (lastSlash >= 0 && lastSlash < windowTitle.Length - 1)
+                    {
+                        displayTitle = windowTitle.Substring(lastSlash + 1);
+                    }
+                }
+                
+                // 在控制台打印窗口信息
+                Console.WriteLine($"[活动窗口更新] 句柄: 0x{newHwnd:X} | 标题: {displayTitle} | 进程: {processName}");
+                
                 Logger.Debug("LastActiveWindowService", $"更新有效窗口: {_lastValidWindowHwnd} ({processName})");
             }
         }
@@ -226,6 +242,27 @@ public unsafe class LastActiveWindowService : IDisposable
                 if (length > 0)
                 {
                     return new string(buffer, 0, length);
+                }
+            }
+        }
+        catch { }
+        return string.Empty;
+    }
+
+    private string GetWindowTitle(HWND hWnd)
+    {
+        try
+        {
+            unsafe
+            {
+                int length = PInvoke.GetWindowTextLength(hWnd);
+                if (length == 0) return string.Empty;
+
+                char* buffer = stackalloc char[length + 1];
+                int result = PInvoke.GetWindowText(hWnd, buffer, length + 1);
+                if (result > 0)
+                {
+                    return new string(buffer, 0, result);
                 }
             }
         }

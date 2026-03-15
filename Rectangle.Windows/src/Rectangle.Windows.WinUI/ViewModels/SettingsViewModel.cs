@@ -83,6 +83,15 @@ namespace Rectangle.Windows.WinUI.ViewModels
             ThirdShortcuts.Add(new ShortcutItem { Action = "FirstTwoThirds",   DisplayName = "左侧 2/3", IconGlyph = "\uE74C" });
             ThirdShortcuts.Add(new ShortcutItem { Action = "CenterTwoThirds",  DisplayName = "中间 2/3", IconGlyph = "\uE74D" });
             ThirdShortcuts.Add(new ShortcutItem { Action = "LastTwoThirds",    DisplayName = "右侧 2/3", IconGlyph = "\uE74E" });
+            ThirdShortcuts.Add(new ShortcutItem { Action = "TopVerticalThird",    DisplayName = "上部 1/3", IconGlyph = "\uE7C3" });
+            ThirdShortcuts.Add(new ShortcutItem { Action = "MiddleVerticalThird", DisplayName = "垂直中间 1/3", IconGlyph = "\uE7C4" });
+            ThirdShortcuts.Add(new ShortcutItem { Action = "BottomVerticalThird", DisplayName = "下部 1/3", IconGlyph = "\uE7C2" });
+            ThirdShortcuts.Add(new ShortcutItem { Action = "TopVerticalTwoThirds",    DisplayName = "上部 2/3", IconGlyph = "\uE7C3" });
+            ThirdShortcuts.Add(new ShortcutItem { Action = "BottomVerticalTwoThirds", DisplayName = "下部 2/3", IconGlyph = "\uE7C2" });
+            ThirdShortcuts.Add(new ShortcutItem { Action = "TopLeftThird",     DisplayName = "左上 1/3", IconGlyph = "\uE744" });
+            ThirdShortcuts.Add(new ShortcutItem { Action = "TopRightThird",    DisplayName = "右上 1/3", IconGlyph = "\uE745" });
+            ThirdShortcuts.Add(new ShortcutItem { Action = "BottomLeftThird",  DisplayName = "左下 1/3", IconGlyph = "\uE746" });
+            ThirdShortcuts.Add(new ShortcutItem { Action = "BottomRightThird", DisplayName = "右下 1/3", IconGlyph = "\uE747" });
 
             FourthShortcuts.Add(new ShortcutItem { Action = "FirstFourth",        DisplayName = "左首 1/4", IconGlyph = "\uE74C" });
             FourthShortcuts.Add(new ShortcutItem { Action = "SecondFourth",       DisplayName = "左中 1/4", IconGlyph = "\uE74D" });
@@ -126,6 +135,10 @@ namespace Rectangle.Windows.WinUI.ViewModels
 
             ResizeShortcuts.Add(new ShortcutItem { Action = "Larger",  DisplayName = "放大", IconGlyph = "\uE71F" });
             ResizeShortcuts.Add(new ShortcutItem { Action = "Smaller", DisplayName = "缩小", IconGlyph = "\uE71E" });
+            ResizeShortcuts.Add(new ShortcutItem { Action = "LargerWidth",   DisplayName = "加宽", IconGlyph = "\uE71F" });
+            ResizeShortcuts.Add(new ShortcutItem { Action = "SmallerWidth",  DisplayName = "减宽", IconGlyph = "\uE71E" });
+            ResizeShortcuts.Add(new ShortcutItem { Action = "LargerHeight",  DisplayName = "加高", IconGlyph = "\uE71F" });
+            ResizeShortcuts.Add(new ShortcutItem { Action = "SmallerHeight", DisplayName = "减高", IconGlyph = "\uE71E" });
 
             MoveShortcuts.Add(new ShortcutItem { Action = "MoveLeft",  DisplayName = "左移", IconGlyph = "\uE72B" });
             MoveShortcuts.Add(new ShortcutItem { Action = "MoveRight", DisplayName = "右移", IconGlyph = "\uE72A" });
@@ -134,6 +147,11 @@ namespace Rectangle.Windows.WinUI.ViewModels
 
             DisplayShortcuts.Add(new ShortcutItem { Action = "NextDisplay",     DisplayName = "下一个显示器", IconGlyph = "\uE7F5" });
             DisplayShortcuts.Add(new ShortcutItem { Action = "PreviousDisplay", DisplayName = "上一个显示器", IconGlyph = "\uE7F6" });
+
+            OtherShortcuts.Add(new ShortcutItem { Action = "LeftTodo",  DisplayName = "左侧 Todo", IconGlyph = "\uE8FD" });
+            OtherShortcuts.Add(new ShortcutItem { Action = "RightTodo", DisplayName = "右侧 Todo", IconGlyph = "\uE8FD" });
+            OtherShortcuts.Add(new ShortcutItem { Action = "Undo",      DisplayName = "撤销", IconGlyph = "\uE7A7" });
+            OtherShortcuts.Add(new ShortcutItem { Action = "Redo",      DisplayName = "重做", IconGlyph = "\uE7A6" });
         }
 
         public async Task LoadShortcutsAsync()

@@ -20,6 +20,7 @@ namespace Rectangle.Windows.WinUI
         private TrayIconService? _trayIconService;
         private LastActiveWindowService? _lastActiveService;
         private Window? _settingsWindow;
+        private Window? _hiddenWindow; // 隐藏窗口，保持应用运行
         private nint _hotkeyHwnd;
 
         // Win32 API
@@ -98,9 +99,9 @@ namespace Rectangle.Windows.WinUI
             _lastActiveService = new LastActiveWindowService();
             WindowManager.SetLastActiveWindowService(_lastActiveService);
 
-            // 创建隐藏窗口用于接收热键消息
-            var msgWindow = new Window();
-            var appWindow = msgWindow.AppWindow;
+            // 创建隐藏窗口用于接收热键消息和保持应用运行
+            _hiddenWindow = new Window();
+            var appWindow = _hiddenWindow.AppWindow;
             var presenter = Microsoft.UI.Windowing.OverlappedPresenter.Create();
             presenter.IsMinimizable = false;
             presenter.IsMaximizable = false;
@@ -111,7 +112,7 @@ namespace Rectangle.Windows.WinUI
             appWindow.Show(activateWindow: false);
             appWindow.Hide();
 
-            _hotkeyHwnd = (nint)WinRT.Interop.WindowNative.GetWindowHandle(msgWindow);
+            _hotkeyHwnd = (nint)WinRT.Interop.WindowNative.GetWindowHandle(_hiddenWindow);
             HotkeyManager = new HotkeyManager(_hotkeyHwnd, WindowManager!);
 
             // 初始化托盘（传入 lastActiveService）
@@ -119,7 +120,7 @@ namespace Rectangle.Windows.WinUI
             _trayIconService.Initialize();
 
             // 输出所有操作项和快捷键到日志
-            LogAllShortcuts(configService);
+            // LogAllShortcuts(configService);
         }
 
         private void LogAllShortcuts(ConfigService configService)
@@ -299,16 +300,41 @@ namespace Rectangle.Windows.WinUI
 
         private void ShowSettingsWindow()
         {
-            if (_settingsWindow == null)
+            try
             {
-                _settingsWindow = new MainWindow();
-                _settingsWindow.Closed += (s, e) => _settingsWindow = null;
-            }
+                Logger.Info("App", "准备显示设置窗口");
+                
+                // 每次都创建新窗口，避免重用已关闭的窗口
+                if (_settingsWindow == null)
+                {
+                    Logger.Info("App", "创建新的设置窗口");
+                    _settingsWindow = new MainWindow();
+                    
+                    // 监听窗口关闭事件
+                    _settingsWindow.Closed += (s, e) =>
+                    {
+                        Logger.Info("App", "设置窗口已关闭，清理引用");
+                        _settingsWindow = null;
+                    };
+                }
 
-            var hwnd = (nint)WinRT.Interop.WindowNative.GetWindowHandle(_settingsWindow);
-            ShowWindow(hwnd, 9 /* SW_RESTORE */);
-            SetForegroundWindow(hwnd);
-            _settingsWindow.Activate();
+                var hwnd = (nint)WinRT.Interop.WindowNative.GetWindowHandle(_settingsWindow);
+                Logger.Info("App", $"设置窗口句柄: {hwnd}");
+                
+                ShowWindow(hwnd, 9 /* SW_RESTORE */);
+                SetForegroundWindow(hwnd);
+                _settingsWindow.Activate();
+                
+                Logger.Info("App", "设置窗口已显示");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("App", $"显示设置窗口失败: {ex.Message}");
+                Logger.Error("App", $"堆栈跟踪: {ex.StackTrace}");
+                
+                // 如果出错，清理窗口引用，下次重新创建
+                _settingsWindow = null;
+            }
         }
 
         void OnNavigationFailed(object sender, NavigationFailedEventArgs e)

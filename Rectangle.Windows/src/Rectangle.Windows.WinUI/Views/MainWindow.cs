@@ -57,7 +57,8 @@ namespace Rectangle.Windows.WinUI.Views
 
             Content = new Grid { Children = { navView } };
 
-            // 导航到默认页面
+            // 导航到默认页面，并选中第一个菜单项
+            navView.SelectedItem = navView.MenuItems[0];
             _contentFrame.Navigate(typeof(SettingsPage));
         }
 
