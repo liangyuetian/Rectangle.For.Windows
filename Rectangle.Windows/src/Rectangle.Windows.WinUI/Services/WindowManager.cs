@@ -394,22 +394,35 @@ public class WindowManager
         var foregroundHwnd = _win32.GetForegroundWindowHandle();
 
         // 检查前台窗口是否在忽略列表中
+        bool isForegroundIgnored = false;
         if (foregroundHwnd != 0)
         {
             var processName = _win32.GetProcessNameFromWindow(foregroundHwnd);
             if (!string.IsNullOrEmpty(processName) && IsIgnoredApp(processName))
             {
-                Logger.Info("WindowManager", $"前台窗口 {processName} 在忽略列表中，不执行操作");
-                return 0; // 返回 0 表示不执行操作
+                Logger.Info("WindowManager", $"前台窗口 {processName} 在忽略列表中，使用上次活跃窗口");
+                isForegroundIgnored = true;
             }
         }
 
-        // 如果有 LastActiveWindowService，使用它获取目标窗口
+        // 如果有 LastActiveWindowService，优先使用它获取目标窗口
         if (_lastActiveService != null)
         {
-            return _lastActiveService.GetTargetWindow();
+            var lastActiveWindow = _lastActiveService.GetTargetWindow();
+            if (lastActiveWindow != 0)
+            {
+                return lastActiveWindow;
+            }
         }
-        return foregroundHwnd;
+        
+        // 如果没有 LastActiveWindowService 或获取失败，且前台窗口未被忽略，使用前台窗口
+        if (!isForegroundIgnored)
+        {
+            return foregroundHwnd;
+        }
+        
+        // 所有尝试都失败，返回 0
+        return 0;
     }
 
     private void ExecuteMaximizeToggle(nint? targetHwnd = null)

@@ -88,7 +88,13 @@ namespace Rectangle.Windows.WinUI.Services
 
                 // 遍历 ContextFlyout 注入图标、快捷键文字、点击命令
                 if (_taskbarIcon.ContextFlyout is MenuFlyout flyout)
+                {
+                    // 添加菜单打开和关闭事件，暂停/恢复窗口跟踪
+                    flyout.Opened += (_, _) => _lastActiveService?.PauseTracking();
+                    flyout.Closed += (_, _) => _lastActiveService?.ResumeTracking();
+                    
                     DecorateItems(flyout.Items, shortcuts);
+                }
 
                 _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
                 Logger.Info("TrayIconService", "托盘图标初始化成功");
@@ -101,29 +107,51 @@ namespace Rectangle.Windows.WinUI.Services
 
         private void DecorateItems(IList<MenuFlyoutItemBase> items, Dictionary<string, ShortcutConfig> shortcuts)
         {
+            Logger.Info("TrayIconService", $"DecorateItems 开始处理，菜单项数量: {items.Count}");
+            
             foreach (var item in items)
             {
                 if (item is MenuFlyoutSubItem sub)
                 {
+                    // 禁用访问键
+                    sub.AccessKey = string.Empty;
                     // 递归处理子菜单
                     DecorateItems(sub.Items, shortcuts);
                 }
-                else if (item is MenuFlyoutItem fi && fi.Tag is string tag)
+                else if (item is MenuFlyoutItem fi)
                 {
-                    // 添加快捷键文本
-                    var shortcutText = GetShortcutText(tag, shortcuts);
-                    if (!string.IsNullOrEmpty(shortcutText))
-                    {
-                        fi.KeyboardAcceleratorTextOverride = shortcutText;
-                        Logger.Info("TrayIconService", $"菜单项 '{fi.Text}' 设置快捷键: {shortcutText}");
-                    }
+                    // 禁用访问键
+                    fi.AccessKey = string.Empty;
                     
-                    // 添加点击事件
-                    fi.Click += (_, _) =>
+                    Logger.Info("TrayIconService", $"处理菜单项: {fi.Text}, Tag: {fi.Tag}");
+                    
+                    if (fi.Tag is string tag)
                     {
-                        if (_tagToAction.TryGetValue(tag, out var action))
-                            _windowManager.Execute(action);
-                    };
+                        // 添加快捷键文本
+                        var shortcutText = GetShortcutText(tag, shortcuts);
+                        if (!string.IsNullOrEmpty(shortcutText))
+                        {
+                            fi.KeyboardAcceleratorTextOverride = shortcutText;
+                            Logger.Info("TrayIconService", $"菜单项 '{fi.Text}' 设置快捷键: {shortcutText}");
+                        }
+                        
+                        // 添加点击事件
+                        fi.Click += (_, _) =>
+                        {
+                            Logger.Info("TrayIconService", $"菜单项点击事件触发: {fi.Text}");
+                            if (_tagToAction.TryGetValue(tag, out var action))
+                            {
+                                Logger.Info("TrayIconService", $"点击托盘菜单项: {fi.Text} ({tag}) -> {action}");
+                                _windowManager.Execute(action);
+                            }
+                            else
+                            {
+                                Logger.Warning("TrayIconService", $"未找到对应的动作: {tag}");
+                            }
+                        };
+                        
+                        Logger.Info("TrayIconService", $"已为菜单项 '{fi.Text}' 绑定点击事件");
+                    }
                 }
             }
         }
