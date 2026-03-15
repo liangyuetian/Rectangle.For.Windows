@@ -3,10 +3,9 @@ using Microsoft.UI.Xaml.Navigation;
 using Rectangle.Windows.WinUI.Core;
 using Rectangle.Windows.WinUI.Services;
 using Rectangle.Windows.WinUI.Views;
-using Windows.Win32;
-using Windows.Win32.Foundation;
-using Windows.Win32.UI.WindowsAndMessaging;
+using H.NotifyIcon;
 using System;
+using System.Runtime.InteropServices;
 
 namespace Rectangle.Windows.WinUI
 {
@@ -21,8 +20,15 @@ namespace Rectangle.Windows.WinUI
         private Window? _settingsWindow;
         private nint _hotkeyHwnd;
 
+        [DllImport("user32.dll")] static extern bool ShowWindow(nint hWnd, int nCmdShow);
+        [DllImport("user32.dll")] static extern bool SetForegroundWindow(nint hWnd);
+
         public App()
         {
+            // WinAppSDK PublishSingleFile 要求在程序入口设置此环境变量
+            Environment.SetEnvironmentVariable(
+                "MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY",
+                AppContext.BaseDirectory);
             _instance = this;
             this.InitializeComponent();
         }
@@ -40,15 +46,24 @@ namespace Rectangle.Windows.WinUI
             var history = new WindowHistory();
             WindowManager = new WindowManager(win32, factory, history);
 
-            // 创建一个最小化隐藏窗口，仅用于接收热键消息
+            // 创建隐藏窗口用于接收热键消息
             var msgWindow = new Window();
-            msgWindow.Activate();
+            var appWindow = msgWindow.AppWindow;
+            var presenter = Microsoft.UI.Windowing.OverlappedPresenter.Create();
+            presenter.IsMinimizable = false;
+            presenter.IsMaximizable = false;
+            presenter.IsResizable = false;
+            presenter.SetBorderAndTitleBar(false, false);
+            appWindow.SetPresenter(presenter);
+            appWindow.IsShownInSwitchers = false;
+            appWindow.Show(activateWindow: false);
+            appWindow.Hide();
+
             _hotkeyHwnd = (nint)WinRT.Interop.WindowNative.GetWindowHandle(msgWindow);
-            PInvoke.ShowWindow((HWND)_hotkeyHwnd, SHOW_WINDOW_CMD.SW_HIDE);
             HotkeyManager = new HotkeyManager(_hotkeyHwnd, WindowManager!);
 
             // 初始化托盘
-            _trayIconService = new TrayIconService(WindowManager!, ShowSettingsWindow);
+            _trayIconService = new TrayIconService(WindowManager!, ShowSettingsWindow, configService);
             _trayIconService.Initialize();
         }
 
@@ -60,9 +75,9 @@ namespace Rectangle.Windows.WinUI
                 _settingsWindow.Closed += (s, e) => _settingsWindow = null;
             }
 
-            var hwnd = (HWND)WinRT.Interop.WindowNative.GetWindowHandle(_settingsWindow);
-            PInvoke.ShowWindow(hwnd, SHOW_WINDOW_CMD.SW_SHOW);
-            PInvoke.SetForegroundWindow(hwnd);
+            var hwnd = (nint)WinRT.Interop.WindowNative.GetWindowHandle(_settingsWindow);
+            ShowWindow(hwnd, 9 /* SW_RESTORE */);
+            SetForegroundWindow(hwnd);
             _settingsWindow.Activate();
         }
 
