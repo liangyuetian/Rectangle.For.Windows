@@ -17,6 +17,7 @@ namespace Rectangle.Windows.WinUI
 
         private static App? _instance;
         private TrayIconService? _trayIconService;
+        private LastActiveWindowService? _lastActiveService;
         private Window? _settingsWindow;
         private nint _hotkeyHwnd;
 
@@ -25,7 +26,6 @@ namespace Rectangle.Windows.WinUI
 
         public App()
         {
-            // WinAppSDK PublishSingleFile 要求在程序入口设置此环境变量
             Environment.SetEnvironmentVariable(
                 "MICROSOFT_WINDOWSAPPRUNTIME_BASE_DIRECTORY",
                 AppContext.BaseDirectory);
@@ -45,6 +45,11 @@ namespace Rectangle.Windows.WinUI
             var factory = new CalculatorFactory();
             var history = new WindowHistory();
             WindowManager = new WindowManager(win32, factory, history);
+            WindowManager.SetConfigService(configService);
+
+            // 初始化活动窗口跟踪服务
+            _lastActiveService = new LastActiveWindowService();
+            WindowManager.SetLastActiveWindowService(_lastActiveService);
 
             // 创建隐藏窗口用于接收热键消息
             var msgWindow = new Window();
@@ -62,8 +67,8 @@ namespace Rectangle.Windows.WinUI
             _hotkeyHwnd = (nint)WinRT.Interop.WindowNative.GetWindowHandle(msgWindow);
             HotkeyManager = new HotkeyManager(_hotkeyHwnd, WindowManager!);
 
-            // 初始化托盘
-            _trayIconService = new TrayIconService(WindowManager!, ShowSettingsWindow, configService);
+            // 初始化托盘（传入 lastActiveService）
+            _trayIconService = new TrayIconService(WindowManager!, ShowSettingsWindow, configService, _lastActiveService);
             _trayIconService.Initialize();
         }
 

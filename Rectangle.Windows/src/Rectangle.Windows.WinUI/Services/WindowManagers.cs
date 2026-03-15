@@ -165,10 +165,10 @@ namespace Rectangle.Windows.WinUI.Services
 
             foreach (var hwnd in windows)
             {
-                if (_history.TryGet(hwnd, out var rect))
+                if (_history.TryGetRestoreRect(hwnd, out var rect))
                 {
                     _win32.SetWindowRect(hwnd, rect.X, rect.Y, rect.W, rect.H);
-                    _history.Remove(hwnd);
+                    _history.RemoveWindow(hwnd);
                     restoredCount++;
                 }
             }

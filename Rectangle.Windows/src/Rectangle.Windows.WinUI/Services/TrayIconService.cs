@@ -15,6 +15,7 @@ namespace Rectangle.Windows.WinUI.Services
         private readonly WindowManager _windowManager;
         private readonly Action _showSettingsCallback;
         private readonly ConfigService _configService;
+        private LastActiveWindowService? _lastActiveService;
 
         private nint _hMenu;
         private readonly Dictionary<uint, WindowAction> _idToAction = new();
@@ -95,11 +96,13 @@ namespace Rectangle.Windows.WinUI.Services
             ["PreviousDisplay"]      = "prevDisplayTemplate.png",
         };
 
-        public TrayIconService(WindowManager windowManager, Action showSettingsCallback, ConfigService configService)
+        public TrayIconService(WindowManager windowManager, Action showSettingsCallback,
+                               ConfigService configService, LastActiveWindowService? lastActiveService = null)
         {
             _windowManager = windowManager;
             _showSettingsCallback = showSettingsCallback;
             _configService = configService;
+            _lastActiveService = lastActiveService;
         }
 
         public void Initialize()
@@ -221,12 +224,28 @@ namespace Rectangle.Windows.WinUI.Services
 
         // ── 图标 ──────────────────────────────────────────────────
 
+        private static string GetAssetsDir()
+        {
+            // 优先用 exe 所在目录（发布后），其次用 BaseDirectory（调试时）
+            try
+            {
+                var exePath = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName;
+                if (!string.IsNullOrEmpty(exePath))
+                {
+                    var dir = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(exePath)!, "Assets", "WindowPositions");
+                    if (System.IO.Directory.Exists(dir)) return dir;
+                }
+            }
+            catch { }
+            return System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "WindowPositions");
+        }
+
         private nint LoadIconBitmap(string actionName)
         {
             if (!_actionIcons.TryGetValue(actionName, out var file)) return nint.Zero;
             try
             {
-                var path = System.IO.Path.Combine(AppContext.BaseDirectory, "Assets", "WindowPositions", file);
+                var path = System.IO.Path.Combine(GetAssetsDir(), file);
                 if (!System.IO.File.Exists(path)) return nint.Zero;
                 using var src = new System.Drawing.Bitmap(path);
                 using var scaled = new System.Drawing.Bitmap(src, new System.Drawing.Size(16, 16));
@@ -278,6 +297,10 @@ namespace Rectangle.Windows.WinUI.Services
         private void ShowNativeMenu()
         {
             if (_hMenu == nint.Zero) return;
+
+            // 弹出菜单前暂停跟踪，保留当前活动窗口
+            _lastActiveService?.PauseTracking();
+
             GetCursorPos(out var pt);
             var hwnd = GetInternalHwnd();
             if (hwnd != nint.Zero) SetForegroundWindow(hwnd);
@@ -286,6 +309,9 @@ namespace Rectangle.Windows.WinUI.Services
                 _hMenu,
                 TPM_RETURNCMD | TPM_RIGHTBUTTON | TPM_NONOTIFY,
                 pt.X, pt.Y, 0, hwnd, nint.Zero);
+
+            // 菜单关闭后恢复跟踪
+            _lastActiveService?.ResumeTracking();
 
             if (cmd == 0) return;
             if (cmd == _idSettings) _showSettingsCallback();
