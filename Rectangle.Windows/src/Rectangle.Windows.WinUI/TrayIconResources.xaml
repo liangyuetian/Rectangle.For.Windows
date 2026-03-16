@@ -253,6 +253,13 @@
                 </MenuFlyoutItem>
                 <MenuFlyoutSeparator />
 
+                <MenuFlyoutItem Text="忽略 [无有效窗口]" Tag="IgnoreApp" IsEnabled="False">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon Glyph="&#xE7BA;" />
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
+                <MenuFlyoutSeparator />
+
                 <MenuFlyoutItem Command="{StaticResource ShowSettingsCommand}">
                     <MenuFlyoutItem.Icon>
                         <FontIcon Glyph="&#xE713;" />
