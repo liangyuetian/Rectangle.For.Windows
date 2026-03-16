@@ -1,6 +1,7 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Rectangle.Windows.WinUI.ViewModels;
+using Rectangle.Windows.WinUI;
 using System;
 
 namespace Rectangle.Windows.WinUI.Views
@@ -88,15 +89,9 @@ namespace Rectangle.Windows.WinUI.Views
 
         private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new ContentDialog
-            {
-                Title = "检查更新",
-                Content = "正在检查更新...",
-                CloseButtonText = "关闭",
-                XamlRoot = this.XamlRoot
-            };
-
-            await dialog.ShowAsync();
+            if (App.ConfigService == null) return;
+            var updateService = new Services.UpdateService(App.ConfigService);
+            await updateService.CheckForUpdatesAsync(silent: false);
         }
     }
 }
