@@ -17,6 +17,21 @@ namespace Rectangle.Windows.WinUI.Services
         private readonly ConfigService _configService;
         private LastActiveWindowService? _lastActiveService;
 
+        /// <summary>
+        /// 统一的菜单项命令，通过 CommandParameter 传递 action tag。使用 Command 而非 Click，因 H.NotifyIcon 托盘菜单下 Click 可能不触发。
+        /// </summary>
+        private XamlUICommand? _menuActionCommand;
+
+        /// <summary>
+        /// 忽略/取消忽略应用的命令
+        /// </summary>
+        private XamlUICommand? _ignoreAppCommand;
+
+        /// <summary>
+        /// 忽略应用菜单项引用，用于动态更新文本
+        /// </summary>
+        private MenuFlyoutItem? _ignoreAppMenuItem;
+
         // action tag → WindowAction
         private static readonly Dictionary<string, WindowAction> _tagToAction = new()
         {
@@ -86,13 +101,25 @@ namespace Rectangle.Windows.WinUI.Services
 
                 var shortcuts = LoadShortcuts();
 
+                // 创建统一的菜单项命令（Command 在托盘菜单中比 Click 更可靠）
+                _menuActionCommand = new XamlUICommand();
+                _menuActionCommand.ExecuteRequested += OnMenuActionExecuteRequested;
+
+                // 创建忽略应用命令
+                _ignoreAppCommand = new XamlUICommand();
+                _ignoreAppCommand.ExecuteRequested += OnIgnoreAppExecuteRequested;
+
                 // 遍历 ContextFlyout 注入图标、快捷键文字、点击命令
                 if (_taskbarIcon.ContextFlyout is MenuFlyout flyout)
                 {
-                    // 添加菜单打开和关闭事件，暂停/恢复窗口跟踪
-                    flyout.Opened += (_, _) => _lastActiveService?.PauseTracking();
+                    // 在菜单即将打开时暂停（Opening 比 Opened 更早，避免右键时焦点变化覆盖活动窗口）
+                    flyout.Opening += (_, _) =>
+                    {
+                        _lastActiveService?.PauseTracking();
+                        UpdateIgnoreMenuItem();
+                    };
                     flyout.Closed += (_, _) => _lastActiveService?.ResumeTracking();
-                    
+
                     DecorateItems(flyout.Items, shortcuts);
                 }
 
@@ -127,33 +154,118 @@ namespace Rectangle.Windows.WinUI.Services
                     
                     if (fi.Tag is string tag)
                     {
-                        // 添加快捷键文本
+                        if (tag == "IgnoreApp")
+                        {
+                            // 忽略应用菜单项：使用独立命令，文本在 Opening 时动态更新
+                            _ignoreAppMenuItem = fi;
+                            fi.Command = _ignoreAppCommand;
+                            Logger.Info("TrayIconService", "已绑定忽略应用菜单项");
+                            continue;
+                        }
+
+                        // 添加快捷键文本（KeyboardAcceleratorTextOverride 在托盘菜单中可能不显示，同时追加到 Text 确保可见）
                         var shortcutText = GetShortcutText(tag, shortcuts);
                         if (!string.IsNullOrEmpty(shortcutText))
                         {
                             fi.KeyboardAcceleratorTextOverride = shortcutText;
-                            Logger.Info("TrayIconService", $"菜单项 '{fi.Text}' 设置快捷键: {shortcutText}");
+                            // 追加到 Text 作为备用，格式：左半屏    Ctrl+Alt+Left
+                            var baseText = fi.Text ?? string.Empty;
+                            fi.Text = $"{baseText}    {shortcutText}";
+                            Logger.Info("TrayIconService", $"菜单项 '{baseText}' 设置快捷键: {shortcutText}");
                         }
-                        
-                        // 添加点击事件
-                        fi.Click += (_, _) =>
-                        {
-                            Logger.Info("TrayIconService", $"菜单项点击事件触发: {fi.Text}");
-                            if (_tagToAction.TryGetValue(tag, out var action))
-                            {
-                                Logger.Info("TrayIconService", $"点击托盘菜单项: {fi.Text} ({tag}) -> {action}");
-                                _windowManager.Execute(action);
-                            }
-                            else
-                            {
-                                Logger.Warning("TrayIconService", $"未找到对应的动作: {tag}");
-                            }
-                        };
-                        
-                        Logger.Info("TrayIconService", $"已为菜单项 '{fi.Text}' 绑定点击事件");
+
+                        // 使用 Command 而非 Click（托盘菜单下 Click 可能不触发）
+                        fi.Command = _menuActionCommand;
+                        fi.CommandParameter = tag;
+                        Logger.Info("TrayIconService", $"已为菜单项 '{fi.Text}' 绑定 Command: {tag}");
                     }
                 }
             }
+        }
+
+        private void OnMenuActionExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
+        {
+            var tag = args.Parameter as string;
+            if (string.IsNullOrEmpty(tag))
+            {
+                Logger.Warning("TrayIconService", "菜单项 Command 执行时 Parameter 为空");
+                return;
+            }
+            Logger.Info("TrayIconService", $"菜单项 Command 执行: {tag}");
+            if (_tagToAction.TryGetValue(tag, out var action))
+            {
+                _windowManager.Execute(action);
+            }
+            else
+            {
+                Logger.Warning("TrayIconService", $"未找到对应的动作: {tag}");
+            }
+        }
+
+        private void OnIgnoreAppExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
+        {
+            var processName = args.Parameter as string;
+            if (string.IsNullOrEmpty(processName))
+            {
+                Logger.Warning("TrayIconService", "忽略应用 Command 执行时 Parameter 为空");
+                return;
+            }
+            ToggleIgnoreApp(processName);
+        }
+
+        private void UpdateIgnoreMenuItem()
+        {
+            if (_ignoreAppMenuItem == null || _lastActiveService == null) return;
+
+            var hwnd = _lastActiveService.GetLastValidWindow();
+            if (hwnd == 0)
+            {
+                _ignoreAppMenuItem.Text = "忽略 [无有效窗口]";
+                _ignoreAppMenuItem.IsEnabled = false;
+                _ignoreAppMenuItem.CommandParameter = null;
+                return;
+            }
+
+            var processName = WindowEnumerator.GetProcessNameFromWindow(hwnd);
+            if (string.IsNullOrEmpty(processName))
+            {
+                _ignoreAppMenuItem.Text = "忽略 [未知应用]";
+                _ignoreAppMenuItem.IsEnabled = false;
+                _ignoreAppMenuItem.CommandParameter = null;
+                return;
+            }
+
+            var config = _configService.Load();
+            var isIgnored = config.IgnoredApps.Exists(a =>
+                a.Equals(processName, StringComparison.OrdinalIgnoreCase) ||
+                a.Equals(processName + ".exe", StringComparison.OrdinalIgnoreCase));
+
+            _ignoreAppMenuItem.Text = isIgnored ? $"取消忽略 {processName}" : $"忽略 {processName}";
+            _ignoreAppMenuItem.IsEnabled = true;
+            _ignoreAppMenuItem.CommandParameter = processName;
+        }
+
+        private void ToggleIgnoreApp(string processName)
+        {
+            var config = _configService.Load();
+            var isIgnored = config.IgnoredApps.Exists(a =>
+                a.Equals(processName, StringComparison.OrdinalIgnoreCase) ||
+                a.Equals(processName + ".exe", StringComparison.OrdinalIgnoreCase));
+
+            if (isIgnored)
+            {
+                config.IgnoredApps.RemoveAll(a =>
+                    a.Equals(processName, StringComparison.OrdinalIgnoreCase) ||
+                    a.Equals(processName + ".exe", StringComparison.OrdinalIgnoreCase));
+                Logger.Info("TrayIconService", $"已从忽略列表移除: {processName}");
+            }
+            else
+            {
+                config.IgnoredApps.Add(processName);
+                Logger.Info("TrayIconService", $"已添加到忽略列表: {processName}");
+            }
+
+            _configService.Save(config);
         }
 
         // ── 快捷键 ────────────────────────────────────────────────
@@ -181,7 +293,7 @@ namespace Rectangle.Windows.WinUI.Services
 
         private static string VkToString(int vk) => vk switch
         {
-            0x25 => "←", 0x26 => "↑", 0x27 => "→", 0x28 => "↓",
+            0x25 => "Left", 0x26 => "Up", 0x27 => "Right", 0x28 => "Down",
             0x0D => "Enter", 0x08 => "Back", 0x2E => "Del", 0x20 => "Space",
             0xBB => "=", 0xBD => "-",
             0x70 => "F1",  0x71 => "F2",  0x72 => "F3",  0x73 => "F4",
@@ -201,6 +313,17 @@ namespace Rectangle.Windows.WinUI.Services
 
         public void Dispose()
         {
+            if (_menuActionCommand != null)
+            {
+                _menuActionCommand.ExecuteRequested -= OnMenuActionExecuteRequested;
+                _menuActionCommand = null;
+            }
+            if (_ignoreAppCommand != null)
+            {
+                _ignoreAppCommand.ExecuteRequested -= OnIgnoreAppExecuteRequested;
+                _ignoreAppCommand = null;
+            }
+            _ignoreAppMenuItem = null;
             _taskbarIcon?.Dispose();
             _taskbarIcon = null;
         }
