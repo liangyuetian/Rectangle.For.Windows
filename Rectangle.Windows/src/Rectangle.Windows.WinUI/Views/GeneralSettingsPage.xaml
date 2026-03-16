@@ -47,6 +47,32 @@
                 </StackPanel>
             </Border>
 
+            <!-- 布局设置卡片 -->
+            <Border Style="{StaticResource ModernCardStyle}">
+                <StackPanel Spacing="16">
+                    <TextBlock Text="半屏分割比例" Style="{StaticResource CardTitleStyle}"/>
+                    <TextBlock Text="自定义左右/上下半屏的宽度或高度占比（1-99%，默认 50% 为均分）"
+                              Foreground="{StaticResource SecondaryTextBrush}"
+                              FontSize="13"/>
+
+                    <Grid ColumnDefinitions="Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="12" RowSpacing="12">
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="水平（左半屏占比）" VerticalAlignment="Center"/>
+                        <Slider Grid.Row="0" Grid.Column="1"
+                                x:Name="HorizontalSplitSlider"
+                                Minimum="1" Maximum="99" Value="50"
+                                ValueChanged="HorizontalSplitSlider_ValueChanged"/>
+                        <TextBlock Grid.Row="0" Grid.Column="2" x:Name="HorizontalSplitValue" Text="50%" VerticalAlignment="Center" MinWidth="36"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="垂直（上半屏占比）" VerticalAlignment="Center"/>
+                        <Slider Grid.Row="1" Grid.Column="1"
+                                x:Name="VerticalSplitSlider"
+                                Minimum="1" Maximum="99" Value="50"
+                                ValueChanged="VerticalSplitSlider_ValueChanged"/>
+                        <TextBlock Grid.Row="1" Grid.Column="2" x:Name="VerticalSplitValue" Text="50%" VerticalAlignment="Center" MinWidth="36"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
             <!-- 通用设置卡片 -->
             <Border Style="{StaticResource ModernCardStyle}">
                 <StackPanel Spacing="16">

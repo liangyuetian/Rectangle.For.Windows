@@ -14,6 +14,8 @@ namespace Rectangle.Windows.WinUI.ViewModels
         private readonly ConfigService _configService;
         private bool _launchOnLogin;
         private int _gapSize;
+        private int _horizontalSplitRatio = 50;
+        private int _verticalSplitRatio = 50;
         private bool _logToFile;
         private int _logLevel;
         private ElementTheme _currentTheme;
@@ -42,6 +44,18 @@ namespace Rectangle.Windows.WinUI.ViewModels
         {
             get => _gapSize;
             set { if (SetProperty(ref _gapSize, value)) SaveGapSizeSetting(); }
+        }
+
+        public int HorizontalSplitRatio
+        {
+            get => _horizontalSplitRatio;
+            set { if (SetProperty(ref _horizontalSplitRatio, Math.Clamp(value, 1, 99))) SaveSplitRatioSetting(); }
+        }
+
+        public int VerticalSplitRatio
+        {
+            get => _verticalSplitRatio;
+            set { if (SetProperty(ref _verticalSplitRatio, Math.Clamp(value, 1, 99))) SaveSplitRatioSetting(); }
         }
 
         public bool LogToFile
@@ -216,11 +230,15 @@ namespace Rectangle.Windows.WinUI.ViewModels
                 var config = _configService.Load();
                 _launchOnLogin = config.LaunchOnLogin;
                 _gapSize = config.GapSize;
+                _horizontalSplitRatio = Math.Clamp(config.HorizontalSplitRatio, 1, 99);
+                _verticalSplitRatio = Math.Clamp(config.VerticalSplitRatio, 1, 99);
                 _logToFile = config.LogToFile;
                 _logLevel = config.LogLevel;
                 _languageIndex = config.Language switch { "en" => 1, _ => 0 };
                 OnPropertyChanged(nameof(LaunchOnLogin));
                 OnPropertyChanged(nameof(GapSize));
+                OnPropertyChanged(nameof(HorizontalSplitRatio));
+                OnPropertyChanged(nameof(VerticalSplitRatio));
                 OnPropertyChanged(nameof(LogToFile));
                 OnPropertyChanged(nameof(LogLevel));
                 OnPropertyChanged(nameof(LanguageIndex));
@@ -359,6 +377,14 @@ namespace Rectangle.Windows.WinUI.ViewModels
         {
             var config = _configService.Load();
             config.GapSize = _gapSize;
+            _configService.Save(config);
+        }
+
+        private void SaveSplitRatioSetting()
+        {
+            var config = _configService.Load();
+            config.HorizontalSplitRatio = _horizontalSplitRatio;
+            config.VerticalSplitRatio = _verticalSplitRatio;
             _configService.Save(config);
         }
 

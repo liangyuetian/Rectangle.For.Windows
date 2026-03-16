@@ -1,22 +1,42 @@
+using Rectangle.Windows.WinUI.Services;
+
 namespace Rectangle.Windows.WinUI.Core.Calculators;
 
 public class TopHalfCalculator : IRectCalculator
 {
+    private readonly ConfigService? _configService;
+
+    public TopHalfCalculator(ConfigService? configService = null) => _configService = configService;
+
     public WindowRect Calculate(WorkArea workArea, WindowRect currentWindow, WindowAction action, int gap = 0)
     {
-        var height = (workArea.Height - gap) / 2;
+        var ratio = GetVerticalRatio();
+        var totalHeight = workArea.Height - gap;
+        var height = (int)(totalHeight * ratio / 100.0);
         return new WindowRect(workArea.Left, workArea.Top, workArea.Width, height);
     }
+
+    private int GetVerticalRatio() =>
+        _configService?.Load().VerticalSplitRatio is var r && r >= 1 && r <= 99 ? r : 50;
 }
 
 public class BottomHalfCalculator : IRectCalculator
 {
+    private readonly ConfigService? _configService;
+
+    public BottomHalfCalculator(ConfigService? configService = null) => _configService = configService;
+
     public WindowRect Calculate(WorkArea workArea, WindowRect currentWindow, WindowAction action, int gap = 0)
     {
-        var height = (workArea.Height - gap) / 2;
-        var y = workArea.Top + height + gap;
+        var ratio = GetVerticalRatio();
+        var totalHeight = workArea.Height - gap;
+        var height = (int)(totalHeight * (100 - ratio) / 100.0);
+        var y = workArea.Top + (int)(totalHeight * ratio / 100.0) + gap;
         return new WindowRect(workArea.Left, y, workArea.Width, height);
     }
+
+    private int GetVerticalRatio() =>
+        _configService?.Load().VerticalSplitRatio is var r && r >= 1 && r <= 99 ? r : 50;
 }
 
 public class TopLeftCalculator : IRectCalculator

@@ -19,6 +19,10 @@ namespace Rectangle.Windows.WinUI.Views
         private async void GeneralSettingsPage_Loaded(object sender, RoutedEventArgs e)
         {
             await ViewModel.LoadSettingsAsync();
+            HorizontalSplitSlider.Value = ViewModel.HorizontalSplitRatio;
+            VerticalSplitSlider.Value = ViewModel.VerticalSplitRatio;
+            HorizontalSplitValue.Text = $"{ViewModel.HorizontalSplitRatio}%";
+            VerticalSplitValue.Text = $"{ViewModel.VerticalSplitRatio}%";
             LogLevelComboBox.SelectedIndex = ViewModel.LogLevel;
             LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
             ThemeComboBox.SelectedIndex = Services.ThemeService.Instance.CurrentTheme switch
@@ -32,6 +36,20 @@ namespace Rectangle.Windows.WinUI.Views
                 if (e.PropertyName == nameof(ViewModel.LogToFile))
                     LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
             };
+        }
+
+        private void HorizontalSplitSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        {
+            var v = (int)e.NewValue;
+            ViewModel.HorizontalSplitRatio = v;
+            HorizontalSplitValue.Text = $"{v}%";
+        }
+
+        private void VerticalSplitSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        {
+            var v = (int)e.NewValue;
+            ViewModel.VerticalSplitRatio = v;
+            VerticalSplitValue.Text = $"{v}%";
         }
 
         private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -75,6 +93,10 @@ namespace Rectangle.Windows.WinUI.Views
             if (result == ContentDialogResult.Primary)
             {
                 await ViewModel.ResetAllSettingsAsync();
+                HorizontalSplitSlider.Value = ViewModel.HorizontalSplitRatio;
+                VerticalSplitSlider.Value = ViewModel.VerticalSplitRatio;
+                HorizontalSplitValue.Text = $"{ViewModel.HorizontalSplitRatio}%";
+                VerticalSplitValue.Text = $"{ViewModel.VerticalSplitRatio}%";
                 LogLevelComboBox.SelectedIndex = ViewModel.LogLevel;
                 LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
                 LanguageComboBox.SelectedIndex = ViewModel.LanguageIndex;

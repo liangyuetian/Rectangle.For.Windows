@@ -11,11 +11,11 @@ public class CalculatorFactory
     {
         _calculators = new Dictionary<WindowAction, IRectCalculator>
         {
-            // 半屏
-            [WindowAction.LeftHalf] = new LeftHalfCalculator(),
-            [WindowAction.RightHalf] = new RightHalfCalculator(),
-            [WindowAction.TopHalf] = new TopHalfCalculator(),
-            [WindowAction.BottomHalf] = new BottomHalfCalculator(),
+            // 半屏（支持自定义分割比例）
+            [WindowAction.LeftHalf] = new LeftHalfCalculator(configService),
+            [WindowAction.RightHalf] = new RightHalfCalculator(configService),
+            [WindowAction.TopHalf] = new TopHalfCalculator(configService),
+            [WindowAction.BottomHalf] = new BottomHalfCalculator(configService),
             [WindowAction.CenterHalf] = new CenterHalfCalculator(),
 
             // 四角

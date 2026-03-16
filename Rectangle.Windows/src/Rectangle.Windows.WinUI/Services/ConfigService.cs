@@ -140,6 +140,10 @@ namespace Rectangle.Windows.WinUI.Services
     public class AppConfig
     {
         public int GapSize { get; set; } = 0;
+        /// <summary>水平分割比例（左半屏宽度占比），1-99，默认 50 表示 50:50</summary>
+        public int HorizontalSplitRatio { get; set; } = 50;
+        /// <summary>垂直分割比例（上半屏高度占比），1-99，默认 50 表示 50:50</summary>
+        public int VerticalSplitRatio { get; set; } = 50;
         public bool LaunchOnLogin { get; set; } = false;
         public List<string> IgnoredApps { get; set; } = new() { "Rectangle.Windows.exe", "Rectangle.Windows.WinUI.exe" };
         public Dictionary<string, ShortcutConfig> Shortcuts { get; set; } = new();
