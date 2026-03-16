@@ -125,9 +125,14 @@
                 </StackPanel>
             </Grid>
 
-            <Button Content="恢复默认快捷键"
-                   Style="{StaticResource RestoreButtonStyle}"
-                   Click="RestoreDefaults_Click"/>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <Button Content="检查快捷键冲突"
+                       Click="CheckConflicts_Click"
+                       Style="{StaticResource RestoreButtonStyle}"/>
+                <Button Content="恢复默认快捷键"
+                       Style="{StaticResource RestoreButtonStyle}"
+                       Click="RestoreDefaults_Click"/>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </Page>

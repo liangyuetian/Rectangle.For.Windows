@@ -13,6 +13,7 @@ public unsafe class HotkeyManager
     private readonly nint _hwnd;
     private readonly WindowManager _windowManager;
     private readonly ConfigService _configService;
+    private readonly HotkeyConflictDetector _conflictDetector;
     private readonly Dictionary<int, WindowAction> _hotkeyActions = new();
     private int _nextHotkeyId = 1;
     private SUBCLASSPROC? _subclassProc;
@@ -28,6 +29,7 @@ public unsafe class HotkeyManager
         _hwnd = hwnd;
         _windowManager = windowManager;
         _configService = configService;
+        _conflictDetector = new HotkeyConflictDetector();
 
         _subclassProc = new SUBCLASSPROC(WindowSubclassProc);
         PInvoke.SetWindowSubclass((HWND)_hwnd, _subclassProc, 0, 0);
@@ -43,6 +45,7 @@ public unsafe class HotkeyManager
         foreach (var id in _hotkeyActions.Keys.ToList())
         {
             PInvoke.UnregisterHotKey((HWND)_hwnd, id);
+            _conflictDetector.UnregisterHotkey(id);
         }
         _hotkeyActions.Clear();
         _nextHotkeyId = 1;
@@ -67,14 +70,36 @@ public unsafe class HotkeyManager
             if (!seen.Add(((uint)cfg.KeyCode, cfg.ModifierFlags))) continue;
 
             var modifiers = ToHotKeyModifiers(cfg.ModifierFlags);
+            var vk = (uint)cfg.KeyCode;
+
+            // 冲突检测（可选）
+            if (config.ConflictDetection.Enabled)
+            {
+                var conflict = _conflictDetector.DetectConflict(cfg.ModifierFlags, vk, kvp.Key);
+                if (conflict != null && config.ConflictDetection.ShowWarnings)
+                    Logger.Warning("HotkeyManager", $"快捷键冲突 [{kvp.Key}]: {conflict.Description}");
+            }
+
             var id = _nextHotkeyId++;
-            if (PInvoke.RegisterHotKey((HWND)_hwnd, id, modifiers, (uint)cfg.KeyCode))
+            if (PInvoke.RegisterHotKey((HWND)_hwnd, id, modifiers, vk))
+            {
                 _hotkeyActions[id] = action;
+                if (config.ConflictDetection.Enabled)
+                    _conflictDetector.RegisterHotkey(id, cfg.ModifierFlags, vk, kvp.Key);
+            }
             else
                 System.Diagnostics.Debug.WriteLine($"[HotkeyManager] 注册失败: {action} (vk=0x{cfg.KeyCode:X})");
         }
 
         System.Diagnostics.Debug.WriteLine($"[HotkeyManager] 已加载 {_hotkeyActions.Count} 个快捷键");
+    }
+
+    /// <summary>
+    /// 检测所有已注册快捷键的冲突
+    /// </summary>
+    public IReadOnlyList<HotkeyConflict> DetectAllConflicts()
+    {
+        return _conflictDetector.DetectAllConflicts();
     }
 
     private static HOT_KEY_MODIFIERS ToHotKeyModifiers(uint flags)

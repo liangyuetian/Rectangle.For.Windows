@@ -1,7 +1,10 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Rectangle.Windows.WinUI.ViewModels;
+using Rectangle.Windows.WinUI;
+using Rectangle.Windows.WinUI.Services;
 using System;
+using System.Linq;
 
 namespace Rectangle.Windows.WinUI.Views
 {
@@ -28,6 +31,38 @@ namespace Rectangle.Windows.WinUI.Views
         private void ShortcutEditor_ShortcutCleared(object sender, Controls.ShortcutClearedEventArgs e)
         {
             ViewModel.ClearShortcut(e.Action);
+        }
+
+        private async void CheckConflicts_Click(object sender, RoutedEventArgs e)
+        {
+            var conflicts = App.HotkeyManager?.DetectAllConflicts() ?? [];
+            if (conflicts.Count == 0)
+            {
+                var ok = new ContentDialog
+                {
+                    Title = "快捷键检查",
+                    Content = "未发现快捷键冲突。",
+                    PrimaryButtonText = "确定",
+                    XamlRoot = this.XamlRoot
+                };
+                await ok.ShowAsync();
+                return;
+            }
+
+            var msg = string.Join("\n\n", conflicts.Select(c =>
+                $"• {c.DisplayText}: {c.Description}"));
+            var dialog = new ContentDialog
+            {
+                Title = $"发现 {conflicts.Count} 个快捷键冲突",
+                Content = new ScrollViewer
+                {
+                    Content = new TextBlock { Text = msg, TextWrapping = TextWrapping.Wrap },
+                    MaxHeight = 300
+                },
+                PrimaryButtonText = "确定",
+                XamlRoot = this.XamlRoot
+            };
+            await dialog.ShowAsync();
         }
 
         private async void RestoreDefaults_Click(object sender, RoutedEventArgs e)
