@@ -20,6 +20,7 @@ namespace Rectangle.Windows.WinUI
         private static App? _instance;
         private TrayIconService? _trayIconService;
         private LastActiveWindowService? _lastActiveService;
+        private SnapDetectionService? _snapDetectionService;
         private Window? _settingsWindow;
         private Window? _hiddenWindow; // 隐藏窗口，保持应用运行
         private nint _hotkeyHwnd;
@@ -73,10 +74,8 @@ namespace Rectangle.Windows.WinUI
         {
             try
             {
-                if (_instance?._trayIconService != null)
-                {
-                    _instance._trayIconService.Dispose();
-                }
+                _instance?._snapDetectionService?.Dispose();
+                _instance?._trayIconService?.Dispose();
             }
             catch { }
             Environment.Exit(0);
@@ -126,6 +125,9 @@ namespace Rectangle.Windows.WinUI
             // 初始化托盘（传入 lastActiveService）
             _trayIconService = new TrayIconService(WindowManager!, ShowSettingsWindow, configService, _lastActiveService);
             _trayIconService.Initialize();
+
+            // 初始化拖拽吸附（含边缘预览）
+            _snapDetectionService = new SnapDetectionService(win32, WindowManager!, configService);
 
             // 输出所有操作项和快捷键到日志
             // LogAllShortcuts(configService);

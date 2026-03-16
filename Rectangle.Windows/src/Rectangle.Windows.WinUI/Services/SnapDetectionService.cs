@@ -83,7 +83,7 @@ namespace Rectangle.Windows.WinUI.Services
                 if (action.HasValue)
                 {
                     SnapPreviewRequested?.Invoke(action);
-                    ShowPreview(action.Value);
+                    ShowPreview(action.Value, e.X, e.Y);
                 }
                 else
                 {
@@ -210,14 +210,27 @@ namespace Rectangle.Windows.WinUI.Services
                 return GetWindowLong32(hWnd, nIndex);
         }
 
-        private void ShowPreview(WindowAction action)
+        private void ShowPreview(WindowAction action, int cursorX, int cursorY)
         {
-            // 预览窗口逻辑
+            try
+            {
+                _previewWindow ??= new Views.SnapPreviewWindow();
+                var workArea = _screenService.GetWorkAreaFromPoint(cursorX, cursorY);
+                _previewWindow.UpdatePreview(action, workArea);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("SnapDetectionService", $"显示预览失败: {ex.Message}");
+            }
         }
 
         private void HidePreview()
         {
-            // 隐藏预览窗口
+            try
+            {
+                _previewWindow?.HidePreview();
+            }
+            catch { }
         }
 
         public void Dispose()
