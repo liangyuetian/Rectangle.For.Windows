@@ -184,6 +184,7 @@ namespace Rectangle.Windows.WinUI.Services
         public int SpecifiedWidth { get; set; } = 1680;
         public int SpecifiedHeight { get; set; } = 1050;
         public string Theme { get; set; } = "Default";
+        public string Language { get; set; } = "zh-CN";
         public bool CheckForUpdates { get; set; } = true;
         public DateTime LastUpdateCheck { get; set; } = DateTime.MinValue;
         public AnimationConfig Animation { get; set; } = new();

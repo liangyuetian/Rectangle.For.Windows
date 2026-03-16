@@ -76,6 +76,7 @@ namespace Rectangle.Windows.WinUI.Views
                 await ViewModel.ResetAllSettingsAsync();
                 LogLevelComboBox.SelectedIndex = ViewModel.LogLevel;
                 LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
+                LanguageComboBox.SelectedIndex = ViewModel.LanguageIndex;
                 ThemeComboBox.SelectedIndex = Services.ThemeService.Instance.CurrentTheme switch
                 {
                     ElementTheme.Dark => 1,

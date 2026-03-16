@@ -17,6 +17,7 @@ namespace Rectangle.Windows.WinUI.ViewModels
         private bool _logToFile;
         private int _logLevel;
         private ElementTheme _currentTheme;
+        private int _languageIndex;
 
         public ObservableCollection<ShortcutItem> HalfScreenShortcuts { get; } = new();
         public ObservableCollection<ShortcutItem> CornerShortcuts { get; } = new();
@@ -59,6 +60,12 @@ namespace Rectangle.Windows.WinUI.ViewModels
         {
             get => _currentTheme;
             set { if (SetProperty(ref _currentTheme, value)) SaveThemeSetting(); }
+        }
+
+        public int LanguageIndex
+        {
+            get => _languageIndex;
+            set { if (SetProperty(ref _languageIndex, value)) SaveLanguageSetting(); }
         }
 
         public SettingsViewModel()
@@ -211,10 +218,12 @@ namespace Rectangle.Windows.WinUI.ViewModels
                 _gapSize = config.GapSize;
                 _logToFile = config.LogToFile;
                 _logLevel = config.LogLevel;
+                _languageIndex = config.Language switch { "en" => 1, _ => 0 };
                 OnPropertyChanged(nameof(LaunchOnLogin));
                 OnPropertyChanged(nameof(GapSize));
                 OnPropertyChanged(nameof(LogToFile));
                 OnPropertyChanged(nameof(LogLevel));
+                OnPropertyChanged(nameof(LanguageIndex));
             });
         }
 
@@ -365,6 +374,13 @@ namespace Rectangle.Windows.WinUI.ViewModels
         {
             ThemeService.Instance.SetTheme(_currentTheme);
             ThemeService.Instance.SaveThemeToConfig();
+        }
+
+        private void SaveLanguageSetting()
+        {
+            var config = _configService.Load();
+            config.Language = _languageIndex == 1 ? "en" : "zh-CN";
+            _configService.Save(config);
         }
     }
 
