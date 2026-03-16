@@ -185,15 +185,23 @@ public class WindowManager
             Logger.Info("WindowManager", $"检测到窗口被用户手动移动: {processName}");
         }
 
-        // 处理重复执行模式（循环尺寸）
-        var actualAction = GetActualAction(hwnd, action, windowMovedExternally);
-        if (actualAction != action)
+        // 处理重复执行模式（循环尺寸），支持多显示器轮询
+        var (actualAction, targetDisplayIndex) = GetActualAction(hwnd, action, windowMovedExternally);
+        if (actualAction != action || targetDisplayIndex.HasValue)
         {
-            Logger.Info("WindowManager", $"循环尺寸: {action} → {actualAction}");
+            Logger.Info("WindowManager", targetDisplayIndex.HasValue
+                ? $"循环尺寸(显示器{targetDisplayIndex.Value + 1}): {action} → {actualAction}"
+                : $"循环尺寸: {action} → {actualAction}");
         }
 
         var calculator = _factory.GetCalculator(actualAction);
         if (calculator == null) return;
+
+        // 多显示器轮询时使用指定显示器的工作区域
+        if (targetDisplayIndex.HasValue)
+        {
+            workArea = ApplyGap(GetWorkAreaByDisplayIndex(targetDisplayIndex.Value));
+        }
 
         // 保存或更新恢复点：
         // 1. 如果没有恢复点，保存当前位置
@@ -241,14 +249,14 @@ public class WindowManager
     }
 
     /// <summary>
-    /// 根据重复执行模式获取实际应该执行的操作
+    /// 根据重复执行模式获取实际应该执行的操作，以及目标显示器索引（多显示器轮询时）。
     /// </summary>
-    private WindowAction GetActualAction(nint hwnd, WindowAction requestedAction, bool windowMovedExternally)
+    private (WindowAction Action, int? TargetDisplayIndex) GetActualAction(nint hwnd, WindowAction requestedAction, bool windowMovedExternally)
     {
         // 如果窗口被用户手动移动，重置循环
         if (windowMovedExternally)
         {
-            return requestedAction;
+            return (requestedAction, null);
         }
 
         // 获取配置的重复执行模式
@@ -259,26 +267,55 @@ public class WindowManager
         if (mode != SubsequentExecutionMode.CycleSize ||
             !RepeatedExecutionsCalculator.SupportsCycle(requestedAction))
         {
-            return requestedAction;
+            return (requestedAction, null);
         }
 
         // 获取最后操作信息
         if (!_history.TryGetLastAction(hwnd, out var lastAction))
         {
-            // 第一次执行，返回原操作
-            return requestedAction;
+            return (requestedAction, null);
         }
 
         // 检查是否是同一个操作（只有连续按同一快捷键才触发循环）
-        if (lastAction.Action == requestedAction)
+        if (lastAction.Action != requestedAction)
         {
-            // 获取下一个循环操作
-            // 使用 lastAction.Count + 1 因为这是即将执行的次数
-            return RepeatedExecutionsCalculator.GetNextCycleAction(requestedAction, lastAction.Count + 1);
+            return (requestedAction, null);
         }
 
-        // 不同的操作，返回原操作
-        return requestedAction;
+        var workAreas = _win32.GetMonitorWorkAreas();
+        var numDisplays = workAreas.Count;
+        var executionCount = lastAction.Count + 1;
+
+        // 多显示器：参考 macOS Rectangle，所有支持循环的操作都在多显示器间轮询
+        // 轮询顺序：显示器1 所有位置 → 显示器2 所有位置 → ... → 显示器1
+        if (numDisplays > 1 && RepeatedExecutionsCalculator.SupportsCycle(requestedAction))
+        {
+            var cycle = RepeatedExecutionsCalculator.GetCycleGroup(requestedAction);
+            var groupLength = cycle.Length;
+            var totalCycleLength = groupLength * numDisplays;
+            var cycleIndex = (executionCount - 1) % totalCycleLength;
+            var displayIndex = cycleIndex / groupLength;
+            var positionInGroup = cycleIndex % groupLength;
+            var actualAction = cycle[positionInGroup];
+            return (actualAction, displayIndex);
+        }
+
+        // 单显示器：使用原有循环逻辑
+        var nextAction = RepeatedExecutionsCalculator.GetNextCycleAction(requestedAction, executionCount);
+        return (nextAction, null);
+    }
+
+    /// <summary>
+    /// 根据显示器索引获取工作区域
+    /// </summary>
+    private WorkArea GetWorkAreaByDisplayIndex(int index)
+    {
+        var workAreas = _win32.GetMonitorWorkAreas();
+        if (index < 0 || index >= workAreas.Count)
+        {
+            return workAreas.Count > 0 ? workAreas[0] : new WorkArea(0, 0, 1920, 1080);
+        }
+        return workAreas[index];
     }
 
     /// <summary>
@@ -443,49 +480,17 @@ public class WindowManager
             return;
         }
 
-        // 如果当前窗口已最大化，则恢复
-        if (_maximizedWindows.Contains(hwnd))
+        // 使用 Windows 原生最大化/恢复：按一下最大化、再按一下恢复
+        // IsMaximized 检测 WS_MAXIMIZE，支持本程序或用户点击标题栏最大化的窗口
+        if (_windowType.IsMaximized(hwnd))
         {
-            if (_history.TryGetRestoreRect(hwnd, out var rect))
-            {
-                _win32.SetWindowRect(hwnd, rect.X, rect.Y, rect.W, rect.H);
-                _history.RemoveLastAction(hwnd);
-            }
-            _maximizedWindows.Remove(hwnd);
+            _win32.ShowWindowRestore(hwnd);
             Logger.Info("WindowManager", $"恢复了 {processName}");
         }
         else
         {
-            // 保存当前位置到恢复点
-            var (x, y, w, h) = _win32.GetWindowRect(hwnd);
-
-            // 检测窗口是否被用户手动移动
-            bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
-
-            if (!_history.HasRestoreRect(hwnd) || windowMovedExternally)
-            {
-                _history.SaveRestoreRect(hwnd, x, y, w, h);
-                Logger.Debug("WindowManager", $"最大化前保存恢复点: ({x}, {y}, {w}, {h})");
-            }
-
-            // 标记此窗口由程序调整
-            _history.MarkAsProgramAdjusted(hwnd);
-
-            // 最大化
-            var workArea = _win32.GetWorkAreaFromWindow(hwnd);
-            workArea = ApplyGap(workArea);
-            var calculator = _factory.GetCalculator(WindowAction.Maximize);
-            if (calculator != null)
-            {
-                var target = calculator.Calculate(workArea, default, WindowAction.Maximize);
-                _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
-
-                // 记录程序操作信息
-                _history.RecordAction(hwnd, WindowAction.Maximize, target.X, target.Y, target.Width, target.Height);
-
-                _maximizedWindows.Add(hwnd);
-                Logger.Info("WindowManager", $"最大化了 {processName}");
-            }
+            _win32.ShowWindowMaximize(hwnd);
+            Logger.Info("WindowManager", $"最大化了 {processName}");
         }
     }
 
