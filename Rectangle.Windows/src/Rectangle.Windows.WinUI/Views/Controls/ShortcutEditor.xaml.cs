@@ -52,19 +52,28 @@ namespace Rectangle.Windows.WinUI.Views.Controls
 
         private async void ShortcutButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new ShortcutCaptureDialog();
-            dialog.XamlRoot = this.XamlRoot ?? App.MainWindow?.Content?.XamlRoot;
-            var result = await dialog.ShowAsync();
-
-            if (result == ContentDialogResult.Primary && dialog.CapturedShortcut != null)
+            // 进入捕获模式：记录快捷键时不触发窗口操作
+            App.HotkeyManager?.SetCapturingMode(true);
+            try
             {
-                ShortcutText = dialog.CapturedShortcut.DisplayText;
-                ShortcutChanged?.Invoke(this, new ShortcutChangedEventArgs
+                var dialog = new ShortcutCaptureDialog();
+                dialog.XamlRoot = this.XamlRoot ?? App.MainWindow?.Content?.XamlRoot;
+                var result = await dialog.ShowAsync();
+
+                if (result == ContentDialogResult.Primary && dialog.CapturedShortcut != null)
                 {
-                    Action = Action,
-                    KeyCode = dialog.CapturedShortcut.KeyCode,
-                    ModifierFlags = dialog.CapturedShortcut.ModifierFlags
-                });
+                    ShortcutText = dialog.CapturedShortcut.DisplayText;
+                    ShortcutChanged?.Invoke(this, new ShortcutChangedEventArgs
+                    {
+                        Action = Action,
+                        KeyCode = dialog.CapturedShortcut.KeyCode,
+                        ModifierFlags = dialog.CapturedShortcut.ModifierFlags
+                    });
+                }
+            }
+            finally
+            {
+                App.HotkeyManager?.SetCapturingMode(false);
             }
         }
 

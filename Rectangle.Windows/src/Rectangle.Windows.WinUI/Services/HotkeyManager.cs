@@ -14,6 +14,12 @@ public unsafe class HotkeyManager
     private readonly Dictionary<int, WindowAction> _hotkeyActions = new();
     private int _nextHotkeyId = 1;
     private SUBCLASSPROC? _subclassProc;
+    private bool _isCapturingMode;
+
+    /// <summary>
+    /// 设置捕获模式。在记录快捷键时启用，此时热键仅用于记录，不触发窗口操作。
+    /// </summary>
+    public void SetCapturingMode(bool capturing) => _isCapturingMode = capturing;
 
     public HotkeyManager(nint hwnd, WindowManager windowManager)
     {
@@ -69,6 +75,10 @@ public unsafe class HotkeyManager
         const uint WM_HOTKEY = 0x0312;
         if (uMsg == WM_HOTKEY)
         {
+            // 正在记录快捷键时，仅捕获不响应
+            if (_isCapturingMode)
+                return new LRESULT(0);
+
             var id = (int)wParam.Value;
             if (_hotkeyActions.TryGetValue(id, out var action))
             {
