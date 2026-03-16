@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Runtime.InteropServices;
 using Rectangle.Windows.WinUI.Core;
 using Windows.Win32;
@@ -11,6 +12,7 @@ public unsafe class HotkeyManager
 {
     private readonly nint _hwnd;
     private readonly WindowManager _windowManager;
+    private readonly ConfigService _configService;
     private readonly Dictionary<int, WindowAction> _hotkeyActions = new();
     private int _nextHotkeyId = 1;
     private SUBCLASSPROC? _subclassProc;
@@ -21,53 +23,68 @@ public unsafe class HotkeyManager
     /// </summary>
     public void SetCapturingMode(bool capturing) => _isCapturingMode = capturing;
 
-    public HotkeyManager(nint hwnd, WindowManager windowManager)
+    public HotkeyManager(nint hwnd, WindowManager windowManager, ConfigService configService)
     {
         _hwnd = hwnd;
         _windowManager = windowManager;
+        _configService = configService;
 
         _subclassProc = new SUBCLASSPROC(WindowSubclassProc);
         PInvoke.SetWindowSubclass((HWND)_hwnd, _subclassProc, 0, 0);
 
-        RegisterDefaultHotkeys();
+        LoadFromConfig();
     }
 
-    private void RegisterDefaultHotkeys()
+    /// <summary>
+    /// 从配置重新加载快捷键。配置变更时调用。
+    /// </summary>
+    public void ReloadFromConfig()
     {
-        var ca = HOT_KEY_MODIFIERS.MOD_CONTROL | HOT_KEY_MODIFIERS.MOD_ALT;
-
-        // 半屏
-        RegisterHotKey(ca, 0x25, WindowAction.LeftHalf);
-        RegisterHotKey(ca, 0x27, WindowAction.RightHalf);
-        RegisterHotKey(ca, 0x26, WindowAction.TopHalf);
-        RegisterHotKey(ca, 0x28, WindowAction.BottomHalf);
-        // 四角
-        RegisterHotKey(ca, 0x55, WindowAction.TopLeft);
-        RegisterHotKey(ca, 0x49, WindowAction.TopRight);
-        RegisterHotKey(ca, 0x4A, WindowAction.BottomLeft);
-        RegisterHotKey(ca, 0x4B, WindowAction.BottomRight);
-        // 三分屏
-        RegisterHotKey(ca, 0x44, WindowAction.FirstThird);
-        RegisterHotKey(ca, 0x46, WindowAction.CenterThird);
-        RegisterHotKey(ca, 0x47, WindowAction.LastThird);
-        RegisterHotKey(ca, 0x45, WindowAction.FirstTwoThirds);
-        RegisterHotKey(ca, 0x52, WindowAction.CenterTwoThirds);
-        RegisterHotKey(ca, 0x54, WindowAction.LastTwoThirds);
-        // 最大化与缩放
-        RegisterHotKey(ca, 0x0D, WindowAction.Maximize);
-        RegisterHotKey(ca, 0x43, WindowAction.Center);
-        RegisterHotKey(ca, 0x08, WindowAction.Restore);
-
-        Console.WriteLine("[HotkeyManager] 快捷键注册完成");
+        foreach (var id in _hotkeyActions.Keys.ToList())
+        {
+            PInvoke.UnregisterHotKey((HWND)_hwnd, id);
+        }
+        _hotkeyActions.Clear();
+        _nextHotkeyId = 1;
+        LoadFromConfig();
     }
 
-    private void RegisterHotKey(HOT_KEY_MODIFIERS modifiers, uint vk, WindowAction action)
+    private void LoadFromConfig()
     {
-        var id = _nextHotkeyId++;
-        if (PInvoke.RegisterHotKey((HWND)_hwnd, id, modifiers, vk))
-            _hotkeyActions[id] = action;
-        else
-            Console.WriteLine($"[HotkeyManager] 注册失败: {action} (vk=0x{vk:X})");
+        var config = _configService.Load();
+        var defaults = ConfigService.GetDefaultShortcuts();
+        var merged = new Dictionary<string, ShortcutConfig>(defaults);
+        foreach (var kvp in config.Shortcuts)
+            merged[kvp.Key] = kvp.Value;
+
+        var seen = new HashSet<(uint Vk, uint Modifiers)>();
+
+        foreach (var kvp in merged)
+        {
+            var cfg = kvp.Value;
+            if (!cfg.Enabled || cfg.KeyCode <= 0) continue;
+            if (!Enum.TryParse<WindowAction>(kvp.Key, out var action)) continue;
+            if (!seen.Add(((uint)cfg.KeyCode, cfg.ModifierFlags))) continue;
+
+            var modifiers = ToHotKeyModifiers(cfg.ModifierFlags);
+            var id = _nextHotkeyId++;
+            if (PInvoke.RegisterHotKey((HWND)_hwnd, id, modifiers, (uint)cfg.KeyCode))
+                _hotkeyActions[id] = action;
+            else
+                System.Diagnostics.Debug.WriteLine($"[HotkeyManager] 注册失败: {action} (vk=0x{cfg.KeyCode:X})");
+        }
+
+        System.Diagnostics.Debug.WriteLine($"[HotkeyManager] 已加载 {_hotkeyActions.Count} 个快捷键");
+    }
+
+    private static HOT_KEY_MODIFIERS ToHotKeyModifiers(uint flags)
+    {
+        HOT_KEY_MODIFIERS m = 0;
+        if ((flags & 0x0002) != 0) m |= HOT_KEY_MODIFIERS.MOD_CONTROL;
+        if ((flags & 0x0001) != 0) m |= HOT_KEY_MODIFIERS.MOD_ALT;
+        if ((flags & 0x0004) != 0) m |= HOT_KEY_MODIFIERS.MOD_SHIFT;
+        if ((flags & 0x0008) != 0) m |= HOT_KEY_MODIFIERS.MOD_WIN;
+        return m;
     }
 
     private LRESULT WindowSubclassProc(HWND hWnd, uint uMsg, WPARAM wParam, LPARAM lParam, nuint uIdSubclass, nuint dwRefData)
@@ -75,14 +92,12 @@ public unsafe class HotkeyManager
         const uint WM_HOTKEY = 0x0312;
         if (uMsg == WM_HOTKEY)
         {
-            // 正在记录快捷键时，仅捕获不响应
             if (_isCapturingMode)
                 return new LRESULT(0);
 
             var id = (int)wParam.Value;
             if (_hotkeyActions.TryGetValue(id, out var action))
             {
-                Console.WriteLine($"[HotkeyManager] 热键触发: {action}");
                 _windowManager.Execute(action);
                 return new LRESULT(0);
             }

@@ -60,7 +60,8 @@ namespace Rectangle.Windows.WinUI.Views.Controls
                 dialog.XamlRoot = this.XamlRoot ?? App.MainWindow?.Content?.XamlRoot;
                 var result = await dialog.ShowAsync();
 
-                if (result == ContentDialogResult.Primary && dialog.CapturedShortcut != null)
+                // 用户按快捷键录制成功时 Hide() 返回 None；点击「取消」返回 Primary 且 CapturedShortcut 为 null
+                if (dialog.CapturedShortcut != null)
                 {
                     ShortcutText = dialog.CapturedShortcut.DisplayText;
                     ShortcutChanged?.Invoke(this, new ShortcutChangedEventArgs

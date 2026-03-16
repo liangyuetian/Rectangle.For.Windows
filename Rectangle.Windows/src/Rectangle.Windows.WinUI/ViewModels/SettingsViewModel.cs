@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
+using Rectangle.Windows.WinUI;
 using Rectangle.Windows.WinUI.Services;
 
 namespace Rectangle.Windows.WinUI.ViewModels
@@ -62,7 +63,7 @@ namespace Rectangle.Windows.WinUI.ViewModels
 
         public SettingsViewModel()
         {
-            _configService = new ConfigService();
+            _configService = App.ConfigService ?? new ConfigService();
             InitializeDefaultShortcuts();
         }
 

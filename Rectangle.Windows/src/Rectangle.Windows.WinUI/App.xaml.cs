@@ -15,6 +15,7 @@ namespace Rectangle.Windows.WinUI
         public static Window? MainWindow => _instance?._settingsWindow;
         public static WindowManager? WindowManager { get; private set; }
         public static HotkeyManager? HotkeyManager { get; private set; }
+        public static ConfigService? ConfigService { get; private set; }
 
         private static App? _instance;
         private TrayIconService? _trayIconService;
@@ -83,7 +84,9 @@ namespace Rectangle.Windows.WinUI
 
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
-            var configService = new ConfigService();
+            ConfigService = new ConfigService();
+            ConfigService.ConfigChanged += (_, _) => HotkeyManager?.ReloadFromConfig();
+            var configService = ConfigService;
             Logger.InitializeFromConfig(configService);
             Logger.Info("App", "应用启动");
 
@@ -113,7 +116,7 @@ namespace Rectangle.Windows.WinUI
             appWindow.Hide();
 
             _hotkeyHwnd = (nint)WinRT.Interop.WindowNative.GetWindowHandle(_hiddenWindow);
-            HotkeyManager = new HotkeyManager(_hotkeyHwnd, WindowManager!);
+            HotkeyManager = new HotkeyManager(_hotkeyHwnd, WindowManager!, configService);
 
             // 初始化托盘（传入 lastActiveService）
             _trayIconService = new TrayIconService(WindowManager!, ShowSettingsWindow, configService, _lastActiveService);
