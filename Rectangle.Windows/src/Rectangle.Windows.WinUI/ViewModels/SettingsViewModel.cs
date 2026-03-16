@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Rectangle.Windows.WinUI.Services;
 
@@ -156,26 +158,47 @@ namespace Rectangle.Windows.WinUI.ViewModels
 
         public async Task LoadShortcutsAsync()
         {
-            await Task.Run(() =>
+            var merged = await Task.Run(() =>
             {
                 var config = _configService.Load();
                 var defaults = ConfigService.GetDefaultShortcuts();
-                var merged = new System.Collections.Generic.Dictionary<string, ShortcutConfig>(defaults);
-                foreach (var kvp in config.Shortcuts) merged[kvp.Key] = kvp.Value;
-
-                UpdateShortcutCollection(HalfScreenShortcuts, merged);
-                UpdateShortcutCollection(CornerShortcuts, merged);
-                UpdateShortcutCollection(ThirdShortcuts, merged);
-                UpdateShortcutCollection(FourthShortcuts, merged);
-                UpdateShortcutCollection(SixthShortcuts, merged);
-                UpdateShortcutCollection(EighthShortcuts, merged);
-                UpdateShortcutCollection(NinthShortcuts, merged);
-                UpdateShortcutCollection(MaximizeShortcuts, merged);
-                UpdateShortcutCollection(ResizeShortcuts, merged);
-                UpdateShortcutCollection(MoveShortcuts, merged);
-                UpdateShortcutCollection(DisplayShortcuts, merged);
-                UpdateShortcutCollection(OtherShortcuts, merged);
+                var dict = new Dictionary<string, ShortcutConfig>(defaults);
+                foreach (var kvp in config.Shortcuts) dict[kvp.Key] = kvp.Value;
+                return dict;
             });
+
+            // 在 UI 线程更新集合，确保快捷键正确显示
+            var dispatcher = DispatcherQueue.GetForCurrentThread();
+            if (dispatcher.HasThreadAccess)
+            {
+                UpdateAllShortcutCollections(merged);
+            }
+            else
+            {
+                var tcs = new TaskCompletionSource<bool>();
+                dispatcher.TryEnqueue(() =>
+                {
+                    UpdateAllShortcutCollections(merged);
+                    tcs.SetResult(true);
+                });
+                await tcs.Task;
+            }
+        }
+
+        private void UpdateAllShortcutCollections(Dictionary<string, ShortcutConfig> merged)
+        {
+            UpdateShortcutCollection(HalfScreenShortcuts, merged);
+            UpdateShortcutCollection(CornerShortcuts, merged);
+            UpdateShortcutCollection(ThirdShortcuts, merged);
+            UpdateShortcutCollection(FourthShortcuts, merged);
+            UpdateShortcutCollection(SixthShortcuts, merged);
+            UpdateShortcutCollection(EighthShortcuts, merged);
+            UpdateShortcutCollection(NinthShortcuts, merged);
+            UpdateShortcutCollection(MaximizeShortcuts, merged);
+            UpdateShortcutCollection(ResizeShortcuts, merged);
+            UpdateShortcutCollection(MoveShortcuts, merged);
+            UpdateShortcutCollection(DisplayShortcuts, merged);
+            UpdateShortcutCollection(OtherShortcuts, merged);
         }
 
         public async Task LoadSettingsAsync()
@@ -195,7 +218,7 @@ namespace Rectangle.Windows.WinUI.ViewModels
         }
 
         private void UpdateShortcutCollection(ObservableCollection<ShortcutItem> collection,
-            System.Collections.Generic.Dictionary<string, ShortcutConfig> shortcuts)
+            Dictionary<string, ShortcutConfig> shortcuts)
         {
             foreach (var item in collection)
             {
@@ -206,22 +229,29 @@ namespace Rectangle.Windows.WinUI.ViewModels
             }
         }
 
-        private string FormatShortcut(int keyCode, uint modifiers)
+        private static string FormatShortcut(int keyCode, uint modifiers)
         {
-            var parts = new System.Collections.Generic.List<string>();
+            var parts = new List<string>();
             if ((modifiers & 0x0002) != 0) parts.Add("Ctrl");
             if ((modifiers & 0x0001) != 0) parts.Add("Alt");
             if ((modifiers & 0x0004) != 0) parts.Add("Shift");
             if ((modifiers & 0x0008) != 0) parts.Add("Win");
-
-            var keyMap = new System.Collections.Generic.Dictionary<int, string>
-            {
-                [0x25] = "←", [0x26] = "↑", [0x27] = "→", [0x28] = "↓",
-                [0x0D] = "Enter", [0x08] = "Back", [0x2E] = "Del", [0x20] = "Space"
-            };
-            parts.Add(keyMap.TryGetValue(keyCode, out var k) ? k : $"0x{keyCode:X}");
+            parts.Add(VkToDisplayString(keyCode));
             return string.Join("+", parts);
         }
+
+        private static string VkToDisplayString(int vk) => vk switch
+        {
+            0x25 => "←", 0x26 => "↑", 0x27 => "→", 0x28 => "↓",
+            0x0D => "Enter", 0x08 => "Back", 0x2E => "Del", 0x20 => "Space",
+            0xBB => "=", 0xBD => "-",
+            0x70 => "F1",  0x71 => "F2",  0x72 => "F3",  0x73 => "F4",
+            0x74 => "F5",  0x75 => "F6",  0x76 => "F7",  0x77 => "F8",
+            0x78 => "F9",  0x79 => "F10", 0x7A => "F11", 0x7B => "F12",
+            >= 0x41 and <= 0x5A => ((char)vk).ToString(),
+            >= 0x30 and <= 0x39 => ((char)vk).ToString(),
+            _ => $"0x{vk:X}"
+        };
 
         public void UpdateShortcut(string action, int keyCode, uint modifierFlags)
         {

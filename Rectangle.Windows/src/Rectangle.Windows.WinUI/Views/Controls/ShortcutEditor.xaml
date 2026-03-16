@@ -13,6 +13,7 @@
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="Auto"/>
         </Grid.ColumnDefinitions>
 
         <FontIcon Grid.Column="0"
@@ -25,13 +26,21 @@
                    Text="{x:Bind DisplayName, Mode=OneWay}"
                    VerticalAlignment="Center"/>
 
-        <Button Grid.Column="2"
+        <!-- 快捷键显示：右侧显示当前快捷键 -->
+        <TextBlock Grid.Column="2"
+                   Text="{x:Bind ShortcutText, Mode=OneWay}"
+                   VerticalAlignment="Center"
+                   Margin="0,0,12,0"
+                   FontSize="13"
+                   Foreground="{ThemeResource TextFillColorSecondary}"/>
+
+        <Button Grid.Column="3"
                 x:Name="ShortcutButton"
-                Content="{x:Bind ShortcutText, Mode=OneWay}"
+                Content="记录"
                 Style="{StaticResource ShortcutInputStyle}"
                 Click="ShortcutButton_Click"/>
 
-        <Button Grid.Column="3"
+        <Button Grid.Column="4"
                 x:Name="ClearButton"
                 Content="&#xE711;"
                 Style="{StaticResource ClearButtonStyle}"
