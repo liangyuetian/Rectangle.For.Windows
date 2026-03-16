@@ -12,6 +12,7 @@ namespace Rectangle.Windows.WinUI.Services;
 [JsonSerializable(typeof(StatisticsReport))]
 [JsonSerializable(typeof(LogEntry))]
 [JsonSerializable(typeof(object))]
+[JsonSourceGenerationOptions(WriteIndented = true)]
 internal partial class AppJsonContext : JsonSerializerContext
 {
 }

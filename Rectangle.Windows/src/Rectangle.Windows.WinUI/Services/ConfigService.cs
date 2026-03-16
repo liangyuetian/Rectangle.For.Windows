@@ -51,8 +51,7 @@ namespace Rectangle.Windows.WinUI.Services
                 var dir = Path.GetDirectoryName(_configPath);
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
-                var options = new JsonSerializerOptions(AppJsonContext.Default.Options) { WriteIndented = true };
-                var json = JsonSerializer.Serialize(config, typeof(AppConfig), options);
+                var json = JsonSerializer.Serialize(config, AppJsonContext.Default.AppConfig);
                 File.WriteAllText(_configPath, json);
                 ConfigChanged?.Invoke(this, config);
             }
@@ -70,8 +69,7 @@ namespace Rectangle.Windows.WinUI.Services
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 using var stream = File.Create(_configPath);
-                var options = new JsonSerializerOptions(AppJsonContext.Default.Options) { WriteIndented = true };
-                await JsonSerializer.SerializeAsync(stream, config, typeof(AppConfig), options);
+                await JsonSerializer.SerializeAsync(stream, config, AppJsonContext.Default.AppConfig);
                 ConfigChanged?.Invoke(this, config);
             }
             catch (Exception ex)

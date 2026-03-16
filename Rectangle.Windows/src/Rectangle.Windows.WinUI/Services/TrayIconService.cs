@@ -163,15 +163,12 @@ namespace Rectangle.Windows.WinUI.Services
                             continue;
                         }
 
-                        // 添加快捷键文本（KeyboardAcceleratorTextOverride 在托盘菜单中可能不显示，同时追加到 Text 确保可见）
+                        // 添加快捷键文本到右侧
                         var shortcutText = GetShortcutText(tag, shortcuts);
                         if (!string.IsNullOrEmpty(shortcutText))
                         {
                             fi.KeyboardAcceleratorTextOverride = shortcutText;
-                            // 追加到 Text 作为备用，格式：左半屏    Ctrl+Alt+Left
-                            var baseText = fi.Text ?? string.Empty;
-                            fi.Text = $"{baseText}    {shortcutText}";
-                            Logger.Info("TrayIconService", $"菜单项 '{baseText}' 设置快捷键: {shortcutText}");
+                            Logger.Info("TrayIconService", $"菜单项 '{fi.Text}' 设置快捷键: {shortcutText}");
                         }
 
                         // 使用 Command 而非 Click（托盘菜单下 Click 可能不触发）
