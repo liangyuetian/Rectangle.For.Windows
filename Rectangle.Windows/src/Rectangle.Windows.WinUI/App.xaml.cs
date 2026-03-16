@@ -95,8 +95,13 @@ namespace Rectangle.Windows.WinUI
             var win32 = new Win32WindowService();
             var factory = new CalculatorFactory(configService);
             var history = new WindowHistory();
+            var operationHistory = new OperationHistoryManager
+            {
+                MaxHistoryCount = configService.Load().History.MaxHistoryCount
+            };
             WindowManager = new WindowManager(win32, factory, history);
             WindowManager.SetConfigService(configService);
+            WindowManager.SetOperationHistory(operationHistory);
 
             // 初始化活动窗口跟踪服务
             _lastActiveService = new LastActiveWindowService();

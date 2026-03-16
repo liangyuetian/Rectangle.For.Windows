@@ -21,6 +21,7 @@ public class WindowManager
     private readonly HashSet<nint> _maximizedWindows = new();
     private LastActiveWindowService? _lastActiveService;
     private ConfigService? _configService;
+    private OperationHistoryManager? _operationHistory;
     private int _gapSize = 0;
 
     public WindowManager(Win32WindowService win32, CalculatorFactory factory, WindowHistory history)
@@ -41,6 +42,11 @@ public class WindowManager
     {
         _configService = configService;
         ReloadConfig();
+    }
+
+    public void SetOperationHistory(OperationHistoryManager manager)
+    {
+        _operationHistory = manager;
     }
 
     public void ReloadConfig()
@@ -139,6 +145,12 @@ public class WindowManager
         if (action == WindowAction.PreviousDisplay)
         {
             ExecutePreviousDisplay(targetHwnd);
+            return;
+        }
+
+        if (action == WindowAction.Undo || action == WindowAction.Redo)
+        {
+            ExecuteUndoRedo(action);
             return;
         }
 
@@ -241,6 +253,9 @@ public class WindowManager
         // 记录程序操作信息（包括操作类型、次数、时间）
         // 注意：记录的是原始 action，而不是 actualAction，这样才能正确计数
         _history.RecordAction(hwnd, action, target.X, target.Y, target.Width, target.Height);
+
+        // 记录到操作历史（用于撤销/重做）
+        RecordToOperationHistory(action, hwnd, current, target, processName);
 
         // 根据配置移动光标到窗口中心
         MoveCursorIfEnabled(hwnd, action);
@@ -373,6 +388,76 @@ public class WindowManager
 
     [DllImport("user32.dll")]
     private static extern bool MessageBeep(uint uType);
+
+    /// <summary>
+    /// 执行撤销或重做
+    /// </summary>
+    private void ExecuteUndoRedo(WindowAction action)
+    {
+        var config = _configService?.Load();
+        if (config?.History.EnableUndo != true || _operationHistory == null)
+        {
+            PlayBeep();
+            return;
+        }
+
+        var item = action == WindowAction.Undo ? _operationHistory.Undo() : _operationHistory.Redo();
+        if (item == null)
+        {
+            PlayBeep();
+            return;
+        }
+
+        if (!PInvoke.IsWindow((HWND)item.WindowHandle))
+        {
+            Logger.Info("WindowManager", "撤销/重做目标窗口已关闭，跳过");
+            return;
+        }
+
+        var rect = action == WindowAction.Undo ? item.RectBefore : item.RectAfter;
+        if (_win32.SetWindowRect(item.WindowHandle, rect.X, rect.Y, rect.Width, rect.Height))
+            Logger.Info("WindowManager", $"已{(action == WindowAction.Undo ? "撤销" : "重做")}: {item.Description}");
+        else
+            PlayBeep();
+    }
+
+    /// <summary>
+    /// 记录操作到撤销/重做历史
+    /// </summary>
+    private void RecordToOperationHistory(WindowAction action, nint hwnd, WindowRect rectBefore, WindowRect rectAfter, string processName)
+    {
+        var config = _configService?.Load();
+        if (config?.History.Enabled != true || _operationHistory == null) return;
+
+        _operationHistory.MaxHistoryCount = config.History.MaxHistoryCount;
+        var title = GetWindowTitle(hwnd);
+        var windowClass = GetWindowClass(hwnd);
+        _operationHistory.RecordOperation(action, hwnd, title, windowClass, rectBefore, rectAfter);
+    }
+
+    private static string GetWindowTitle(nint hwnd)
+    {
+        try
+        {
+            var length = PInvoke.GetWindowTextLength((HWND)hwnd);
+            if (length <= 0) return "";
+            var buffer = new char[length + 1];
+            PInvoke.GetWindowText((HWND)hwnd, buffer, length + 1);
+            return new string(buffer, 0, length);
+        }
+        catch { return ""; }
+    }
+
+    private static string GetWindowClass(nint hwnd)
+    {
+        try
+        {
+            var buffer = new char[256];
+            var len = PInvoke.GetClassName((HWND)hwnd, buffer, buffer.Length);
+            return len > 0 ? new string(buffer, 0, len) : "";
+        }
+       catch { return ""; }
+    }
 
     /// <summary>
     /// 处理固定尺寸窗口：只移动位置，保持原有尺寸

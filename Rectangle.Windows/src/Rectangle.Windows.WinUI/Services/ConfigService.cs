@@ -133,6 +133,8 @@ namespace Rectangle.Windows.WinUI.Services
                 ["MoveRight"]         = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["MoveUp"]            = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
                 ["MoveDown"]          = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
+                ["Undo"]              = new() { KeyCode = 0x5A, ModifierFlags = ctrlAlt, Enabled = true },
+                ["Redo"]              = new() { KeyCode = 0x5A, ModifierFlags = ctrlAltShift, Enabled = true },
             };
         }
     }
