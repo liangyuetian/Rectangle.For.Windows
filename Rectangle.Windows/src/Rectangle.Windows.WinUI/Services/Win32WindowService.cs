@@ -59,6 +59,24 @@ public unsafe class Win32WindowService
         return result;
     }
 
+    /// <summary>
+    /// 使用 Windows 原生最大化（SW_MAXIMIZE），按一下最大化、再按一下恢复。
+    /// </summary>
+    public void ShowWindowMaximize(nint hwnd)
+    {
+        if (hwnd == 0) return;
+        PInvoke.ShowWindow((HWND)hwnd, SHOW_WINDOW_CMD.SW_MAXIMIZE);
+    }
+
+    /// <summary>
+    /// 使用 Windows 原生恢复（SW_RESTORE）。
+    /// </summary>
+    public void ShowWindowRestore(nint hwnd)
+    {
+        if (hwnd == 0) return;
+        PInvoke.ShowWindow((HWND)hwnd, SHOW_WINDOW_CMD.SW_RESTORE);
+    }
+
     public WorkArea GetWorkAreaFromWindow(nint hwnd)
     {
         var hMonitor = PInvoke.MonitorFromWindow((HWND)hwnd, MONITOR_FROM_FLAGS.MONITOR_DEFAULTTONEAREST);
