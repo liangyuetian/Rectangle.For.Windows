@@ -301,6 +301,34 @@ namespace Rectangle.Windows.WinUI.ViewModels
             await LoadShortcutsAsync();
         }
 
+        /// <summary>
+        /// 重置所有设置为默认值。
+        /// </summary>
+        public async Task ResetAllSettingsAsync()
+        {
+            await Task.Run(() =>
+            {
+                var config = new AppConfig
+                {
+                    Shortcuts = ConfigService.GetDefaultShortcuts()
+                };
+                _configService.Save(config);
+
+                // 同步登录启动项到注册表
+                try
+                {
+                    using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                        @"Software\Microsoft\Windows\CurrentVersion\Run", true);
+                    key?.DeleteValue("Rectangle", false);
+                }
+                catch { }
+            });
+
+            await LoadSettingsAsync();
+            await LoadShortcutsAsync();
+            ThemeService.Instance.LoadThemeFromConfig();
+        }
+
         private void SaveLaunchOnLoginSetting()
         {
             try

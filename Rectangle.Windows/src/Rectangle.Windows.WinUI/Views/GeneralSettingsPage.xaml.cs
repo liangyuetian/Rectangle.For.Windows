@@ -20,6 +20,12 @@ namespace Rectangle.Windows.WinUI.Views
             await ViewModel.LoadSettingsAsync();
             LogLevelComboBox.SelectedIndex = ViewModel.LogLevel;
             LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
+            ThemeComboBox.SelectedIndex = Services.ThemeService.Instance.CurrentTheme switch
+            {
+                ElementTheme.Dark => 1,
+                ElementTheme.Light => 2,
+                _ => 0
+            };
             ViewModel.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(ViewModel.LogToFile))
@@ -67,7 +73,15 @@ namespace Rectangle.Windows.WinUI.Views
             var result = await dialog.ShowAsync();
             if (result == ContentDialogResult.Primary)
             {
-                // TODO: Implement reset settings
+                await ViewModel.ResetAllSettingsAsync();
+                LogLevelComboBox.SelectedIndex = ViewModel.LogLevel;
+                LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
+                ThemeComboBox.SelectedIndex = Services.ThemeService.Instance.CurrentTheme switch
+                {
+                    ElementTheme.Dark => 1,
+                    ElementTheme.Light => 2,
+                    _ => 0
+                };
             }
         }
 
