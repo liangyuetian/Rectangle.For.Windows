@@ -12,6 +12,7 @@
         IconSource="Assets/AppIcon.ico"
         NoLeftClickDelay="True"
         LeftClickCommand="{StaticResource ShowSettingsCommand}"
+        ContextMenuMode="SecondWindow"
     >
         <tb:TaskbarIcon.ContextFlyout >
             <MenuFlyout>
