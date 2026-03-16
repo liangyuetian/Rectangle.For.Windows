@@ -117,6 +117,24 @@ public static class RepeatedExecutionsCalculator
     };
 
     /// <summary>
+    /// 左右移动循环序列：MoveLeft → MoveRight → MoveLeft（参考 macOS Rectangle，支持跨显示器轮询）
+    /// </summary>
+    private static readonly WindowAction[] MoveLeftRightCycle =
+    {
+        WindowAction.MoveLeft,
+        WindowAction.MoveRight
+    };
+
+    /// <summary>
+    /// 上下移动循环序列：MoveUp → MoveDown → MoveUp
+    /// </summary>
+    private static readonly WindowAction[] MoveUpDownCycle =
+    {
+        WindowAction.MoveUp,
+        WindowAction.MoveDown
+    };
+
+    /// <summary>
     /// 所有循环组的映射
     /// </summary>
     private static readonly Dictionary<WindowAction, WindowAction[]> CycleGroups = new()
@@ -179,6 +197,14 @@ public static class RepeatedExecutionsCalculator
         // 垂直三分之二循环组
         { WindowAction.TopVerticalTwoThirds, VerticalTwoThirdsCycle },
         { WindowAction.BottomVerticalTwoThirds, VerticalTwoThirdsCycle },
+
+        // 左右移动循环组（参考 macOS Rectangle MoveLeftRightCalculation）
+        { WindowAction.MoveLeft, MoveLeftRightCycle },
+        { WindowAction.MoveRight, MoveLeftRightCycle },
+
+        // 上下移动循环组
+        { WindowAction.MoveUp, MoveUpDownCycle },
+        { WindowAction.MoveDown, MoveUpDownCycle },
     };
 
     /// <summary>

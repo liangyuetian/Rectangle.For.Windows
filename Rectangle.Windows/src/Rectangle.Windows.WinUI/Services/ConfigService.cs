@@ -144,7 +144,8 @@ namespace Rectangle.Windows.WinUI.Services
         public List<string> IgnoredApps { get; set; } = new() { "Rectangle.Windows.exe" };
         public Dictionary<string, ShortcutConfig> Shortcuts { get; set; } = new();
         public SnapAreaConfig SnapAreas { get; set; } = new();
-        public int SubsequentExecutionMode { get; set; } = 0;
+        /// <summary>重复执行模式：0=None 1=CycleSize(循环尺寸，支持多显示器轮询) 2=CyclePosition 3=CycleDisplay</summary>
+        public int SubsequentExecutionMode { get; set; } = 1;
         public float AlmostMaximizeHeight { get; set; } = 0.9f;
         public float AlmostMaximizeWidth { get; set; } = 0.9f;
         public float MinimumWindowWidth { get; set; } = 0;
