@@ -334,6 +334,7 @@ public unsafe class LastActiveWindowService : IDisposable
         // 已知的系统进程（这些进程的窗口不应被记录）
         // 注意：explorer 已从排除列表移除，因为资源管理器文件夹窗口是有效的应用窗口
         // 通过 IsSystemWindowClass 排除任务栏和桌面等系统窗口
+        // Rectangle 本应用：右键托盘菜单时不应覆盖用户之前选中的活动窗口
         string[] systemProcesses = {
             "ShellExperienceHost",
             "SearchApp",
@@ -343,6 +344,8 @@ public unsafe class LastActiveWindowService : IDisposable
             "ApplicationFrameHost",
             "SystemSettings",
             "WindowsInternal.Shell", // Shell 组件
+            "Rectangle.Windows.WinUI", // 本应用 WinUI 版
+            "Rectangle.Windows",       // 本应用 WPF 版
         };
 
         foreach (var sysProc in systemProcesses)
