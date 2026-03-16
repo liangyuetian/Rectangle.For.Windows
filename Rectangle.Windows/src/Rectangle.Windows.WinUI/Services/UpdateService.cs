@@ -83,13 +83,24 @@ namespace Rectangle.Windows.WinUI.Services
 
             for (int i = 0; i < Math.Min(latestParts.Length, currentParts.Length); i++)
             {
-                if (int.Parse(latestParts[i]) > int.Parse(currentParts[i]))
-                    return true;
-                if (int.Parse(latestParts[i]) < int.Parse(currentParts[i]))
-                    return false;
+                // 剥离预发布后缀（如 -beta、-alpha）后解析数字部分
+                var latestNum = ParseVersionPart(latestParts[i]);
+                var currentNum = ParseVersionPart(currentParts[i]);
+                if (latestNum > currentNum) return true;
+                if (latestNum < currentNum) return false;
             }
 
             return latestParts.Length > currentParts.Length;
+        }
+
+        /// <summary>
+        /// 解析版本号片段，支持 "1"、"2-beta" 等格式，非数字部分视为 0。
+        /// </summary>
+        private static int ParseVersionPart(string part)
+        {
+            if (string.IsNullOrEmpty(part)) return 0;
+            var numPart = part.Split('-', '+')[0].Trim();
+            return int.TryParse(numPart, out var n) ? n : 0;
         }
 
         private async Task ShowUpdateDialog(UpdateInfo info)

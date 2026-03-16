@@ -141,7 +141,7 @@ namespace Rectangle.Windows.WinUI.Services
     {
         public int GapSize { get; set; } = 0;
         public bool LaunchOnLogin { get; set; } = false;
-        public List<string> IgnoredApps { get; set; } = new() { "Rectangle.Windows.exe" };
+        public List<string> IgnoredApps { get; set; } = new() { "Rectangle.Windows.exe", "Rectangle.Windows.WinUI.exe" };
         public Dictionary<string, ShortcutConfig> Shortcuts { get; set; } = new();
         public SnapAreaConfig SnapAreas { get; set; } = new();
         /// <summary>重复执行模式：0=None 1=CycleSize(循环尺寸，支持多显示器轮询) 2=CyclePosition 3=CycleDisplay</summary>

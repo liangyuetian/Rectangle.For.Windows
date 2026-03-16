@@ -133,10 +133,7 @@ public unsafe class LastActiveWindowService : IDisposable
                     }
                 }
                 
-                // 在控制台打印窗口信息
-                Console.WriteLine($"[活动窗口更新] 句柄: 0x{newHwnd:X} | 标题: {displayTitle} | 进程: {processName}");
-                
-                Logger.Debug("LastActiveWindowService", $"更新有效窗口: {_lastValidWindowHwnd} ({processName})");
+                Logger.Debug("LastActiveWindowService", $"更新有效窗口: 0x{newHwnd:X} | 标题: {displayTitle} | 进程: {processName}");
             }
         }
         else

@@ -33,7 +33,7 @@ public unsafe class Win32WindowService
 
     public bool SetWindowRect(nint hwnd, int x, int y, int width, int height)
     {
-        Console.WriteLine($"[SetWindowRect] hwnd={hwnd} -> ({x}, {y}, {width}, {height})");
+        Logger.Debug("Win32WindowService", $"SetWindowRect hwnd={hwnd} -> ({x}, {y}, {width}, {height})");
         if (hwnd == 0) return false;
 
         var hWnd = (HWND)hwnd;
@@ -51,7 +51,7 @@ public unsafe class Win32WindowService
 
         if (!result)
         {
-            Console.WriteLine($"[SetWindowRect] 失败，错误码: {Marshal.GetLastWin32Error()}，重试...");
+            Logger.Warning("Win32WindowService", $"SetWindowRect 失败，错误码: {Marshal.GetLastWin32Error()}，重试...");
             result = PInvoke.SetWindowPos(hWnd, HWND.Null, x, y, width, height,
                 SET_WINDOW_POS_FLAGS.SWP_NOZORDER | SET_WINDOW_POS_FLAGS.SWP_FRAMECHANGED);
         }
