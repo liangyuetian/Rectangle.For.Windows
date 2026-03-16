@@ -28,7 +28,7 @@ namespace Rectangle.Windows.WinUI.Services
             try
             {
                 var json = File.ReadAllText(_configPath);
-                return JsonSerializer.Deserialize<AppConfig>(json) ?? CreateDefaultConfig();
+                return JsonSerializer.Deserialize(json, AppJsonContext.Default.AppConfig) ?? CreateDefaultConfig();
             }
             catch { return CreateDefaultConfig(); }
         }
@@ -39,7 +39,7 @@ namespace Rectangle.Windows.WinUI.Services
             try
             {
                 using var stream = File.OpenRead(_configPath);
-                return await JsonSerializer.DeserializeAsync<AppConfig>(stream) ?? CreateDefaultConfig();
+                return await JsonSerializer.DeserializeAsync(stream, AppJsonContext.Default.AppConfig) ?? CreateDefaultConfig();
             }
             catch { return CreateDefaultConfig(); }
         }
@@ -51,7 +51,8 @@ namespace Rectangle.Windows.WinUI.Services
                 var dir = Path.GetDirectoryName(_configPath);
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
-                var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+                var options = new JsonSerializerOptions(AppJsonContext.Default.Options) { WriteIndented = true };
+                var json = JsonSerializer.Serialize(config, typeof(AppConfig), options);
                 File.WriteAllText(_configPath, json);
                 ConfigChanged?.Invoke(this, config);
             }
@@ -69,7 +70,8 @@ namespace Rectangle.Windows.WinUI.Services
                 if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
                     Directory.CreateDirectory(dir);
                 using var stream = File.Create(_configPath);
-                await JsonSerializer.SerializeAsync(stream, config, new JsonSerializerOptions { WriteIndented = true });
+                var options = new JsonSerializerOptions(AppJsonContext.Default.Options) { WriteIndented = true };
+                await JsonSerializer.SerializeAsync(stream, config, typeof(AppConfig), options);
                 ConfigChanged?.Invoke(this, config);
             }
             catch (Exception ex)

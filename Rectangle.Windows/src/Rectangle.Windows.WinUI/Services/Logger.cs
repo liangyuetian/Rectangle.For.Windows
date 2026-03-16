@@ -94,7 +94,7 @@ namespace Rectangle.Windows.WinUI.Services
             sb.Append($" [{entry.Level.ToString().ToUpper()}] [{entry.Category}] {entry.Message}");
 
             if (entry.Data != null)
-                sb.Append($" | Data: {JsonSerializer.Serialize(entry.Data)}");
+                sb.Append($" | Data: {JsonSerializer.Serialize(entry.Data, AppJsonContext.Default.Object)}");
 
             if (!string.IsNullOrEmpty(entry.Exception))
                 sb.Append($" | Exception: {entry.Exception}");

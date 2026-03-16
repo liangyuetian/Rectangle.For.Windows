@@ -625,11 +625,7 @@ namespace Rectangle.Windows.WinUI.Services
                     SavedAt = DateTime.Now
                 };
 
-                var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-
+                var json = JsonSerializer.Serialize(data, AppJsonContext.Default.StatisticsData);
                 await File.WriteAllTextAsync(filePath, json);
                 Logger.Info("Statistics", $"[Statistics] 统计数据已保存: {filePath}");
             }
@@ -653,7 +649,7 @@ namespace Rectangle.Windows.WinUI.Services
                 }
 
                 var json = await File.ReadAllTextAsync(filePath);
-                var data = JsonSerializer.Deserialize<StatisticsData>(json);
+                var data = JsonSerializer.Deserialize(json, AppJsonContext.Default.StatisticsData);
 
                 if (data != null)
                 {
@@ -743,10 +739,7 @@ namespace Rectangle.Windows.WinUI.Services
 
             if (format.ToLower() == "json")
             {
-                var json = JsonSerializer.Serialize(report, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
+                var json = JsonSerializer.Serialize(report, AppJsonContext.Default.StatisticsReport);
                 await File.WriteAllTextAsync(filePath, json);
             }
             else if (format.ToLower() == "csv")

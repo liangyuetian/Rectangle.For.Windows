@@ -17,7 +17,7 @@ public class TopHalfCalculator : IRectCalculator
     }
 
     private int GetVerticalRatio() =>
-        _configService?.Load().VerticalSplitRatio is var r && r >= 1 && r <= 99 ? r : 50;
+        _configService?.Load().VerticalSplitRatio is int r && r >= 1 && r <= 99 ? r : 50;
 }
 
 public class BottomHalfCalculator : IRectCalculator
@@ -36,7 +36,7 @@ public class BottomHalfCalculator : IRectCalculator
     }
 
     private int GetVerticalRatio() =>
-        _configService?.Load().VerticalSplitRatio is var r && r >= 1 && r <= 99 ? r : 50;
+        _configService?.Load().VerticalSplitRatio is int r && r >= 1 && r <= 99 ? r : 50;
 }
 
 public class TopLeftCalculator : IRectCalculator

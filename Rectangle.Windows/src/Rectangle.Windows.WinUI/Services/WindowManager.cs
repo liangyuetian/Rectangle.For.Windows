@@ -11,7 +11,7 @@ namespace Rectangle.Windows.WinUI.Services;
 /// <summary>
 /// 窗口管理器 - 处理所有窗口操作
 /// </summary>
-public class WindowManager
+public unsafe class WindowManager
 {
     private readonly Win32WindowService _win32;
     private readonly CalculatorFactory _factory;
@@ -441,9 +441,12 @@ public class WindowManager
         {
             var length = PInvoke.GetWindowTextLength((HWND)hwnd);
             if (length <= 0) return "";
-            var buffer = new char[length + 1];
-            PInvoke.GetWindowText((HWND)hwnd, buffer, length + 1);
-            return new string(buffer, 0, length);
+            unsafe
+            {
+                var buffer = stackalloc char[length + 1];
+                PInvoke.GetWindowText((HWND)hwnd, buffer, length + 1);
+                return new string(buffer, 0, length);
+            }
         }
         catch { return ""; }
     }
@@ -452,9 +455,12 @@ public class WindowManager
     {
         try
         {
-            var buffer = new char[256];
-            var len = PInvoke.GetClassName((HWND)hwnd, buffer, buffer.Length);
-            return len > 0 ? new string(buffer, 0, len) : "";
+            unsafe
+            {
+                var buffer = stackalloc char[256];
+                var len = PInvoke.GetClassName((HWND)hwnd, buffer, 256);
+                return len > 0 ? new string(buffer, 0, len) : "";
+            }
         }
        catch { return ""; }
     }

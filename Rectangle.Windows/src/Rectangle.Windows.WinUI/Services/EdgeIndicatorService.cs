@@ -375,6 +375,10 @@ namespace Rectangle.Windows.WinUI.Services
         /// </summary>
         private void CheckEdgeProximity(int mouseX, int mouseY)
         {
+            // DragOnly 模式下只在拖拽时检测边缘
+            if (_config.DisplayMode == EdgeIndicatorMode.DragOnly && !_isDragging)
+                return;
+
             var screens = _screenDetection.GetAllScreens();
 
             foreach (var screen in screens)

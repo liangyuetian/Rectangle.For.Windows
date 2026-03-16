@@ -18,5 +18,5 @@ public class RightHalfCalculator : IRectCalculator
     }
 
     private int GetHorizontalRatio() =>
-        _configService?.Load().HorizontalSplitRatio is var r && r >= 1 && r <= 99 ? r : 50;
+        _configService?.Load().HorizontalSplitRatio is int r && r >= 1 && r <= 99 ? r : 50;
 }

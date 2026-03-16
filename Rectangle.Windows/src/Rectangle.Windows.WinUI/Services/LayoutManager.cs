@@ -149,10 +149,7 @@ namespace Rectangle.Windows.WinUI.Services
 
             if (layout == null) return string.Empty;
 
-            return JsonSerializer.Serialize(layout, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
+            return JsonSerializer.Serialize(layout, AppJsonContext.Default.WindowLayout);
         }
 
         /// <summary>
@@ -162,7 +159,7 @@ namespace Rectangle.Windows.WinUI.Services
         {
             try
             {
-                var layout = JsonSerializer.Deserialize<WindowLayout>(json);
+                var layout = JsonSerializer.Deserialize(json, AppJsonContext.Default.WindowLayout);
                 if (layout != null)
                 {
                     layout.Id = Guid.NewGuid().ToString();
@@ -191,7 +188,7 @@ namespace Rectangle.Windows.WinUI.Services
                 if (File.Exists(_layoutsFilePath))
                 {
                     var json = await File.ReadAllTextAsync(_layoutsFilePath);
-                    return JsonSerializer.Deserialize<List<WindowLayout>>(json) ?? new List<WindowLayout>();
+                    return JsonSerializer.Deserialize(json, AppJsonContext.Default.ListWindowLayout) ?? new List<WindowLayout>();
                 }
             }
             catch { }
@@ -209,11 +206,7 @@ namespace Rectangle.Windows.WinUI.Services
                     Directory.CreateDirectory(dir);
                 }
 
-                var json = JsonSerializer.Serialize(layouts, new JsonSerializerOptions
-                {
-                    WriteIndented = true
-                });
-
+                var json = JsonSerializer.Serialize(layouts, AppJsonContext.Default.ListWindowLayout);
                 await File.WriteAllTextAsync(_layoutsFilePath, json);
             }
             catch (Exception ex)

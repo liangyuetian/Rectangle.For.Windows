@@ -176,7 +176,6 @@ namespace Rectangle.Windows.WinUI.Services
             if ((nint)hwnd.Value == 0) return 0;
 
             // 获取根窗口
-            const uint GA_ROOT = 2;
             var rootHwnd = PInvoke.GetAncestor(hwnd, GET_ANCESTOR_FLAGS.GA_ROOT);
 
             return (nint)rootHwnd.Value != 0 ? (nint)rootHwnd.Value : (nint)hwnd.Value;
