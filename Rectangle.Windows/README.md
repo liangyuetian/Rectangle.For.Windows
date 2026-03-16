@@ -33,6 +33,7 @@ dotnet test src/Rectangle.Windows.Tests/Rectangle.Windows.Tests.csproj
 ### 方式一：压缩单文件（推荐，约 54MB）
 
 包含 .NET 运行时，启用压缩，用户无需安装任何依赖：
+--self-contained true 得意思是包含运行时
 
 ```bash
 dotnet publish src/Rectangle.Windows/Rectangle.Windows.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=none -p:DebugSymbols=false -o ./publish
