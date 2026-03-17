@@ -16,6 +16,12 @@
     >
         <tb:TaskbarIcon.ContextFlyout >
             <MenuFlyout>
+                <MenuFlyout.MenuFlyoutPresenterStyle>
+                    <Style TargetType="MenuFlyoutPresenter">
+                        <!-- 修复首次打开时布局计算错误导致菜单被挤压的问题（WinUI #7374, H.NotifyIcon #21） -->
+                        <Setter Property="MinWidth" Value="280" />
+                    </Style>
+                </MenuFlyout.MenuFlyoutPresenterStyle>
                 <MenuFlyoutItem Text="左半屏" Tag="LeftHalf">
                     <MenuFlyoutItem.Icon>
                         <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/leftHalfTemplate.png" ShowAsMonochrome="False" />
