@@ -54,7 +54,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.*" />
-        <PackageReference Include="Microsoft.Web.WebView2" Version="1.*" />
+        <!-- WebView2 已移除（未使用），可减少约 5–10 MB -->
         <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.*" />
         <PackageReference Include="H.NotifyIcon.WinUI" Version="2.*" />
         <PackageReference Include="System.Drawing.Common" Version="10.*" />
