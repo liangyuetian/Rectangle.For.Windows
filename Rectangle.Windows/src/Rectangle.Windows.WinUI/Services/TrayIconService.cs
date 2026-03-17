@@ -191,7 +191,8 @@ namespace Rectangle.Windows.WinUI.Services
             Logger.Info("TrayIconService", $"菜单项 Command 执行: {tag}");
             if (_tagToAction.TryGetValue(tag, out var action))
             {
-                _windowManager.Execute(action);
+                // 托盘菜单显式选择，跳过循环模式，始终执行用户点击的操作
+                _windowManager.Execute(action, forceDirectAction: true);
             }
             else
             {

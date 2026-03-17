@@ -122,7 +122,8 @@ public unsafe class WindowManager
         };
     }
 
-    public void Execute(WindowAction action, nint? targetHwnd = null)
+    /// <param name="forceDirectAction">为 true 时跳过循环模式，始终执行请求的操作（如托盘菜单点击）</param>
+    public void Execute(WindowAction action, nint? targetHwnd = null, bool forceDirectAction = false)
     {
         if (action == WindowAction.Restore)
         {
@@ -198,7 +199,10 @@ public unsafe class WindowManager
         }
 
         // 处理重复执行模式（循环尺寸），支持多显示器轮询
-        var (actualAction, targetDisplayIndex) = GetActualAction(hwnd, action, windowMovedExternally);
+        // 托盘菜单等显式选择时跳过循环，始终执行用户点击的操作
+        var (actualAction, targetDisplayIndex) = forceDirectAction
+            ? (action, null as int?)
+            : GetActualAction(hwnd, action, windowMovedExternally);
         if (actualAction != action || targetDisplayIndex.HasValue)
         {
             Logger.Info("WindowManager", targetDisplayIndex.HasValue
