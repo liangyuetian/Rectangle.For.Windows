@@ -89,6 +89,8 @@ namespace Rectangle.Windows.WinUI
             Logger.InitializeFromConfig(configService);
             Logger.Info("App", "应用启动");
 
+            TrayIconService.PreloadMenuIcons();
+
             ThemeService.Instance.LoadThemeFromConfig();
 
             var win32 = new Win32WindowService();

@@ -2,10 +2,12 @@ using H.NotifyIcon;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media.Imaging;
 using Rectangle.Windows.WinUI.Core;
 using Rectangle.Windows.WinUI.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Rectangle.Windows.WinUI.Services
 {
@@ -85,6 +87,111 @@ namespace Rectangle.Windows.WinUI.Services
             _showSettingsCallback = showSettingsCallback;
             _configService = configService;
             _lastActiveService = lastActiveService;
+        }
+
+        private static readonly string[] _iconPaths = new[]
+        {
+            "ms-appx:///Assets/WindowPositions/leftHalfTemplate.png",
+            "ms-appx:///Assets/WindowPositions/rightHalfTemplate.png",
+            "ms-appx:///Assets/WindowPositions/halfWidthCenterTemplate.png",
+            "ms-appx:///Assets/WindowPositions/topHalfTemplate.png",
+            "ms-appx:///Assets/WindowPositions/bottomHalfTemplate.png",
+            "ms-appx:///Assets/WindowPositions/topLeftTemplate.png",
+            "ms-appx:///Assets/WindowPositions/topRightTemplate.png",
+            "ms-appx:///Assets/WindowPositions/bottomLeftTemplate.png",
+            "ms-appx:///Assets/WindowPositions/bottomRightTemplate.png",
+            "ms-appx:///Assets/WindowPositions/firstThirdTemplate.png",
+            "ms-appx:///Assets/WindowPositions/centerThirdTemplate.png",
+            "ms-appx:///Assets/WindowPositions/lastThirdTemplate.png",
+            "ms-appx:///Assets/WindowPositions/firstTwoThirdsTemplate.png",
+            "ms-appx:///Assets/WindowPositions/centerTwoThirdsTemplate.png",
+            "ms-appx:///Assets/WindowPositions/lastTwoThirdsTemplate.png",
+            "ms-appx:///Assets/WindowPositions/leftFourthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/centerLeftFourthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/centerRightFourthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/rightFourthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/firstThreeFourthsTemplate.png",
+            "ms-appx:///Assets/WindowPositions/centerThreeFourthsTemplate.png",
+            "ms-appx:///Assets/WindowPositions/lastThreeFourthsTemplate.png",
+            "ms-appx:///Assets/WindowPositions/topLeftSixthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/topCenterSixthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/topRightSixthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/bottomLeftSixthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/bottomCenterSixthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/bottomRightSixthTemplate.png",
+            "ms-appx:///Assets/WindowPositions/maximizeTemplate.png",
+            "ms-appx:///Assets/WindowPositions/almostMaximizeTemplate.png",
+            "ms-appx:///Assets/WindowPositions/maximizeHeightTemplate.png",
+            "ms-appx:///Assets/WindowPositions/makeLargerTemplate.png",
+            "ms-appx:///Assets/WindowPositions/makeSmallerTemplate.png",
+            "ms-appx:///Assets/WindowPositions/centerTemplate.png",
+            "ms-appx:///Assets/WindowPositions/restoreTemplate.png",
+            "ms-appx:///Assets/WindowPositions/moveLeftTemplate.png",
+            "ms-appx:///Assets/WindowPositions/moveRightTemplate.png",
+            "ms-appx:///Assets/WindowPositions/moveUpTemplate.png",
+            "ms-appx:///Assets/WindowPositions/moveDownTemplate.png",
+            "ms-appx:///Assets/WindowPositions/nextDisplayTemplate.png",
+            "ms-appx:///Assets/WindowPositions/prevDisplayTemplate.png",
+        };
+
+        private static readonly List<BitmapImage> _preloadedIcons = new();
+
+        public static void PreloadMenuIcons()
+        {
+            if (_preloadedIcons.Count > 0) return;
+
+            var dispatcherQueue = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            if (dispatcherQueue == null)
+            {
+                Logger.Warning("TrayIconService", "无法获取 DispatcherQueue，跳过图标预加载");
+                return;
+            }
+
+            _ = dispatcherQueue.TryEnqueue(async () =>
+            {
+                try
+                {
+                    var tcs = new System.Threading.Tasks.TaskCompletionSource();
+                    var loadedCount = 0;
+                    var totalCount = _iconPaths.Length;
+
+                    foreach (var path in _iconPaths)
+                    {
+                        var bitmap = new BitmapImage(new Uri(path))
+                        {
+                            CreateOptions = BitmapCreateOptions.None
+                        };
+
+                        bitmap.ImageOpened += (s, e) =>
+                        {
+                            loadedCount++;
+                            if (loadedCount == totalCount)
+                            {
+                                tcs.TrySetResult();
+                            }
+                        };
+
+                        bitmap.ImageFailed += (s, e) =>
+                        {
+                            loadedCount++;
+                            Logger.Warning("TrayIconService", $"图标加载失败: {path}");
+                            if (loadedCount == totalCount)
+                            {
+                                tcs.TrySetResult();
+                            }
+                        };
+
+                        _preloadedIcons.Add(bitmap);
+                    }
+
+                    await System.Threading.Tasks.Task.WhenAny(tcs.Task, System.Threading.Tasks.Task.Delay(3000));
+                    Logger.Info("TrayIconService", $"预加载 {_preloadedIcons.Count} 个菜单图标完成");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("TrayIconService", $"预加载菜单图标失败: {ex}");
+                }
+            });
         }
 
         public void Initialize()
