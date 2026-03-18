@@ -180,22 +180,21 @@ public unsafe class WindowManager
 
         var (x, y, w, h) = _win32.GetWindowRect(hwnd);
 
-        // 最大化状态下缩放类操作的特殊处理：避免闪屏和错误计算
+        // 最大化状态下缩放类操作的特殊处理
         var isResizeAction = action is WindowAction.Larger or WindowAction.Smaller
             or WindowAction.LargerWidth or WindowAction.SmallerWidth
             or WindowAction.LargerHeight or WindowAction.SmallerHeight;
-        if (isResizeAction && _windowType.IsMaximized(hwnd))
+        var isMaximized = _windowType.IsMaximized(hwnd);
+        var useDirectResizeFromMaximized = false; // 从最大化直接缩小，使用 SetWindowPlacement 避免闪屏
+        if (isResizeAction && isMaximized)
         {
             var isLarger = action is WindowAction.Larger or WindowAction.LargerWidth or WindowAction.LargerHeight;
             if (isLarger)
             {
-                // 已最大化，无法再放大
-                return;
+                return; // 已最大化，无法再放大
             }
-            // Smaller 类：先恢复获取真实尺寸，再基于恢复后的尺寸缩小
-            _win32.ShowWindowRestore(hwnd);
-            System.Threading.Thread.Sleep(50);
-            (x, y, w, h) = _win32.GetWindowRect(hwnd);
+            // Smaller 类：基于当前最大化尺寸（GetWindowRect 返回的即全屏尺寸）计算目标，稍后用 SetWindowRectFromMaximized 直接过渡
+            useDirectResizeFromMaximized = true;
         }
 
         // 根据配置获取目标屏幕（光标位置或窗口位置）
@@ -270,7 +269,10 @@ public unsafe class WindowManager
         // 确保窗口在屏幕工作区内
         target = ClampToWorkArea(target, workArea);
 
-        _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
+        if (useDirectResizeFromMaximized)
+            _win32.SetWindowRectFromMaximized(hwnd, target.X, target.Y, target.Width, target.Height);
+        else
+            _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
 
         // 记录程序操作信息（包括操作类型、次数、时间）
         // 注意：记录的是原始 action，而不是 actualAction，这样才能正确计数
