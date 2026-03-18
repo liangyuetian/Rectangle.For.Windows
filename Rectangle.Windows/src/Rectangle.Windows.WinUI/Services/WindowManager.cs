@@ -180,6 +180,24 @@ public unsafe class WindowManager
 
         var (x, y, w, h) = _win32.GetWindowRect(hwnd);
 
+        // 最大化状态下缩放类操作的特殊处理：避免闪屏和错误计算
+        var isResizeAction = action is WindowAction.Larger or WindowAction.Smaller
+            or WindowAction.LargerWidth or WindowAction.SmallerWidth
+            or WindowAction.LargerHeight or WindowAction.SmallerHeight;
+        if (isResizeAction && _windowType.IsMaximized(hwnd))
+        {
+            var isLarger = action is WindowAction.Larger or WindowAction.LargerWidth or WindowAction.LargerHeight;
+            if (isLarger)
+            {
+                // 已最大化，无法再放大
+                return;
+            }
+            // Smaller 类：先恢复获取真实尺寸，再基于恢复后的尺寸缩小
+            _win32.ShowWindowRestore(hwnd);
+            System.Threading.Thread.Sleep(50);
+            (x, y, w, h) = _win32.GetWindowRect(hwnd);
+        }
+
         // 根据配置获取目标屏幕（光标位置或窗口位置）
         var workArea = GetTargetWorkArea(hwnd);
 
