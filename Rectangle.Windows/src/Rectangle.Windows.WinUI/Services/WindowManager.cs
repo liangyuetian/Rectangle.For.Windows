@@ -200,9 +200,6 @@ public unsafe class WindowManager
         // 根据配置获取目标屏幕（光标位置或窗口位置）
         var workArea = GetTargetWorkArea(hwnd);
 
-        // 应用窗口间隙
-        workArea = ApplyGap(workArea);
-
         var current = new WindowRect(x, y, w, h);
 
         // 检测窗口是否被用户手动移动
@@ -233,7 +230,7 @@ public unsafe class WindowManager
         // 多显示器轮询时使用指定显示器的工作区域
         if (targetDisplayIndex.HasValue)
         {
-            workArea = ApplyGap(GetWorkAreaByDisplayIndex(targetDisplayIndex.Value));
+            workArea = GetWorkAreaByDisplayIndex(targetDisplayIndex.Value);
         }
 
         // 保存或更新恢复点：
@@ -251,7 +248,7 @@ public unsafe class WindowManager
         // 执行其他操作时，清除最大化状态
         _maximizedWindows.Remove(hwnd);
 
-        var target = calculator.Calculate(workArea, current, actualAction);
+        var target = calculator.Calculate(workArea, current, actualAction, _gapSize);
 
         // 为相邻窗口应用间隙
         target = ApplyWindowGap(target, workArea, actualAction);
@@ -761,17 +758,6 @@ public unsafe class WindowManager
         // 返回上一个显示器
         int prevIndex = currentIndex <= 0 ? workAreas.Count - 1 : currentIndex - 1;
         return workAreas[prevIndex];
-    }
-
-    private WorkArea ApplyGap(WorkArea workArea)
-    {
-        if (_gapSize <= 0) return workArea;
-        return new WorkArea(
-            workArea.Left + _gapSize,
-            workArea.Top + _gapSize,
-            workArea.Right - _gapSize,
-            workArea.Bottom - _gapSize
-        );
     }
 
     private WindowRect ApplyWindowGap(WindowRect target, WorkArea workArea, WindowAction action)
