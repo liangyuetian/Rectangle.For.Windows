@@ -134,47 +134,32 @@ namespace Rectangle.Windows.WinUI.Services
 
         private void DecorateItems(IList<MenuFlyoutItemBase> items, Dictionary<string, ShortcutConfig> shortcuts)
         {
-            Logger.Info("TrayIconService", $"DecorateItems 开始处理，菜单项数量: {items.Count}");
-            
             foreach (var item in items)
             {
                 if (item is MenuFlyoutSubItem sub)
                 {
-                    // 禁用访问键
                     sub.AccessKey = string.Empty;
-                    // 递归处理子菜单
                     DecorateItems(sub.Items, shortcuts);
                 }
                 else if (item is MenuFlyoutItem fi)
                 {
-                    // 禁用访问键
                     fi.AccessKey = string.Empty;
-                    
-                    Logger.Info("TrayIconService", $"处理菜单项: {fi.Text}, Tag: {fi.Tag}");
-                    
+
                     if (fi.Tag is string tag)
                     {
                         if (tag == "IgnoreApp")
                         {
-                            // 忽略应用菜单项：使用独立命令，文本在 Opening 时动态更新
                             _ignoreAppMenuItem = fi;
                             fi.Command = _ignoreAppCommand;
-                            Logger.Info("TrayIconService", "已绑定忽略应用菜单项");
                             continue;
                         }
 
-                        // 添加快捷键文本到右侧
                         var shortcutText = GetShortcutText(tag, shortcuts);
                         if (!string.IsNullOrEmpty(shortcutText))
-                        {
                             fi.KeyboardAcceleratorTextOverride = shortcutText;
-                            Logger.Info("TrayIconService", $"菜单项 '{fi.Text}' 设置快捷键: {shortcutText}");
-                        }
 
-                        // 使用 Command 而非 Click（托盘菜单下 Click 可能不触发）
                         fi.Command = _menuActionCommand;
                         fi.CommandParameter = tag;
-                        Logger.Info("TrayIconService", $"已为菜单项 '{fi.Text}' 绑定 Command: {tag}");
                     }
                 }
             }
