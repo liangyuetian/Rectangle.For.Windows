@@ -7,6 +7,7 @@ using H.NotifyIcon;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace Rectangle.Windows.WinUI
 {
@@ -47,6 +48,9 @@ namespace Rectangle.Windows.WinUI
             // 尝试附加到控制台以支持 Ctrl+C
             TryAttachConsole();
 
+            // 进程退出时清理托盘图标，确保图标立即消失（dotnet run Ctrl+C、任务管理器结束等场景）
+            AppDomain.CurrentDomain.ProcessExit += (s, e) => CleanupTrayIcon();
+
             this.InitializeComponent();
         }
 
@@ -70,14 +74,21 @@ namespace Rectangle.Windows.WinUI
             catch { /* 忽略错误 */ }
         }
 
-        private static void ExitApplication()
+        private static void CleanupTrayIcon()
         {
             try
             {
                 _instance?._snapDetectionService?.Dispose();
                 _instance?._trayIconService?.Dispose();
+                // 给 Shell 时间处理 NIM_DELETE，确保托盘图标立即消失
+                Thread.Sleep(150);
             }
             catch { }
+        }
+
+        private static void ExitApplication()
+        {
+            CleanupTrayIcon();
             Environment.Exit(0);
         }
 

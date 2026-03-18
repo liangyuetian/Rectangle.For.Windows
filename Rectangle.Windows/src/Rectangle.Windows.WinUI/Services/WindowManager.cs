@@ -180,11 +180,25 @@ public unsafe class WindowManager
 
         var (x, y, w, h) = _win32.GetWindowRect(hwnd);
 
+        // 最大化状态下缩放类操作的特殊处理
+        var isResizeAction = action is WindowAction.Larger or WindowAction.Smaller
+            or WindowAction.LargerWidth or WindowAction.SmallerWidth
+            or WindowAction.LargerHeight or WindowAction.SmallerHeight;
+        var isMaximized = _windowType.IsMaximized(hwnd);
+        var useDirectResizeFromMaximized = false; // 从最大化直接缩小，使用 SetWindowPlacement 避免闪屏
+        if (isResizeAction && isMaximized)
+        {
+            var isLarger = action is WindowAction.Larger or WindowAction.LargerWidth or WindowAction.LargerHeight;
+            if (isLarger)
+            {
+                return; // 已最大化，无法再放大
+            }
+            // Smaller 类：基于当前最大化尺寸（GetWindowRect 返回的即全屏尺寸）计算目标，稍后用 SetWindowRectFromMaximized 直接过渡
+            useDirectResizeFromMaximized = true;
+        }
+
         // 根据配置获取目标屏幕（光标位置或窗口位置）
         var workArea = GetTargetWorkArea(hwnd);
-
-        // 应用窗口间隙
-        workArea = ApplyGap(workArea);
 
         var current = new WindowRect(x, y, w, h);
 
@@ -216,7 +230,7 @@ public unsafe class WindowManager
         // 多显示器轮询时使用指定显示器的工作区域
         if (targetDisplayIndex.HasValue)
         {
-            workArea = ApplyGap(GetWorkAreaByDisplayIndex(targetDisplayIndex.Value));
+            workArea = GetWorkAreaByDisplayIndex(targetDisplayIndex.Value);
         }
 
         // 保存或更新恢复点：
@@ -234,7 +248,7 @@ public unsafe class WindowManager
         // 执行其他操作时，清除最大化状态
         _maximizedWindows.Remove(hwnd);
 
-        var target = calculator.Calculate(workArea, current, actualAction);
+        var target = calculator.Calculate(workArea, current, actualAction, _gapSize);
 
         // 为相邻窗口应用间隙
         target = ApplyWindowGap(target, workArea, actualAction);
@@ -252,7 +266,10 @@ public unsafe class WindowManager
         // 确保窗口在屏幕工作区内
         target = ClampToWorkArea(target, workArea);
 
-        _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
+        if (useDirectResizeFromMaximized)
+            _win32.SetWindowRectFromMaximized(hwnd, target.X, target.Y, target.Width, target.Height);
+        else
+            _win32.SetWindowRect(hwnd, target.X, target.Y, target.Width, target.Height);
 
         // 记录程序操作信息（包括操作类型、次数、时间）
         // 注意：记录的是原始 action，而不是 actualAction，这样才能正确计数
@@ -741,17 +758,6 @@ public unsafe class WindowManager
         // 返回上一个显示器
         int prevIndex = currentIndex <= 0 ? workAreas.Count - 1 : currentIndex - 1;
         return workAreas[prevIndex];
-    }
-
-    private WorkArea ApplyGap(WorkArea workArea)
-    {
-        if (_gapSize <= 0) return workArea;
-        return new WorkArea(
-            workArea.Left + _gapSize,
-            workArea.Top + _gapSize,
-            workArea.Right - _gapSize,
-            workArea.Bottom - _gapSize
-        );
     }
 
     private WindowRect ApplyWindowGap(WindowRect target, WorkArea workArea, WindowAction action)

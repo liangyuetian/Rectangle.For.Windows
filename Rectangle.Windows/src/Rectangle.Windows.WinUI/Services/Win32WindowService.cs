@@ -22,6 +22,27 @@ public unsafe class Win32WindowService
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool IsWindowVisible(void* hWnd);
 
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static extern bool SetWindowPlacement(IntPtr hWnd, ref WINDOWPLACEMENT lpwndpl);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct WINDOWPLACEMENT
+    {
+        public uint length;
+        public uint flags;
+        public uint showCmd;
+        public POINT ptMinPosition;
+        public POINT ptMaxPosition;
+        public global::Windows.Win32.Foundation.RECT rcNormalPosition;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct POINT
+    {
+        public int x, y;
+    }
+
     public nint GetForegroundWindowHandle()
         => (nint)PInvoke.GetForegroundWindow().Value;
 
@@ -29,6 +50,23 @@ public unsafe class Win32WindowService
     {
         PInvoke.GetWindowRect((HWND)hwnd, out var rect);
         return (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top);
+    }
+
+    /// <summary>
+    /// 从最大化状态直接设置窗口尺寸，使用 SetWindowPlacement 实现单次过渡，避免先恢复再设置的闪屏。
+    /// </summary>
+    public bool SetWindowRectFromMaximized(nint hwnd, int x, int y, int width, int height)
+    {
+        if (hwnd == 0) return false;
+        if (!IsWindow((void*)hwnd)) return false;
+
+        var wp = new WINDOWPLACEMENT
+        {
+            length = (uint)Marshal.SizeOf<WINDOWPLACEMENT>(),
+            showCmd = 1, // SW_SHOWNORMAL
+            rcNormalPosition = new global::Windows.Win32.Foundation.RECT { left = x, top = y, right = x + width, bottom = y + height }
+        };
+        return SetWindowPlacement((IntPtr)hwnd, ref wp);
     }
 
     public bool SetWindowRect(nint hwnd, int x, int y, int width, int height)

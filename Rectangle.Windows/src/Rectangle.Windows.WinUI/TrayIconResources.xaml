@@ -12,13 +12,12 @@
         IconSource="Assets/AppIcon.ico"
         NoLeftClickDelay="True"
         LeftClickCommand="{StaticResource ShowSettingsCommand}"
-        ContextMenuMode="SecondWindow"
+        ContextMenuMode="Standard"
     >
         <tb:TaskbarIcon.ContextFlyout >
             <MenuFlyout>
                 <MenuFlyout.MenuFlyoutPresenterStyle>
                     <Style TargetType="MenuFlyoutPresenter">
-                        <!-- 修复首次打开时布局计算错误导致菜单被挤压的问题（WinUI #7374, H.NotifyIcon #21） -->
                         <Setter Property="MinWidth" Value="280" />
                     </Style>
                 </MenuFlyout.MenuFlyoutPresenterStyle>
