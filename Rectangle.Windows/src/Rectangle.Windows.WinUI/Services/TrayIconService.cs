@@ -5,6 +5,7 @@ using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Rectangle.Windows.WinUI.Core;
+using Windows.Foundation;
 using Rectangle.Windows.WinUI.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -359,7 +360,7 @@ namespace Rectangle.Windows.WinUI.Services
                     var target = _taskbarIcon as Microsoft.UI.Xaml.FrameworkElement;
                     if (target != null)
                     {
-                        flyout.ShowAt(target, new Windows.Foundation.Point(-10000, -10000));
+                        flyout.ShowAt(target, new global::Windows.Foundation.Point(-10000, -10000));
                         flyout.Hide();
                     }
                 }
