@@ -2,6 +2,7 @@ using H.NotifyIcon;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Rectangle.Windows.WinUI.Core;
 using Rectangle.Windows.WinUI.ViewModels;
@@ -219,11 +220,13 @@ namespace Rectangle.Windows.WinUI.Services
                 // 遍历 ContextFlyout 注入图标、快捷键文字、点击命令
                 if (_taskbarIcon.ContextFlyout is MenuFlyout flyout)
                 {
-                    // 在菜单即将打开时暂停（Opening 比 Opened 更早，避免右键时焦点变化覆盖活动窗口）
                     flyout.Opening += (_, _) =>
                     {
-                        _lastActiveService?.PauseTracking();
+                        // 先更新忽略菜单项（在焦点变化前获取活动窗口），再暂停跟踪
                         UpdateIgnoreMenuItem();
+                        _lastActiveService?.PauseTracking();
+                        // 首次打开时强制布局：延迟查找 MenuFlyoutPresenter 并设置 MinWidth（H.NotifyIcon SecondWindow 布局问题）
+                        _ = EnqueueFixMenuLayoutAsync(flyout);
                     };
                     flyout.Closed += (_, _) => _lastActiveService?.ResumeTracking();
 
@@ -231,6 +234,10 @@ namespace Rectangle.Windows.WinUI.Services
                 }
 
                 _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
+
+                // 预加载菜单以解决首次打开布局挤压（H.NotifyIcon #21, #89）
+                PrewarmContextMenu();
+
                 Logger.Info("TrayIconService", "托盘图标初始化成功");
             }
             catch (Exception ex)
@@ -307,7 +314,8 @@ namespace Rectangle.Windows.WinUI.Services
         {
             if (_ignoreAppMenuItem == null || _lastActiveService == null) return;
 
-            var hwnd = _lastActiveService.GetLastValidWindow();
+            // 使用 GetTargetWindow 而非 GetLastValidWindow，以便在缓存无效时回退到当前前台窗口
+            var hwnd = _lastActiveService.GetTargetWindow();
             if (hwnd == 0)
             {
                 _ignoreAppMenuItem.Text = "忽略 [无有效窗口]";
@@ -333,6 +341,74 @@ namespace Rectangle.Windows.WinUI.Services
             _ignoreAppMenuItem.Text = isIgnored ? $"取消忽略 {processName}" : $"忽略 {processName}";
             _ignoreAppMenuItem.IsEnabled = true;
             _ignoreAppMenuItem.CommandParameter = processName;
+        }
+
+        /// <summary>
+        /// 预加载菜单，触发布局计算，避免首次右键时挤在一起。
+        /// </summary>
+        private void PrewarmContextMenu()
+        {
+            if (_taskbarIcon?.ContextFlyout is not MenuFlyout flyout) return;
+
+            var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            dispatcher.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            {
+                try
+                {
+                    // 在屏幕外显示一次以触发布局测量
+                    var target = _taskbarIcon as Microsoft.UI.Xaml.FrameworkElement;
+                    if (target != null)
+                    {
+                        flyout.ShowAt(target, new Windows.Foundation.Point(-10000, -10000));
+                        flyout.Hide();
+                    }
+                }
+                catch { }
+            });
+        }
+
+        /// <summary>
+        /// 修复 H.NotifyIcon SecondWindow 模式下首次打开菜单布局挤压问题，通过代码强制设置 MenuFlyoutPresenter 宽度。
+        /// </summary>
+        private async Task EnqueueFixMenuLayoutAsync(MenuFlyout flyout)
+        {
+            await Task.Delay(30);
+            var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            dispatcher.TryEnqueue(() =>
+            {
+                try
+                {
+                    // SecondWindow 模式下菜单在独立窗口，优先用 flyout 的 XamlRoot（菜单显示时已设置）
+                    var xamlRoot = flyout.XamlRoot ?? _taskbarIcon?.XamlRoot ?? App.MainWindow?.Content?.XamlRoot;
+                    if (xamlRoot == null) return;
+
+                    foreach (var popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot))
+                    {
+                        var presenter = FindChildByType<MenuFlyoutPresenter>(popup.Child);
+                        if (presenter != null)
+                        {
+                            presenter.MinWidth = 280;
+                            presenter.Width = 280;
+                            presenter.UpdateLayout();
+                            break;
+                        }
+                    }
+                }
+                catch { }
+            });
+        }
+
+        private static T? FindChildByType<T>(DependencyObject? parent) where T : DependencyObject
+        {
+            if (parent == null) return null;
+            if (parent is T t) return t;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                var found = FindChildByType<T>(child);
+                if (found != null) return found;
+            }
+            return null;
         }
 
         private void ToggleIgnoreApp(string processName)
