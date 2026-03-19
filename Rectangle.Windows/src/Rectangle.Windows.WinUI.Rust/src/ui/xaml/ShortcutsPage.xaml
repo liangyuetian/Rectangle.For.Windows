@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Page
+    x:Class="Rectangle.Windows.WinUI.Rust.ShortcutsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Rectangle.Windows.WinUI.Rust">
+
+    <ScrollViewer>
+        <StackPanel Padding="20" Spacing="16">
+            <TextBlock Text="半屏" Style="{StaticResource SubtitleTextBlockStyle}" />
+            <Grid ColumnSpacing="16" RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="0" Label="左半屏" ActionName="LeftHalf" />
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="1" Label="右半屏" ActionName="RightHalf" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="0" Label="上半屏" ActionName="TopHalf" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="1" Label="下半屏" ActionName="BottomHalf" />
+                <local:ShortcutEditor Grid.Row="2" Grid.Column="0" Label="中间半屏" ActionName="CenterHalf" />
+            </Grid>
+
+            <TextBlock Text="四角" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
+            <Grid ColumnSpacing="16" RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="0" Label="左上" ActionName="TopLeft" />
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="1" Label="右上" ActionName="TopRight" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="0" Label="左下" ActionName="BottomLeft" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="1" Label="右下" ActionName="BottomRight" />
+            </Grid>
+
+            <TextBlock Text="三分屏" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
+            <Grid ColumnSpacing="16" RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="0" Label="左三分之一" ActionName="FirstThird" />
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="1" Label="中三分之一" ActionName="CenterThird" />
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="2" Label="右三分之一" ActionName="LastThird" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="0" Label="左三分之二" ActionName="FirstTwoThirds" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="1" Label="中三分之二" ActionName="CenterTwoThirds" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="2" Label="右三分之二" ActionName="LastTwoThirds" />
+            </Grid>
+
+            <TextBlock Text="最大化与缩放" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
+            <Grid ColumnSpacing="16" RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="0" Label="最大化" ActionName="Maximize" />
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="1" Label="几乎最大化" ActionName="AlmostMaximize" />
+                <local:ShortcutEditor Grid.Row="0" Grid.Column="2" Label="最大化高度" ActionName="MaximizeHeight" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="0" Label="放大" ActionName="Larger" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="1" Label="缩小" ActionName="Smaller" />
+                <local:ShortcutEditor Grid.Row="1" Grid.Column="2" Label="居中" ActionName="Center" />
+            </Grid>
+
+            <TextBlock Text="显示器" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
+            <Grid ColumnSpacing="16" RowSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <local:ShortcutEditor Grid.Column="0" Label="上一个显示器" ActionName="PreviousDisplay" />
+                <local:ShortcutEditor Grid.Column="1" Label="下一个显示器" ActionName="NextDisplay" />
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</Page>

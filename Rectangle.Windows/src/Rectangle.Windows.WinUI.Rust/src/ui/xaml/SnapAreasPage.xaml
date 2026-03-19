@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Page
+    x:Class="Rectangle.Windows.WinUI.Rust.SnapAreasPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:Rectangle.Windows.WinUI.Rust">
+
+    <ScrollViewer>
+        <StackPanel Padding="20" Spacing="16">
+            <TextBlock Text="吸附区域设置" Style="{StaticResource TitleTextBlockStyle}" />
+
+            <ToggleSwitch Header="拖拽时吸附" x:Name="DragToSnapToggle" IsOn="True" />
+            <ToggleSwitch Header="吸附结束时恢复尺寸" x:Name="RestoreSizeToggle" IsOn="True" />
+            <ToggleSwitch Header="触觉反馈" x:Name="HapticFeedbackToggle" IsOn="False" />
+            <ToggleSwitch Header="吸附动画" x:Name="SnapAnimationToggle" IsOn="False" />
+
+            <TextBlock Text="边缘边距" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
+            <Slider Header="顶部边距" x:Name="TopMarginSlider" Minimum="0" Maximum="50" Value="5" />
+            <Slider Header="底部边距" x:Name="BottomMarginSlider" Minimum="0" Maximum="50" Value="5" />
+            <Slider Header="左侧边距" x:Name="LeftMarginSlider" Minimum="0" Maximum="50" Value="5" />
+            <Slider Header="右侧边距" x:Name="RightMarginSlider" Minimum="0" Maximum="50" Value="5" />
+
+            <TextBlock Text="角落吸附区域大小" Style="{StaticResource SubtitleTextBlockStyle}" Margin="0,16,0,0" />
+            <Slider x:Name="CornerSnapAreaSlider" Minimum="10" Maximum="100" Value="20" />
+        </StackPanel>
+    </ScrollViewer>
+</Page>
