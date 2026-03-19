@@ -225,24 +225,35 @@ namespace Rectangle.Windows.WinUI.ViewModels
 
         public async Task LoadSettingsAsync()
         {
-            await Task.Run(() =>
+            var (launchOnLogin, gapSize, hRatio, vRatio, logToFile, logLevel, langIdx) = await Task.Run(() =>
             {
                 var config = _configService.Load();
-                _launchOnLogin = config.LaunchOnLogin;
-                _gapSize = config.GapSize;
-                _horizontalSplitRatio = Math.Clamp(config.HorizontalSplitRatio, 1, 99);
-                _verticalSplitRatio = Math.Clamp(config.VerticalSplitRatio, 1, 99);
-                _logToFile = config.LogToFile;
-                _logLevel = config.LogLevel;
-                _languageIndex = config.Language switch { "en" => 1, _ => 0 };
-                OnPropertyChanged(nameof(LaunchOnLogin));
-                OnPropertyChanged(nameof(GapSize));
-                OnPropertyChanged(nameof(HorizontalSplitRatio));
-                OnPropertyChanged(nameof(VerticalSplitRatio));
-                OnPropertyChanged(nameof(LogToFile));
-                OnPropertyChanged(nameof(LogLevel));
-                OnPropertyChanged(nameof(LanguageIndex));
+                return (
+                    config.LaunchOnLogin,
+                    config.GapSize,
+                    Math.Clamp(config.HorizontalSplitRatio, 1, 99),
+                    Math.Clamp(config.VerticalSplitRatio, 1, 99),
+                    config.LogToFile,
+                    config.LogLevel,
+                    config.Language switch { "en" => 1, _ => 0 }
+                );
             });
+
+            // 必须在 UI 线程更新属性，否则 PropertyChanged 会触发跨线程 UI 更新导致崩溃
+            _launchOnLogin = launchOnLogin;
+            _gapSize = gapSize;
+            _horizontalSplitRatio = hRatio;
+            _verticalSplitRatio = vRatio;
+            _logToFile = logToFile;
+            _logLevel = logLevel;
+            _languageIndex = langIdx;
+            OnPropertyChanged(nameof(LaunchOnLogin));
+            OnPropertyChanged(nameof(GapSize));
+            OnPropertyChanged(nameof(HorizontalSplitRatio));
+            OnPropertyChanged(nameof(VerticalSplitRatio));
+            OnPropertyChanged(nameof(LogToFile));
+            OnPropertyChanged(nameof(LogLevel));
+            OnPropertyChanged(nameof(LanguageIndex));
         }
 
         private void UpdateShortcutCollection(ObservableCollection<ShortcutItem> collection,
