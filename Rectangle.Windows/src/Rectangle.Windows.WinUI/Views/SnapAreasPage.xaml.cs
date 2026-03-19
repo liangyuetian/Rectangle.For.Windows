@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using Rectangle.Windows.WinUI.ViewModels;
 
 namespace Rectangle.Windows.WinUI.Views
@@ -11,6 +12,7 @@ namespace Rectangle.Windows.WinUI.Views
         public SnapAreasPage()
         {
             this.InitializeComponent();
+            this.NavigationCacheMode = NavigationCacheMode.Enabled;
             this.Loaded += SnapAreasPage_Loaded;
         }
 

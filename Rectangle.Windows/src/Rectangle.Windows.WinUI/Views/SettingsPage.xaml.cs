@@ -1,5 +1,6 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Navigation;
 using Rectangle.Windows.WinUI.ViewModels;
 using Rectangle.Windows.WinUI;
 using Rectangle.Windows.WinUI.Services;
@@ -15,6 +16,7 @@ namespace Rectangle.Windows.WinUI.Views
         public SettingsPage()
         {
             this.InitializeComponent();
+            this.NavigationCacheMode = NavigationCacheMode.Enabled;
             this.Loaded += SettingsPage_Loaded;
         }
 
