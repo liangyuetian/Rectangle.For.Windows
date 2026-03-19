@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>17.0</VCProjectVersion>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <WindowsPackageType>None</WindowsPackageType>
+    <PublishDir>$(MSBuildThisFileDirectory)publish\</PublishDir>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <Import Project="$(MSBuildThisFileDirectory)\.nuget\NuGet.Cpp.props" Condition="Exists('$(MSBuildThisFileDirectory)\.nuget\NuGet.Cpp.props')" />
+
+  <ItemGroup>
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="Core\Enums.h" />
+    <ClInclude Include="Core\WindowRect.h" />
+    <ClInclude Include="Core\IRectCalculator.h" />
+    <ClInclude Include="Core\CalculatorFactory.h" />
+    <ClInclude Include="Core\RepeatedExecutionsCalculator.h" />
+    <ClInclude Include="Core\WindowHistory.h" />
+    <ClInclude Include="Core\WindowAction.h" />
+    <ClInclude Include="Services\ConfigService.h" />
+    <ClInclude Include="Services\Logger.h" />
+    <ClInclude Include="Services\Win32WindowService.h" />
+    <ClInclude Include="Services\HotkeyManager.h" />
+    <ClInclude Include="Services\WindowManager.h" />
+    <ClInclude Include="Services\ScreenDetectionService.h" />
+    <ClInclude Include="Services\WindowTypeService.h" />
+    <ClInclude Include="Services\LastActiveWindowService.h" />
+    <ClInclude Include="Services\SnapDetectionService.h" />
+    <ClInclude Include="Services\TrayIconService.h" />
+    <ClInclude Include="Services\ThemeService.h" />
+    <ClInclude Include="Services\WindowEnumerator.h" />
+    <ClInclude Include="Services\OperationHistoryManager.h" />
+    <ClInclude Include="Services\MouseHookService.h" />
+    <ClInclude Include="Services\SnappingManager.h" />
+    <ClInclude Include="Services\WindowAnimationService.h" />
+    <ClInclude Include="Services\LayoutManager.h" />
+    <ClInclude Include="Core\Calculators\HalfCalculators.h" />
+    <ClInclude Include="Core\Calculators\CornerCalculators.h" />
+    <ClInclude Include="Core\Calculators\ThirdCalculators.h" />
+    <ClInclude Include="Core\Calculators\FourthCalculators.h" />
+    <ClInclude Include="Core\Calculators\SixthCalculators.h" />
+    <ClInclude Include="Core\Calculators\EighthCalculators.h" />
+    <ClInclude Include="Core\Calculators\NinthCalculators.h" />
+    <ClInclude Include="Core\Calculators\MoveCalculators.h" />
+    <ClInclude Include="Core\Calculators\MiscCalculators.h" />
+    <ClInclude Include="Views\SettingsWindow.h" />
+    <ClInclude Include="Views\MainWindow.h" />
+    <ClInclude Include="Views\SnapAreasViewModel.h" />
+    <ClInclude Include="Views\ShortcutEditor.h" />
+    <ClInclude Include="Views\Controls\ShortcutCaptureDialog.h" />
+    <ClInclude Include="App.h" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ClCompile Include="pch.cpp" />
+    <ClCompile Include="App.cpp" />
+    <ClCompile Include="Core\Enums.cpp" />
+    <ClCompile Include="Core\WindowRect.cpp" />
+    <ClCompile Include="Core\CalculatorFactory.cpp" />
+    <ClCompile Include="Core\RepeatedExecutionsCalculator.cpp" />
+    <ClCompile Include="Core\WindowHistory.cpp" />
+    <ClCompile Include="Core\WindowAction.cpp" />
+    <ClCompile Include="Services\ConfigService.cpp" />
+    <ClCompile Include="Services\Logger.cpp" />
+    <ClCompile Include="Services\Win32WindowService.cpp" />
+    <ClCompile Include="Services\HotkeyManager.cpp" />
+    <ClCompile Include="Services\WindowManager.cpp" />
+    <ClCompile Include="Services\ScreenDetectionService.cpp" />
+    <ClCompile Include="Services\WindowTypeService.cpp" />
+    <ClCompile Include="Services\LastActiveWindowService.cpp" />
+    <ClCompile Include="Services\SnapDetectionService.cpp" />
+    <ClCompile Include="Services\TrayIconService.cpp" />
+    <ClCompile Include="Services\ThemeService.cpp" />
+    <ClCompile Include="Services\WindowEnumerator.cpp" />
+    <ClCompile Include="Services\OperationHistoryManager.cpp" />
+    <ClCompile Include="Services\MouseHookService.cpp" />
+    <ClCompile Include="Services\SnappingManager.cpp" />
+    <ClCompile Include="Services\WindowAnimationService.cpp" />
+    <ClCompile Include="Services\LayoutManager.cpp" />
+    <ClCompile Include="Core\Calculators\HalfCalculators.cpp" />
+    <ClCompile Include="Core\Calculators\CornerCalculators.cpp" />
+    <ClCompile Include="Core\Calculators\ThirdCalculators.cpp" />
+    <ClCompile Include="Core\Calculators\FourthCalculators.cpp" />
+    <ClCompile Include="Core\Calculators\SixthCalculators.cpp" />
+    <ClCompile Include="Core\Calculators\EighthCalculators.cpp" />
+    <ClCompile Include="Core\Calculators\NinthCalculators.cpp" />
+    <ClCompile Include="Core\Calculators\MoveCalculators.cpp" />
+    <ClCompile Include="Core\Calculators\MiscCalculators.cpp" />
+    <ClCompile Include="Views\SettingsWindow.cpp" />
+    <ClCompile Include="Views\MainWindow.cpp" />
+    <ClCompile Include="Views\SnapAreasViewModel.cpp" />
+    <ClCompile Include="Views\ShortcutEditor.cpp" />
+    <ClCompile Include="Views\Controls\ShortcutCaptureDialog.cpp" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="Package.appxmanifest" />
+    <None Include="app.manifest" />
+    <Page Include="Views\SettingsWindow.xaml" />
+    <Page Include="Views\Controls\ShortcutCaptureDialog.xaml" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ResourceCompile Include="Resources\Resources.resw" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Image Include="Assets\**\*.*" />
+  </ItemGroup>
+
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+</Project>
