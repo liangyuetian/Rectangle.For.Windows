@@ -221,15 +221,22 @@ namespace Rectangle.Windows.WinUI.Services
                 // 遍历 ContextFlyout 注入图标、快捷键文字、点击命令
                 if (_taskbarIcon.ContextFlyout is MenuFlyout flyout)
                 {
+                    void FixMenuLayout(object? s, object? _) => TryFixMenuFlyoutPresenterWidth(flyout);
+
                     flyout.Opening += (_, _) =>
                     {
                         // 先更新忽略菜单项（在焦点变化前获取活动窗口），再暂停跟踪
                         UpdateIgnoreMenuItem();
                         _lastActiveService?.PauseTracking();
-                        // 首次打开时强制布局：延迟查找 MenuFlyoutPresenter 并设置 MinWidth（H.NotifyIcon SecondWindow 布局问题）
+                        // 首次打开时强制布局：LayoutUpdated 即时响应 + 延迟重试兜底（H.NotifyIcon SecondWindow 布局问题）
+                        flyout.LayoutUpdated += FixMenuLayout;
                         _ = EnqueueFixMenuLayoutAsync(flyout);
                     };
-                    flyout.Closed += (_, _) => _lastActiveService?.ResumeTracking();
+                    flyout.Closed += (_, _) =>
+                    {
+                        flyout.LayoutUpdated -= FixMenuLayout;
+                        _lastActiveService?.ResumeTracking();
+                    };
 
                     DecorateItems(flyout.Items, shortcuts);
                 }
@@ -346,57 +353,66 @@ namespace Rectangle.Windows.WinUI.Services
 
         /// <summary>
         /// 预加载菜单，触发布局计算，避免首次右键时挤在一起。
+        /// SecondWindow 模式下需在显示后等待布局完成再隐藏，否则首次打开仍会挤压。
         /// </summary>
         private void PrewarmContextMenu()
         {
             if (_taskbarIcon?.ContextFlyout is not MenuFlyout flyout) return;
 
             var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-            dispatcher.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+            dispatcher.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, async () =>
             {
                 try
                 {
-                    // 在屏幕外显示一次以触发布局测量
                     var target = _taskbarIcon as Microsoft.UI.Xaml.FrameworkElement;
-                    if (target != null)
-                    {
-                        flyout.ShowAt(target, new global::Windows.Foundation.Point(-10000, -10000));
-                        flyout.Hide();
-                    }
+                    if (target == null) return;
+
+                    // 在屏幕外显示以触发布局测量
+                    flyout.ShowAt(target, new global::Windows.Foundation.Point(-10000, -10000));
+                    // 等待布局完成，否则首次打开仍会挤压（H.NotifyIcon SecondWindow 需先显示才能正确测量）
+                    await Task.Delay(200);
+                    flyout.Hide();
                 }
                 catch { }
             });
         }
 
         /// <summary>
-        /// 修复 H.NotifyIcon SecondWindow 模式下首次打开菜单布局挤压问题，通过代码强制设置 MenuFlyoutPresenter 宽度。
+        /// 尝试查找并设置 MenuFlyoutPresenter 宽度，修复 H.NotifyIcon SecondWindow 首次打开挤压。
+        /// </summary>
+        private void TryFixMenuFlyoutPresenterWidth(MenuFlyout flyout)
+        {
+            try
+            {
+                var xamlRoot = flyout.XamlRoot ?? _taskbarIcon?.XamlRoot ?? App.MainWindow?.Content?.XamlRoot;
+                if (xamlRoot == null) return;
+
+                foreach (var popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot))
+                {
+                    var presenter = FindChildByType<MenuFlyoutPresenter>(popup.Child);
+                    if (presenter != null)
+                    {
+                        presenter.MinWidth = 408;
+                        presenter.Width = 408;
+                        presenter.UpdateLayout();
+                        break;
+                    }
+                }
+            }
+            catch { }
+        }
+
+        /// <summary>
+        /// 延迟重试修复布局，兜底处理 SecondWindow 创建较慢的情况。
         /// </summary>
         private async Task EnqueueFixMenuLayoutAsync(MenuFlyout flyout)
         {
-            await Task.Delay(30);
-            var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-            dispatcher.TryEnqueue(() =>
+            foreach (var delayMs in new[] { 50, 100, 150, 200 })
             {
-                try
-                {
-                    // SecondWindow 模式下菜单在独立窗口，优先用 flyout 的 XamlRoot（菜单显示时已设置）
-                    var xamlRoot = flyout.XamlRoot ?? _taskbarIcon?.XamlRoot ?? App.MainWindow?.Content?.XamlRoot;
-                    if (xamlRoot == null) return;
-
-                    foreach (var popup in VisualTreeHelper.GetOpenPopupsForXamlRoot(xamlRoot))
-                    {
-                        var presenter = FindChildByType<MenuFlyoutPresenter>(popup.Child);
-                        if (presenter != null)
-                        {
-                            presenter.MinWidth = 280;
-                            presenter.Width = 280;
-                            presenter.UpdateLayout();
-                            break;
-                        }
-                    }
-                }
-                catch { }
-            });
+                await Task.Delay(delayMs);
+                var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+                dispatcher.TryEnqueue(() => TryFixMenuFlyoutPresenterWidth(flyout));
+            }
         }
 
         private static T? FindChildByType<T>(DependencyObject? parent) where T : DependencyObject
