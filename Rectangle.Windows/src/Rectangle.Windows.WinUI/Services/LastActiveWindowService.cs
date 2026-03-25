@@ -117,14 +117,16 @@ public unsafe class LastActiveWindowService : IDisposable
         // 只有有效窗口才更新记录
         if (IsValidWindow(newHwnd))
         {
+            string processName;
+            string displayTitle = string.Empty;
             lock (_lock)
             {
                 _lastValidWindowHwnd = newHwnd;
-                var processName = GetProcessName(newHwnd);
+                processName = GetProcessName(newHwnd);
                 var windowTitle = GetWindowTitle(new HWND(newHwnd));
                 
                 // 简化标题显示：如果标题包含路径分隔符，只显示最后一部分
-                var displayTitle = windowTitle;
+                displayTitle = windowTitle;
                 if (!string.IsNullOrEmpty(windowTitle))
                 {
                     var lastSlash = Math.Max(windowTitle.LastIndexOf('/'), windowTitle.LastIndexOf('\\'));
@@ -135,7 +137,14 @@ public unsafe class LastActiveWindowService : IDisposable
                 }
                 
                 Logger.Debug("LastActiveWindowService", $"更新有效窗口: 0x{newHwnd:X} | 标题: {displayTitle} | 进程: {processName}");
+            }
+            try
+            {
                 ActiveWindowChanged?.Invoke(newHwnd, processName);
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("LastActiveWindowService", $"ActiveWindowChanged 回调异常: {ex.Message}");
             }
         }
         else

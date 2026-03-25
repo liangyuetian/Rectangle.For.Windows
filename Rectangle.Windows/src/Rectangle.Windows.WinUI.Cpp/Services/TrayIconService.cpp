@@ -89,6 +89,8 @@ namespace winrt::Rectangle::Services
         std::vector<std::pair<std::wstring, std::wstring>> GetMenuItems()
         {
             return {
+                { L"ActionSearch", L"搜索动作..." },
+                { L"---", L"" },
                 { L"LeftHalf", L"左半屏" },
                 { L"RightHalf", L"右半屏" },
                 { L"CenterHalf", L"中间半屏" },
@@ -123,6 +125,12 @@ namespace winrt::Rectangle::Services
                 { L"---", L"" },
                 { L"Undo", L"撤销" },
                 { L"Redo", L"重做" },
+                { L"---", L"" },
+                { L"SaveCurrentLayout", L"保存当前布局" },
+                { L"RestoreLatestLayout", L"恢复最近布局" },
+                { L"---", L"" },
+                { L"ExportConfig", L"导出配置" },
+                { L"ImportConfig", L"导入配置" },
             };
         }
     }
@@ -280,7 +288,7 @@ namespace winrt::Rectangle::Services
         {
             if (item.first == L"---")
             {
-                InsertMenu(m_contextMenu, menuId, MF_SEPARATOR, 0, nullptr);
+                AppendMenu(m_contextMenu, MF_SEPARATOR, 0, nullptr);
             }
             else
             {
@@ -291,20 +299,20 @@ namespace winrt::Rectangle::Services
                     displayText += L"\t" + shortcutText;
                 }
 
-                InsertMenu(m_contextMenu, menuId, MF_STRING, menuId, displayText.c_str());
+                AppendMenu(m_contextMenu, MF_STRING, menuId, displayText.c_str());
                 m_menuItemIds[menuId] = item.first;
                 menuId++;
             }
         }
 
-        InsertMenu(m_contextMenu, menuId, MF_SEPARATOR, 0, nullptr);
+        AppendMenu(m_contextMenu, MF_SEPARATOR, 0, nullptr);
         menuId++;
 
-        InsertMenu(m_contextMenu, menuId, MF_STRING, menuId, L"设置...");
+        AppendMenu(m_contextMenu, MF_STRING, menuId, L"设置...");
         m_menuItemIds[menuId] = L"_settings_";
         menuId++;
 
-        InsertMenu(m_contextMenu, menuId, MF_STRING, menuId, L"退出");
+        AppendMenu(m_contextMenu, MF_STRING, menuId, L"退出");
         m_menuItemIds[menuId] = L"_exit_";
 
         Logger::Instance().Debug(L"TrayIconService", L"Context menu created with items");
@@ -397,10 +405,10 @@ namespace winrt::Rectangle::Services
             }
             break;
 
-        case WM_USER + 2:
+        case WM_COMMAND:
             if (m_contextMenu)
             {
-                UINT menuId = static_cast<UINT>(wParam);
+                UINT menuId = LOWORD(wParam);
                 auto it = m_menuItemIds.find(menuId);
                 if (it != m_menuItemIds.end())
                 {

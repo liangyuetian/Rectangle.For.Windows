@@ -2,6 +2,7 @@
 #include "Services/ConfigService.h"
 #include "Services/Logger.h"
 #include <shlobj.h>
+#include <filesystem>
 
 namespace winrt::Rectangle::Services
 {
@@ -93,7 +94,43 @@ namespace winrt::Rectangle::Services
         file.close();
 
         Logger::Instance().Info(L"ConfigService", L"配置已保存");
-        ConfigChanged(config);
+        if (ConfigChanged)
+        {
+            ConfigChanged(config);
+        }
+    }
+
+    std::wstring ConfigService::ExportToFile(const std::wstring& filePath)
+    {
+        auto target = filePath.empty()
+            ? (std::filesystem::path(m_configPath).parent_path() / L"config.export.json").wstring()
+            : filePath;
+        try
+        {
+            std::filesystem::copy_file(m_configPath, target, std::filesystem::copy_options::overwrite_existing);
+            return target;
+        }
+        catch (...)
+        {
+            return L"";
+        }
+    }
+
+    bool ConfigService::ImportFromFile(const std::wstring& filePath)
+    {
+        auto source = filePath.empty()
+            ? (std::filesystem::path(m_configPath).parent_path() / L"config.import.json").wstring()
+            : filePath;
+        try
+        {
+            if (!std::filesystem::exists(source)) return false;
+            std::filesystem::copy_file(source, m_configPath, std::filesystem::copy_options::overwrite_existing);
+            return true;
+        }
+        catch (...)
+        {
+            return false;
+        }
     }
 
     std::map<std::wstring, ShortcutConfig> ConfigService::GetDefaultShortcuts()

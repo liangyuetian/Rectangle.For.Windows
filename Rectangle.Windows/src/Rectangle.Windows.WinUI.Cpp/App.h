@@ -40,5 +40,6 @@ namespace winrt::Rectangle
         std::unique_ptr<Services::LastActiveWindowService> m_lastActiveService;
         std::unique_ptr<Services::SnapDetectionService> m_snapDetectionService;
         std::unique_ptr<Services::OperationHistoryManager> m_operationHistoryManager;
+        std::unique_ptr<Services::LayoutManager> m_layoutManager;
     };
 }

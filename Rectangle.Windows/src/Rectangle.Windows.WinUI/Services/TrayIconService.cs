@@ -46,6 +46,14 @@ namespace Rectangle.Windows.WinUI.Services
         private MenuFlyoutSubItem? _layoutsSubMenu;
         private MenuFlyoutSubItem? _configSubMenu;
         private static readonly List<string> _recentActionTags = new();
+        private static readonly HashSet<string> _specialMenuTags = new(StringComparer.OrdinalIgnoreCase)
+        {
+            "ActionSearch",
+            "SaveCurrentLayout",
+            "RestoreLatestLayout",
+            "ExportConfig",
+            "ImportConfig"
+        };
 
         // action tag → WindowAction
         private static readonly Dictionary<string, WindowAction> _tagToAction = new()
@@ -312,6 +320,13 @@ namespace Rectangle.Windows.WinUI.Services
 
                     if (fi.Tag is string tag)
                     {
+                        if (_specialMenuTags.Contains(tag))
+                        {
+                            fi.Command = _menuActionCommand;
+                            fi.CommandParameter = tag;
+                            continue;
+                        }
+
                         if (tag == "IgnoreApp")
                         {
                             _ignoreAppMenuItem = fi;

@@ -150,6 +150,8 @@ namespace winrt::Rectangle::Services
 
         AppConfig Load();
         void Save(const AppConfig& config);
+        std::wstring ExportToFile(const std::wstring& filePath = L"");
+        bool ImportFromFile(const std::wstring& filePath = L"");
 
         static std::map<std::wstring, ShortcutConfig> GetDefaultShortcuts();
 
