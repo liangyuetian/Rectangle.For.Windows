@@ -17,8 +17,13 @@ namespace winrt::Rectangle::Services
         using ShowSettingsCallback = std::function<void()>;
         using ExitCallback = std::function<void()>;
         using MenuActionCallback = std::function<void(const std::wstring& actionTag)>;
+        using GetLayoutsCallback = std::function<std::vector<std::pair<std::wstring, std::wstring>>()>;
 
-        TrayIconService(ShowSettingsCallback showSettings, ExitCallback onExit, MenuActionCallback onMenuAction);
+        TrayIconService(
+            ShowSettingsCallback showSettings,
+            ExitCallback onExit,
+            MenuActionCallback onMenuAction,
+            GetLayoutsCallback getLayouts = nullptr);
         ~TrayIconService();
 
         void Initialize();
@@ -32,7 +37,9 @@ namespace winrt::Rectangle::Services
     private:
         void CreateTrayIcon();
         void CreateContextMenu();
-        void SetupMenuItemCommands();
+        HMENU BuildRecentActionsMenu(UINT& menuId);
+        HMENU BuildLayoutsMenu(UINT& menuId);
+        void RecordRecentAction(const std::wstring& actionTag);
         void DestroyTrayIcon();
 
         std::wstring GetShortcutText(const std::wstring& actionName);
@@ -46,6 +53,7 @@ namespace winrt::Rectangle::Services
         ShowSettingsCallback m_showSettingsCallback;
         ExitCallback m_onExit;
         MenuActionCallback m_onMenuAction;
+        GetLayoutsCallback m_getLayouts;
 
         HWND m_trayIconHwnd{ nullptr };
         HICON m_iconHandle{ nullptr };
@@ -56,6 +64,7 @@ namespace winrt::Rectangle::Services
 
         HMENU m_contextMenu{ nullptr };
         std::map<UINT, std::wstring> m_menuItemIds;
+        std::vector<std::wstring> m_recentActionTags;
 
         static const UINT s_taskbarCreatedMsg;
 

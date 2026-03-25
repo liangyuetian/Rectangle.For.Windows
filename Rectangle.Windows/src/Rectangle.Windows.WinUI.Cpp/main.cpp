@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "App.h"
 #include <Windows.h>
+#include <exception>
 
 using namespace winrt::Rectangle;
 
@@ -21,6 +22,14 @@ static BOOL WINAPI ConsoleCtrlHandler(DWORD ctrlType)
 
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
 {
+    SetUnhandledExceptionFilter([](EXCEPTION_POINTERS*) -> LONG {
+        App::Current().Exit();
+        return EXCEPTION_EXECUTE_HANDLER;
+    });
+    std::set_terminate([]() {
+        App::Current().Exit();
+        abort();
+    });
     SetConsoleCtrlHandler(ConsoleCtrlHandler, TRUE);
     App::Current().Initialize();
     App::Current().Run();

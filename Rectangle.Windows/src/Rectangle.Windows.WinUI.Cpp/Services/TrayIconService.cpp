@@ -135,10 +135,15 @@ namespace winrt::Rectangle::Services
         }
     }
 
-    TrayIconService::TrayIconService(ShowSettingsCallback showSettings, ExitCallback onExit, MenuActionCallback onMenuAction)
+    TrayIconService::TrayIconService(
+        ShowSettingsCallback showSettings,
+        ExitCallback onExit,
+        MenuActionCallback onMenuAction,
+        GetLayoutsCallback getLayouts)
         : m_showSettingsCallback(std::move(showSettings))
         , m_onExit(std::move(onExit))
         , m_onMenuAction(std::move(onMenuAction))
+        , m_getLayouts(std::move(getLayouts))
     {
         Logger::Instance().Info(L"TrayIconService", L"TrayIconService created");
     }
@@ -308,6 +313,19 @@ namespace winrt::Rectangle::Services
         AppendMenu(m_contextMenu, MF_SEPARATOR, 0, nullptr);
         menuId++;
 
+        auto recentMenu = BuildRecentActionsMenu(menuId);
+        AppendMenu(m_contextMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(recentMenu), L"最近动作");
+
+        auto layoutsMenu = BuildLayoutsMenu(menuId);
+        AppendMenu(m_contextMenu, MF_POPUP, reinterpret_cast<UINT_PTR>(layoutsMenu), L"布局");
+
+        AppendMenu(m_contextMenu, MF_SEPARATOR, 0, nullptr);
+        menuId++;
+
+        AppendMenu(m_contextMenu, MF_STRING, menuId, L"忽略当前应用");
+        m_menuItemIds[menuId] = L"ToggleIgnoreApp";
+        menuId++;
+
         AppendMenu(m_contextMenu, MF_STRING, menuId, L"设置...");
         m_menuItemIds[menuId] = L"_settings_";
         menuId++;
@@ -320,6 +338,12 @@ namespace winrt::Rectangle::Services
 
     void TrayIconService::OnTrayIconClick(int x, int y)
     {
+        if (m_contextMenu)
+        {
+            DestroyMenu(m_contextMenu);
+            m_contextMenu = nullptr;
+        }
+        CreateContextMenu();
         if (!m_contextMenu)
         {
             return;
@@ -362,6 +386,10 @@ namespace winrt::Rectangle::Services
         }
         else
         {
+            if (s_tagToAction.find(actionTag) != s_tagToAction.end())
+            {
+                RecordRecentAction(actionTag);
+            }
             if (m_onMenuAction)
             {
                 m_onMenuAction(actionTag);
@@ -529,5 +557,90 @@ namespace winrt::Rectangle::Services
         }
 
         return L"";
+    }
+
+    HMENU TrayIconService::BuildRecentActionsMenu(UINT& menuId)
+    {
+        HMENU sub = CreatePopupMenu();
+        if (!sub)
+        {
+            return nullptr;
+        }
+
+        if (m_recentActionTags.empty())
+        {
+            AppendMenu(sub, MF_STRING | MF_GRAYED, menuId++, L"暂无");
+            return sub;
+        }
+
+        for (auto const& tag : m_recentActionTags)
+        {
+            auto it = s_tagToAction.find(tag);
+            if (it == s_tagToAction.end())
+            {
+                continue;
+            }
+
+            auto label = Core::ToString(it->second);
+            AppendMenu(sub, MF_STRING, menuId, label.c_str());
+            m_menuItemIds[menuId] = tag;
+            menuId++;
+        }
+
+        return sub;
+    }
+
+    HMENU TrayIconService::BuildLayoutsMenu(UINT& menuId)
+    {
+        HMENU sub = CreatePopupMenu();
+        if (!sub)
+        {
+            return nullptr;
+        }
+
+        AppendMenu(sub, MF_STRING, menuId, L"保存当前布局");
+        m_menuItemIds[menuId] = L"SaveCurrentLayout";
+        menuId++;
+        AppendMenu(sub, MF_STRING, menuId, L"恢复最近布局");
+        m_menuItemIds[menuId] = L"RestoreLatestLayout";
+        menuId++;
+        AppendMenu(sub, MF_SEPARATOR, 0, nullptr);
+
+        if (!m_getLayouts)
+        {
+            AppendMenu(sub, MF_STRING | MF_GRAYED, menuId++, L"暂无布局");
+            return sub;
+        }
+
+        auto layouts = m_getLayouts();
+        if (layouts.empty())
+        {
+            AppendMenu(sub, MF_STRING | MF_GRAYED, menuId++, L"暂无布局");
+            return sub;
+        }
+
+        for (auto const& layout : layouts)
+        {
+            std::wstring actionTag = L"RestoreLayout:" + layout.first;
+            AppendMenu(sub, MF_STRING, menuId, layout.second.c_str());
+            m_menuItemIds[menuId] = actionTag;
+            menuId++;
+        }
+
+        return sub;
+    }
+
+    void TrayIconService::RecordRecentAction(const std::wstring& actionTag)
+    {
+        auto it = std::find(m_recentActionTags.begin(), m_recentActionTags.end(), actionTag);
+        if (it != m_recentActionTags.end())
+        {
+            m_recentActionTags.erase(it);
+        }
+        m_recentActionTags.insert(m_recentActionTags.begin(), actionTag);
+        if (m_recentActionTags.size() > 8)
+        {
+            m_recentActionTags.resize(8);
+        }
     }
 }

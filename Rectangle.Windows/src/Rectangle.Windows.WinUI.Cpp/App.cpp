@@ -139,6 +139,45 @@ namespace winrt::Rectangle
                     if (m_trayIconService) m_trayIconService->ShowNotification(L"Rectangle", ok ? L"配置已导入" : L"未找到 config.import.json");
                     return;
                 }
+                if (actionTag == L"ToggleIgnoreApp")
+                {
+                    if (!m_configService) return;
+                    Services::Win32WindowService win32;
+                    auto hwnd = win32.GetForegroundWindow();
+                    auto processName = win32.GetProcessNameFromWindow(hwnd);
+                    if (processName.empty())
+                    {
+                        if (m_trayIconService) m_trayIconService->ShowNotification(L"Rectangle", L"未识别到前台应用");
+                        return;
+                    }
+                    auto cfg = m_configService->Load();
+                    auto it = std::find_if(cfg.IgnoredApps.begin(), cfg.IgnoredApps.end(), [&](const std::wstring& app) {
+                        return _wcsicmp(app.c_str(), processName.c_str()) == 0;
+                    });
+                    bool ignored = it != cfg.IgnoredApps.end();
+                    if (ignored)
+                    {
+                        cfg.IgnoredApps.erase(it);
+                        if (m_trayIconService) m_trayIconService->ShowNotification(L"Rectangle", processName + L" 已移出忽略列表");
+                    }
+                    else
+                    {
+                        cfg.IgnoredApps.push_back(processName);
+                        if (m_trayIconService) m_trayIconService->ShowNotification(L"Rectangle", processName + L" 已加入忽略列表");
+                    }
+                    m_configService->Save(cfg);
+                    return;
+                }
+                if (actionTag.rfind(L"RestoreLayout:", 0) == 0)
+                {
+                    if (m_layoutManager)
+                    {
+                        auto id = actionTag.substr(std::wstring(L"RestoreLayout:").size());
+                        bool ok = m_layoutManager->RestoreLayout(id);
+                        if (m_trayIconService) m_trayIconService->ShowNotification(L"Rectangle", ok ? L"布局已恢复" : L"布局恢复失败");
+                    }
+                    return;
+                }
 
                 static const std::map<std::wstring, Core::WindowAction> actionMap = {
                     { L"LeftHalf", Core::WindowAction::LeftHalf }, { L"RightHalf", Core::WindowAction::RightHalf },
@@ -172,6 +211,19 @@ namespace winrt::Rectangle
                 {
                     m_windowManager->Execute(it->second, 0, true);
                 }
+            },
+            [this]() -> std::vector<std::pair<std::wstring, std::wstring>> {
+                std::vector<std::pair<std::wstring, std::wstring>> result;
+                if (!m_layoutManager)
+                {
+                    return result;
+                }
+                auto layouts = m_layoutManager->GetAllLayouts();
+                for (auto const& layout : layouts)
+                {
+                    result.emplace_back(layout.Id, layout.Name.empty() ? layout.Id : layout.Name);
+                }
+                return result;
             }
         );
         m_trayIconService->Initialize();

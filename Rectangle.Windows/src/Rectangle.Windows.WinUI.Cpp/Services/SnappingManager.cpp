@@ -4,6 +4,7 @@
 #include "Services/Logger.h"
 #include "Services/Win32WindowService.h"
 #include "Services/ConfigService.h"
+#include "Services/WindowManager.h"
 #include "Core/WindowHistory.h"
 
 namespace winrt::Rectangle::Services
@@ -113,6 +114,28 @@ namespace winrt::Rectangle::Services
     {
         if (!m_isDragging) return;
 
+        if (m_hasMoved)
+        {
+            auto action = DetectSnapAction(x, y);
+            if (action.has_value())
+            {
+                if (m_windowManager)
+                {
+                    auto* manager = static_cast<WindowManager*>(m_windowManager);
+                    manager->Execute(action.value(), 0, true);
+                }
+
+                if (m_onSnapTriggered)
+                {
+                    SnapEventArgs args{};
+                    args.X = x;
+                    args.Y = y;
+                    args.ActionName = Core::ToString(action.value());
+                    m_onSnapTriggered(args);
+                }
+            }
+        }
+
         if (m_hasMoved && m_onDragEnded)
         {
             m_onDragEnded();
@@ -120,5 +143,39 @@ namespace winrt::Rectangle::Services
         }
 
         StopDragDetection();
+    }
+
+    std::optional<Core::WindowAction> SnappingManager::DetectSnapAction(int32_t x, int32_t y) const
+    {
+        POINT pt{ x, y };
+        HMONITOR monitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
+        MONITORINFO mi{};
+        mi.cbSize = sizeof(mi);
+        if (!monitor || !GetMonitorInfo(monitor, &mi))
+        {
+            return std::nullopt;
+        }
+
+        const auto left = mi.rcWork.left;
+        const auto top = mi.rcWork.top;
+        const auto right = mi.rcWork.right;
+        const auto bottom = mi.rcWork.bottom;
+
+        bool nearLeft = x <= left + m_edgeMarginLeft;
+        bool nearRight = x >= right - m_edgeMarginRight;
+        bool nearTop = y <= top + m_edgeMarginTop;
+        bool nearBottom = y >= bottom - m_edgeMarginBottom;
+
+        if (nearTop && nearLeft && x <= left + m_cornerSize && y <= top + m_cornerSize) return Core::WindowAction::TopLeft;
+        if (nearTop && nearRight && x >= right - m_cornerSize && y <= top + m_cornerSize) return Core::WindowAction::TopRight;
+        if (nearBottom && nearLeft && x <= left + m_cornerSize && y >= bottom - m_cornerSize) return Core::WindowAction::BottomLeft;
+        if (nearBottom && nearRight && x >= right - m_cornerSize && y >= bottom - m_cornerSize) return Core::WindowAction::BottomRight;
+
+        if (nearLeft) return Core::WindowAction::LeftHalf;
+        if (nearRight) return Core::WindowAction::RightHalf;
+        if (nearTop) return Core::WindowAction::TopHalf;
+        if (nearBottom) return Core::WindowAction::BottomHalf;
+
+        return std::nullopt;
     }
 }

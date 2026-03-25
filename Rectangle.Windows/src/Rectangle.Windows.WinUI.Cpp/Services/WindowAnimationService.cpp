@@ -3,6 +3,7 @@
 #include "Services/Logger.h"
 #include <thread>
 #include <cmath>
+#include <Windows.h>
 
 namespace winrt::Rectangle::Services
 {
@@ -72,6 +73,15 @@ namespace winrt::Rectangle::Services
 
             Logger::Instance().Debug(L"WindowAnimationService",
                 L"Animating: " + std::to_wstring(currentPos.X) + L"," + std::to_wstring(currentPos.Y));
+
+            SetWindowPos(
+                reinterpret_cast<HWND>(hwnd),
+                nullptr,
+                currentPos.X,
+                currentPos.Y,
+                currentPos.Width,
+                currentPos.Height,
+                SWP_NOZORDER | SWP_NOACTIVATE);
 
             t += dt;
             std::this_thread::sleep_for(std::chrono::milliseconds(16));

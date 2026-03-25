@@ -36,6 +36,7 @@ namespace winrt::Rectangle::Services
         void StopDragDetection();
         void ProcessMouseMove(int32_t x, int32_t y);
         void ProcessMouseUp(int32_t x, int32_t y);
+        std::optional<Core::WindowAction> DetectSnapAction(int32_t x, int32_t y) const;
 
         void* m_windowManager{ nullptr };
         std::unique_ptr<MouseHookService> m_mouseHook;
