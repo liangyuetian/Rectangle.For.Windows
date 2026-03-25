@@ -20,6 +20,8 @@ namespace Rectangle.Windows.WinUI.Services
         private readonly Action _showSettingsCallback;
         private readonly ConfigService _configService;
         private LastActiveWindowService? _lastActiveService;
+        private bool _contextMenuPrewarmed;
+        private bool _contextMenuPrewarming;
 
         /// <summary>
         /// 统一的菜单项命令，通过 CommandParameter 传递 action tag。使用 Command 而非 Click，因 H.NotifyIcon 托盘菜单下 Click 可能不触发。
@@ -243,8 +245,8 @@ namespace Rectangle.Windows.WinUI.Services
 
                 _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
 
-                // 预加载菜单以解决首次打开布局挤压（H.NotifyIcon #21, #89）
-                PrewarmContextMenu();
+                // 预加载菜单以解决首次打开布局挤压（SecondWindow 首次测量可能尚未稳定）
+                _ = PrewarmContextMenuAsync();
 
                 Logger.Info("TrayIconService", "托盘图标初始化成功");
             }
@@ -352,29 +354,57 @@ namespace Rectangle.Windows.WinUI.Services
         }
 
         /// <summary>
-        /// 预加载菜单，触发布局计算，避免首次右键时挤在一起。
-        /// SecondWindow 模式下需在显示后等待布局完成再隐藏，否则首次打开仍会挤压。
+        /// 多次预加载菜单，触发布局计算，避免首次右键时挤在一起。
+        /// SecondWindow 模式下单次预热偶发失效，因此采用分阶段重试。
         /// </summary>
-        private void PrewarmContextMenu()
+        private async Task PrewarmContextMenuAsync()
         {
             if (_taskbarIcon?.ContextFlyout is not MenuFlyout flyout) return;
+            if (_contextMenuPrewarmed || _contextMenuPrewarming) return;
+            _contextMenuPrewarming = true;
 
             var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-            dispatcher.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, async () =>
+            if (dispatcher == null)
             {
-                try
-                {
-                    var target = _taskbarIcon as Microsoft.UI.Xaml.FrameworkElement;
-                    if (target == null) return;
+                _contextMenuPrewarming = false;
+                return;
+            }
 
-                    // 在屏幕外显示以触发布局测量
-                    flyout.ShowAt(target, new global::Windows.Foundation.Point(-10000, -10000));
-                    // 等待布局完成，否则首次打开仍会挤压（H.NotifyIcon SecondWindow 需先显示才能正确测量）
-                    await Task.Delay(200);
-                    flyout.Hide();
+            try
+            {
+                // 分阶段预热：让 SecondWindow 的 XamlRoot/Presenter 在启动后有充分时间完成创建与测量
+                foreach (var delayMs in new[] { 0, 120, 280, 520 })
+                {
+                    if (delayMs > 0) await Task.Delay(delayMs);
+
+                    dispatcher.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
+                    {
+                        try
+                        {
+                            var target = _taskbarIcon as Microsoft.UI.Xaml.FrameworkElement;
+                            if (target == null) return;
+                            if (flyout.IsOpen) return;
+
+                            // 屏幕外显示触发布局测量
+                            flyout.ShowAt(target, new global::Windows.Foundation.Point(-10000, -10000));
+                            TryFixMenuFlyoutPresenterWidth(flyout);
+                        }
+                        catch { }
+                    });
+
+                    await Task.Delay(180);
+                    dispatcher.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Normal, () =>
+                    {
+                        try { if (flyout.IsOpen) flyout.Hide(); } catch { }
+                    });
                 }
-                catch { }
-            });
+
+                _contextMenuPrewarmed = true;
+            }
+            finally
+            {
+                _contextMenuPrewarming = false;
+            }
         }
 
         /// <summary>
