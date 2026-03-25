@@ -37,6 +37,8 @@ namespace winrt::Rectangle::Services
         std::pair<WindowAction, std::optional<int32_t>> GetActualAction(
             int64_t hwnd, WindowAction action, bool windowMovedExternally);
 
+        Core::WindowRect HandleFixedSizeWindow(const Core::WindowRect& current, const Core::WindowRect& target,
+            const Core::WorkArea& workArea, WindowAction action);
         Core::WindowRect ApplyWindowGap(Core::WindowRect target, const Core::WorkArea& workArea, WindowAction action);
         Core::WindowRect ApplyMinimumSize(Core::WindowRect target);
         Core::WindowRect ClampToWorkArea(Core::WindowRect target, const Core::WorkArea& workArea);

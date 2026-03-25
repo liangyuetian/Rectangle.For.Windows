@@ -188,6 +188,12 @@ namespace winrt::Rectangle::Services
 
         auto target = calculator->Calculate(workArea, current, actualAction, m_gapSize);
         target = ApplyWindowGap(target, workArea, actualAction);
+
+        if (!win32.IsResizable(hwnd))
+        {
+            target = HandleFixedSizeWindow(current, target, workArea, actualAction);
+        }
+
         target = ApplyMinimumSize(target);
         target = ClampToWorkArea(target, workArea);
 
@@ -516,6 +522,45 @@ namespace winrt::Rectangle::Services
         }
 
         return target;
+    }
+
+    Core::WindowRect WindowManager::HandleFixedSizeWindow(const Core::WindowRect& current, const Core::WindowRect& target,
+        const Core::WorkArea& workArea, WindowAction action)
+    {
+        switch (action)
+        {
+        case WindowAction::LeftHalf:
+        case WindowAction::FirstThird:
+        case WindowAction::FirstFourth:
+            return Core::WindowRect(workArea.Left, target.Y, current.Width, current.Height);
+        case WindowAction::RightHalf:
+        case WindowAction::LastThird:
+        case WindowAction::LastFourth:
+            return Core::WindowRect(workArea.Right - current.Width, target.Y, current.Width, current.Height);
+        case WindowAction::Center:
+        case WindowAction::CenterHalf:
+        case WindowAction::CenterThird:
+        {
+            int32_t centerX = workArea.Left + (workArea.Width() - current.Width) / 2;
+            int32_t centerY = workArea.Top + (workArea.Height() - current.Height) / 2;
+            return Core::WindowRect(centerX, centerY, current.Width, current.Height);
+        }
+        case WindowAction::TopHalf:
+            return Core::WindowRect(target.X, workArea.Top, current.Width, current.Height);
+        case WindowAction::BottomHalf:
+            return Core::WindowRect(target.X, workArea.Bottom - current.Height, current.Width, current.Height);
+        case WindowAction::MoveLeft:
+        case WindowAction::MoveRight:
+        case WindowAction::MoveUp:
+        case WindowAction::MoveDown:
+            return Core::WindowRect(target.X, target.Y, current.Width, current.Height);
+        default:
+        {
+            int32_t centerX = workArea.Left + (workArea.Width() - current.Width) / 2;
+            int32_t centerY = workArea.Top + (workArea.Height() - current.Height) / 2;
+            return Core::WindowRect(centerX, centerY, current.Width, current.Height);
+        }
+        }
     }
 
     Core::WindowRect WindowManager::ApplyMinimumSize(Core::WindowRect target)

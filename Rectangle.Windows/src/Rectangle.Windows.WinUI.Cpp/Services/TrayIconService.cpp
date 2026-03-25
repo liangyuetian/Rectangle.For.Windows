@@ -445,6 +445,11 @@ namespace winrt::Rectangle::Services
             }
             break;
 
+        case WM_ENDSESSION:
+        case WM_DESTROY:
+            DestroyTrayIcon();
+            break;
+
         default:
             if (msg == s_taskbarCreatedMsg)
             {
