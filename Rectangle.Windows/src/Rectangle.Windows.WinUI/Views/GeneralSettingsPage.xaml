@@ -154,6 +154,37 @@
                 </StackPanel>
             </Border>
 
+            <Border Style="{StaticResource ModernCardStyle}">
+                <StackPanel Spacing="12">
+                    <TextBlock Text="托盘与自动化（高级）" Style="{StaticResource CardTitleStyle}"/>
+                    <TextBlock Text="用逗号分隔标签。例如：LeftHalf,RightHalf,Maximize。应用规则格式：进程名=动作标签；多条用分号分隔。"
+                              FontSize="12"
+                              Foreground="{StaticResource SecondaryTextBrush}"
+                              TextWrapping="Wrap"/>
+
+                    <TextBlock Text="收藏动作标签"/>
+                    <TextBox x:Name="FavoriteActionsBox" PlaceholderText="LeftHalf,RightHalf,Maximize,Undo" LostFocus="FavoriteActionsBox_LostFocus"/>
+
+                    <TextBlock Text="托盘可见动作标签（留空=显示全部）"/>
+                    <TextBox x:Name="VisibleActionsBox" PlaceholderText="LeftHalf,RightHalf,TopHalf,BottomHalf" LostFocus="VisibleActionsBox_LostFocus"/>
+
+                    <TextBlock Text="应用规则（进程=动作）"/>
+                    <TextBox x:Name="AppRulesBox" PlaceholderText="Code=LeftHalf;chrome=RightHalf" LostFocus="AppRulesBox_LostFocus"/>
+
+                    <TextBlock Text="显示器间隙覆盖（索引=gap）"/>
+                    <TextBox x:Name="MonitorGapOverridesBox" PlaceholderText="0=8;1=16" LostFocus="MonitorGapOverridesBox_LostFocus"/>
+
+                    <ToggleSwitch x:Name="ActionNotificationSwitch"
+                                 Header="执行动作后显示托盘通知"
+                                 Toggled="ActionNotificationSwitch_Toggled"/>
+
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="导出配置到 config.export.json" Click="ExportConfig_Click"/>
+                        <Button Content="从 config.import.json 导入配置" Click="ImportConfig_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <!-- 关于卡片 -->
             <Border Style="{StaticResource ModernCardStyle}">
                 <StackPanel Spacing="12">

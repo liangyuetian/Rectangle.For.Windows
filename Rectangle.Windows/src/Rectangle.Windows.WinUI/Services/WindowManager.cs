@@ -248,10 +248,11 @@ public unsafe class WindowManager
         // 执行其他操作时，清除最大化状态
         _maximizedWindows.Remove(hwnd);
 
-        var target = calculator.Calculate(workArea, current, actualAction, _gapSize);
+        var effectiveGap = GetEffectiveGapSize(workArea);
+        var target = calculator.Calculate(workArea, current, actualAction, effectiveGap);
 
         // 为相邻窗口应用间隙
-        target = ApplyWindowGap(target, workArea, actualAction);
+        target = ApplyWindowGap(target, workArea, actualAction, effectiveGap);
 
         // 对固定尺寸窗口特殊处理：只移动，不调整大小
         if (!_windowType.IsResizable(hwnd))
@@ -760,11 +761,11 @@ public unsafe class WindowManager
         return workAreas[prevIndex];
     }
 
-    private WindowRect ApplyWindowGap(WindowRect target, WorkArea workArea, WindowAction action)
+    private WindowRect ApplyWindowGap(WindowRect target, WorkArea workArea, WindowAction action, int gapSize)
     {
-        if (_gapSize <= 0) return target;
+        if (gapSize <= 0) return target;
 
-        var halfGap = _gapSize / 2;
+        var halfGap = gapSize / 2;
 
         // 根据操作类型，为窗口之间添加间隙
         return action switch
@@ -784,11 +785,31 @@ public unsafe class WindowManager
             WindowAction.BottomRight => new WindowRect(target.X + halfGap, target.Y + halfGap, target.Width - halfGap, target.Height - halfGap),
             // 三分之一
             WindowAction.FirstThird => new WindowRect(target.X, target.Y, target.Width - halfGap, target.Height),
-            WindowAction.CenterThird => new WindowRect(target.X + halfGap, target.Y, target.Width - _gapSize, target.Height),
+            WindowAction.CenterThird => new WindowRect(target.X + halfGap, target.Y, target.Width - gapSize, target.Height),
             WindowAction.LastThird => new WindowRect(target.X + halfGap, target.Y, target.Width - halfGap, target.Height),
             // 其他操作不应用间隙
             _ => target
         };
+    }
+
+    private int GetEffectiveGapSize(WorkArea targetArea)
+    {
+        var config = _configService?.Load();
+        if (config?.MonitorGapOverrides == null || config.MonitorGapOverrides.Count == 0)
+            return _gapSize;
+
+        var workAreas = _win32.GetMonitorWorkAreas();
+        for (int i = 0; i < workAreas.Count; i++)
+        {
+            var wa = workAreas[i];
+            if (wa.Left == targetArea.Left && wa.Top == targetArea.Top && wa.Right == targetArea.Right && wa.Bottom == targetArea.Bottom)
+            {
+                if (config.MonitorGapOverrides.TryGetValue(i.ToString(), out var gap))
+                    return Math.Max(0, gap);
+                break;
+            }
+        }
+        return _gapSize;
     }
 
     /// <summary>

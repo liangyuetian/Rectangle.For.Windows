@@ -22,6 +22,32 @@
                         <Setter Property="Width" Value="408" />
                     </Style>
                 </MenuFlyout.MenuFlyoutPresenterStyle>
+                <MenuFlyoutItem Text="搜索动作..." Tag="ActionSearch">
+                    <MenuFlyoutItem.Icon>
+                        <FontIcon Glyph="&#xE721;" />
+                    </MenuFlyoutItem.Icon>
+                </MenuFlyoutItem>
+                <MenuFlyoutSubItem Text="最近操作" Tag="RecentActions">
+                    <MenuFlyoutSubItem.Icon>
+                        <FontIcon Glyph="&#xE823;" />
+                    </MenuFlyoutSubItem.Icon>
+                </MenuFlyoutSubItem>
+                <MenuFlyoutSubItem Text="收藏动作" Tag="FavoriteActions">
+                    <MenuFlyoutSubItem.Icon>
+                        <FontIcon Glyph="&#xE734;" />
+                    </MenuFlyoutSubItem.Icon>
+                </MenuFlyoutSubItem>
+                <MenuFlyoutSubItem Text="布局预设" Tag="LayoutsMenu">
+                    <MenuFlyoutSubItem.Icon>
+                        <FontIcon Glyph="&#xE8FD;" />
+                    </MenuFlyoutSubItem.Icon>
+                </MenuFlyoutSubItem>
+                <MenuFlyoutSubItem Text="配置" Tag="ConfigMenu">
+                    <MenuFlyoutSubItem.Icon>
+                        <FontIcon Glyph="&#xE713;" />
+                    </MenuFlyoutSubItem.Icon>
+                </MenuFlyoutSubItem>
+                <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="左半屏" Tag="LeftHalf">
                     <MenuFlyoutItem.Icon>
                         <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/leftHalfTemplate.png" ShowAsMonochrome="False" />

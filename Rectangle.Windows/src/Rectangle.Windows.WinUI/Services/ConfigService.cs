@@ -78,6 +78,32 @@ namespace Rectangle.Windows.WinUI.Services
             }
         }
 
+        public async Task<string> ExportToFileAsync(string? filePath = null)
+        {
+            var target = string.IsNullOrWhiteSpace(filePath)
+                ? Path.Combine(Path.GetDirectoryName(_configPath) ?? "", "config.export.json")
+                : filePath;
+
+            var config = Load();
+            var json = JsonSerializer.Serialize(config, AppJsonContext.Default.AppConfig);
+            await File.WriteAllTextAsync(target, json);
+            return target;
+        }
+
+        public async Task<bool> ImportFromFileAsync(string? filePath = null)
+        {
+            var source = string.IsNullOrWhiteSpace(filePath)
+                ? Path.Combine(Path.GetDirectoryName(_configPath) ?? "", "config.import.json")
+                : filePath;
+            if (!File.Exists(source)) return false;
+
+            var json = await File.ReadAllTextAsync(source);
+            var imported = JsonSerializer.Deserialize(json, AppJsonContext.Default.AppConfig);
+            if (imported == null) return false;
+            Save(imported);
+            return true;
+        }
+
         private AppConfig CreateDefaultConfig() => new AppConfig { Shortcuts = GetDefaultShortcuts() };
 
         public static Dictionary<string, ShortcutConfig> GetDefaultShortcuts()
@@ -200,6 +226,22 @@ namespace Rectangle.Windows.WinUI.Services
         public ConflictDetectionConfig ConflictDetection { get; set; } = new();
         public DpiConfig Dpi { get; set; } = new();
         public StatisticsConfig Statistics { get; set; } = new();
+        public List<string> FavoriteTrayActions { get; set; } = new() { "LeftHalf", "RightHalf", "Maximize", "Undo" };
+        public List<string> TrayVisibleActions { get; set; } = new();
+        public int RecentActionLimit { get; set; } = 8;
+        public bool EnableActionNotification { get; set; } = false;
+        /// <summary>每个显示器索引的间隙覆盖值，key 为显示器索引字符串（如 "0","1"）</summary>
+        public Dictionary<string, int> MonitorGapOverrides { get; set; } = new();
+        /// <summary>按应用自动执行规则</summary>
+        public List<AppActionRule> AppRules { get; set; } = new();
+    }
+
+    public class AppActionRule
+    {
+        public bool Enabled { get; set; } = true;
+        public string ProcessName { get; set; } = "";
+        public string ActionTag { get; set; } = "";
+        public bool MatchExact { get; set; } = false;
     }
 
     public class AnimationConfig

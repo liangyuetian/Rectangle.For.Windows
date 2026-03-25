@@ -9,6 +9,8 @@ using Windows.Foundation;
 using Rectangle.Windows.WinUI.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Rectangle.Windows.WinUI.Services
@@ -18,7 +20,9 @@ namespace Rectangle.Windows.WinUI.Services
         private TaskbarIcon? _taskbarIcon;
         private readonly WindowManager _windowManager;
         private readonly Action _showSettingsCallback;
+        private readonly Action _showActionSearchCallback;
         private readonly ConfigService _configService;
+        private readonly LayoutManager _layoutManager;
         private LastActiveWindowService? _lastActiveService;
         private bool _contextMenuPrewarmed;
         private bool _contextMenuPrewarming;
@@ -37,6 +41,11 @@ namespace Rectangle.Windows.WinUI.Services
         /// 忽略应用菜单项引用，用于动态更新文本
         /// </summary>
         private MenuFlyoutItem? _ignoreAppMenuItem;
+        private MenuFlyoutSubItem? _recentActionsSubMenu;
+        private MenuFlyoutSubItem? _favoriteActionsSubMenu;
+        private MenuFlyoutSubItem? _layoutsSubMenu;
+        private MenuFlyoutSubItem? _configSubMenu;
+        private static readonly List<string> _recentActionTags = new();
 
         // action tag → WindowAction
         private static readonly Dictionary<string, WindowAction> _tagToAction = new()
@@ -95,12 +104,14 @@ namespace Rectangle.Windows.WinUI.Services
             ["Redo"]               = WindowAction.Redo,
         };
 
-        public TrayIconService(WindowManager windowManager, Action showSettingsCallback,
+        public TrayIconService(WindowManager windowManager, Action showSettingsCallback, Action showActionSearchCallback,
                                ConfigService configService, LastActiveWindowService? lastActiveService = null)
         {
             _windowManager = windowManager;
             _showSettingsCallback = showSettingsCallback;
+            _showActionSearchCallback = showActionSearchCallback;
             _configService = configService;
+            _layoutManager = new LayoutManager(configService, new Win32WindowService());
             _lastActiveService = lastActiveService;
         }
 
@@ -247,6 +258,7 @@ namespace Rectangle.Windows.WinUI.Services
                     {
                         // 先更新忽略菜单项（在焦点变化前获取活动窗口），再暂停跟踪
                         UpdateIgnoreMenuItem();
+                        PopulateDynamicSections(flyout);
                         _lastActiveService?.PauseTracking();
                         // 首次打开时强制布局：LayoutUpdated 即时响应 + 延迟重试兜底（H.NotifyIcon SecondWindow 布局问题）
                         flyout.LayoutUpdated += FixMenuLayout;
@@ -276,11 +288,22 @@ namespace Rectangle.Windows.WinUI.Services
 
         private void DecorateItems(IList<MenuFlyoutItemBase> items, Dictionary<string, ShortcutConfig> shortcuts)
         {
+            var config = _configService.Load();
+            var visible = new HashSet<string>(config.TrayVisibleActions ?? [], StringComparer.OrdinalIgnoreCase);
+            var useFilter = visible.Count > 0;
+
             foreach (var item in items)
             {
                 if (item is MenuFlyoutSubItem sub)
                 {
                     sub.AccessKey = string.Empty;
+                    if (sub.Tag is string subTag)
+                    {
+                        if (subTag == "RecentActions") _recentActionsSubMenu = sub;
+                        else if (subTag == "FavoriteActions") _favoriteActionsSubMenu = sub;
+                        else if (subTag == "LayoutsMenu") _layoutsSubMenu = sub;
+                        else if (subTag == "ConfigMenu") _configSubMenu = sub;
+                    }
                     DecorateItems(sub.Items, shortcuts);
                 }
                 else if (item is MenuFlyoutItem fi)
@@ -302,6 +325,11 @@ namespace Rectangle.Windows.WinUI.Services
 
                         fi.Command = _menuActionCommand;
                         fi.CommandParameter = tag;
+
+                        if (useFilter && _tagToAction.ContainsKey(tag) && !visible.Contains(tag))
+                        {
+                            fi.Visibility = Visibility.Collapsed;
+                        }
                     }
                 }
             }
@@ -315,16 +343,54 @@ namespace Rectangle.Windows.WinUI.Services
                 Logger.Warning("TrayIconService", "菜单项 Command 执行时 Parameter 为空");
                 return;
             }
+
+            if (HandleSpecialMenuAction(tag))
+                return;
+
             Logger.Info("TrayIconService", $"菜单项 Command 执行: {tag}");
             if (_tagToAction.TryGetValue(tag, out var action))
             {
                 // 托盘菜单显式选择，跳过循环模式，始终执行用户点击的操作
                 _windowManager.Execute(action, forceDirectAction: true);
+                RecordRecentAction(tag);
+                TryShowActionNotification(tag);
             }
             else
             {
                 Logger.Warning("TrayIconService", $"未找到对应的动作: {tag}");
             }
+        }
+
+        private bool HandleSpecialMenuAction(string tag)
+        {
+            switch (tag)
+            {
+                case "ActionSearch":
+                    _showActionSearchCallback();
+                    return true;
+                case "SaveCurrentLayout":
+                    _ = SaveCurrentLayoutAsync();
+                    return true;
+                case "RestoreLatestLayout":
+                    _ = RestoreLatestLayoutAsync();
+                    return true;
+                case "ExportConfig":
+                    _ = ExportConfigAsync();
+                    return true;
+                case "ImportConfig":
+                    _ = ImportConfigAsync();
+                    return true;
+            }
+
+            if (tag.StartsWith("RestoreLayout:", StringComparison.Ordinal))
+            {
+                var id = tag["RestoreLayout:".Length..];
+                if (!string.IsNullOrWhiteSpace(id))
+                    _ = RestoreLayoutByIdAsync(id);
+                return true;
+            }
+
+            return false;
         }
 
         private void OnIgnoreAppExecuteRequested(XamlUICommand sender, ExecuteRequestedEventArgs args)
@@ -369,6 +435,177 @@ namespace Rectangle.Windows.WinUI.Services
             _ignoreAppMenuItem.Text = isIgnored ? $"取消忽略 {processName}" : $"忽略 {processName}";
             _ignoreAppMenuItem.IsEnabled = true;
             _ignoreAppMenuItem.CommandParameter = processName;
+        }
+
+        private void PopulateDynamicSections(MenuFlyout flyout)
+        {
+            try
+            {
+                PopulateRecentActionsMenu();
+                PopulateFavoriteActionsMenu();
+                _ = PopulateLayoutsMenuAsync();
+                PopulateConfigMenu();
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("TrayIconService", $"动态菜单构建失败: {ex.Message}");
+            }
+        }
+
+        private void PopulateRecentActionsMenu()
+        {
+            if (_recentActionsSubMenu == null) return;
+            _recentActionsSubMenu.Items.Clear();
+
+            var limit = Math.Max(1, _configService.Load().RecentActionLimit);
+            var tags = _recentActionTags.Take(limit).ToList();
+            if (tags.Count == 0)
+            {
+                _recentActionsSubMenu.Items.Add(new MenuFlyoutItem { Text = "暂无记录", IsEnabled = false });
+                return;
+            }
+
+            var shortcuts = LoadShortcuts();
+            foreach (var tag in tags)
+            {
+                var item = new MenuFlyoutItem { Text = tag, Command = _menuActionCommand, CommandParameter = tag };
+                var shortcutText = GetShortcutText(tag, shortcuts);
+                if (!string.IsNullOrWhiteSpace(shortcutText)) item.KeyboardAcceleratorTextOverride = shortcutText;
+                _recentActionsSubMenu.Items.Add(item);
+            }
+        }
+
+        private void PopulateFavoriteActionsMenu()
+        {
+            if (_favoriteActionsSubMenu == null) return;
+            _favoriteActionsSubMenu.Items.Clear();
+
+            var favorites = _configService.Load().FavoriteTrayActions ?? [];
+            if (favorites.Count == 0)
+            {
+                _favoriteActionsSubMenu.Items.Add(new MenuFlyoutItem { Text = "暂无收藏（在配置中设置）", IsEnabled = false });
+                return;
+            }
+
+            var shortcuts = LoadShortcuts();
+            foreach (var tag in favorites)
+            {
+                if (!_tagToAction.ContainsKey(tag)) continue;
+                var item = new MenuFlyoutItem { Text = tag, Command = _menuActionCommand, CommandParameter = tag };
+                var shortcutText = GetShortcutText(tag, shortcuts);
+                if (!string.IsNullOrWhiteSpace(shortcutText)) item.KeyboardAcceleratorTextOverride = shortcutText;
+                _favoriteActionsSubMenu.Items.Add(item);
+            }
+        }
+
+        private async Task PopulateLayoutsMenuAsync()
+        {
+            if (_layoutsSubMenu == null) return;
+            _layoutsSubMenu.Items.Clear();
+            _layoutsSubMenu.Items.Add(new MenuFlyoutItem { Text = "保存当前布局", Command = _menuActionCommand, CommandParameter = "SaveCurrentLayout" });
+            _layoutsSubMenu.Items.Add(new MenuFlyoutItem { Text = "恢复最近布局", Command = _menuActionCommand, CommandParameter = "RestoreLatestLayout" });
+            _layoutsSubMenu.Items.Add(new MenuFlyoutSeparator());
+
+            var layouts = await _layoutManager.GetLayoutsAsync();
+            foreach (var layout in layouts.OrderByDescending(l => l.CreatedAt).Take(8))
+            {
+                _layoutsSubMenu.Items.Add(new MenuFlyoutItem
+                {
+                    Text = $"{layout.Name} ({layout.CreatedAt:MM-dd HH:mm})",
+                    Command = _menuActionCommand,
+                    CommandParameter = $"RestoreLayout:{layout.Id}"
+                });
+            }
+        }
+
+        private void PopulateConfigMenu()
+        {
+            if (_configSubMenu == null) return;
+            _configSubMenu.Items.Clear();
+            _configSubMenu.Items.Add(new MenuFlyoutItem { Text = "导出配置", Command = _menuActionCommand, CommandParameter = "ExportConfig" });
+            _configSubMenu.Items.Add(new MenuFlyoutItem { Text = "导入配置", Command = _menuActionCommand, CommandParameter = "ImportConfig" });
+        }
+
+        private void RecordRecentAction(string tag)
+        {
+            _recentActionTags.RemoveAll(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase));
+            _recentActionTags.Insert(0, tag);
+            if (_recentActionTags.Count > 32)
+            {
+                _recentActionTags.RemoveRange(32, _recentActionTags.Count - 32);
+            }
+        }
+
+        private void TryShowActionNotification(string tag)
+        {
+            var config = _configService.Load();
+            if (!config.EnableActionNotification) return;
+            _taskbarIcon?.ShowNotification("Rectangle", $"已执行动作: {tag}");
+        }
+
+        private async Task SaveCurrentLayoutAsync()
+        {
+            try
+            {
+                var name = $"布局 {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+                await _layoutManager.SaveCurrentLayoutAsync(name);
+                _taskbarIcon?.ShowNotification("Rectangle", $"已保存布局: {name}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("TrayIconService", $"保存布局失败: {ex.Message}");
+            }
+        }
+
+        private async Task RestoreLatestLayoutAsync()
+        {
+            try
+            {
+                var latest = (await _layoutManager.GetLayoutsAsync()).OrderByDescending(l => l.CreatedAt).FirstOrDefault();
+                if (latest == null)
+                {
+                    _taskbarIcon?.ShowNotification("Rectangle", "暂无可恢复布局");
+                    return;
+                }
+                await _layoutManager.RestoreLayoutAsync(latest.Id);
+                _taskbarIcon?.ShowNotification("Rectangle", $"已恢复布局: {latest.Name}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("TrayIconService", $"恢复布局失败: {ex.Message}");
+            }
+        }
+
+        private async Task RestoreLayoutByIdAsync(string id)
+        {
+            try { await _layoutManager.RestoreLayoutAsync(id); }
+            catch (Exception ex) { Logger.Warning("TrayIconService", $"恢复布局失败: {ex.Message}"); }
+        }
+
+        private async Task ExportConfigAsync()
+        {
+            try
+            {
+                var path = await _configService.ExportToFileAsync();
+                _taskbarIcon?.ShowNotification("Rectangle", $"配置已导出到: {Path.GetFileName(path)}");
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("TrayIconService", $"导出配置失败: {ex.Message}");
+            }
+        }
+
+        private async Task ImportConfigAsync()
+        {
+            try
+            {
+                var ok = await _configService.ImportFromFileAsync();
+                _taskbarIcon?.ShowNotification("Rectangle", ok ? "配置导入成功" : "未找到 config.import.json");
+            }
+            catch (Exception ex)
+            {
+                Logger.Warning("TrayIconService", $"导入配置失败: {ex.Message}");
+            }
         }
 
         /// <summary>

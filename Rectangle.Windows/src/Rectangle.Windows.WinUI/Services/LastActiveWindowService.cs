@@ -22,6 +22,7 @@ public unsafe class LastActiveWindowService : IDisposable
 
     // 委托必须保持引用防止被 GC 回收
     private WINEVENTPROC? _winEventProc;
+    public event Action<nint, string>? ActiveWindowChanged;
 
     public LastActiveWindowService()
     {
@@ -134,6 +135,7 @@ public unsafe class LastActiveWindowService : IDisposable
                 }
                 
                 Logger.Debug("LastActiveWindowService", $"更新有效窗口: 0x{newHwnd:X} | 标题: {displayTitle} | 进程: {processName}");
+                ActiveWindowChanged?.Invoke(newHwnd, processName);
             }
         }
         else

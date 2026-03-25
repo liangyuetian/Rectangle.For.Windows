@@ -24,7 +24,9 @@ namespace Rectangle.Windows.WinUI
         private TrayIconService? _trayIconService;
         private LastActiveWindowService? _lastActiveService;
         private SnapDetectionService? _snapDetectionService;
+        private AutoRuleService? _autoRuleService;
         private Window? _settingsWindow;
+        private Window? _actionSearchWindow;
         private Window? _hiddenWindow; // 隐藏窗口，保持应用运行
         private nint _hotkeyHwnd;
 
@@ -107,6 +109,7 @@ namespace Rectangle.Windows.WinUI
             try
             {
                 _instance?._snapDetectionService?.Dispose();
+                _instance?._autoRuleService?.Dispose();
                 _instance?._trayIconService?.Dispose();
                 // 给 Shell 时间处理 NIM_DELETE，确保托盘图标立即消失
                 Thread.Sleep(250);
@@ -164,8 +167,13 @@ namespace Rectangle.Windows.WinUI
             HotkeyManager = new HotkeyManager(_hotkeyHwnd, WindowManager!, configService);
 
             // 初始化托盘（传入 lastActiveService）
-            _trayIconService = new TrayIconService(WindowManager!, ShowSettingsWindow, configService, _lastActiveService);
+            _trayIconService = new TrayIconService(WindowManager!, ShowSettingsWindow, ShowActionSearchWindow, configService, _lastActiveService);
             _trayIconService.Initialize();
+
+            if (_lastActiveService != null)
+            {
+                _autoRuleService = new AutoRuleService(configService, WindowManager!, _lastActiveService);
+            }
 
             // 初始化拖拽吸附（含边缘预览）
             _snapDetectionService = new SnapDetectionService(win32, WindowManager!, configService);
@@ -385,6 +393,25 @@ namespace Rectangle.Windows.WinUI
                 
                 // 如果出错，清理窗口引用，下次重新创建
                 _settingsWindow = null;
+            }
+        }
+
+        private void ShowActionSearchWindow()
+        {
+            try
+            {
+                if (_actionSearchWindow == null)
+                {
+                    _actionSearchWindow = new ActionSearchWindow(WindowManager!);
+                    _actionSearchWindow.Closed += (_, _) => _actionSearchWindow = null;
+                }
+
+                _actionSearchWindow.Activate();
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("App", "显示动作搜索窗口失败", ex);
+                _actionSearchWindow = null;
             }
         }
 
