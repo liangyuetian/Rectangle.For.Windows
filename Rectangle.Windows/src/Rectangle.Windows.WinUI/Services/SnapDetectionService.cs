@@ -116,26 +116,12 @@ namespace Rectangle.Windows.WinUI.Services
         {
             if (_draggedWindow == 0) return;
 
-            var config = _configService.Load();
-            var workArea = _screenService.GetWorkAreaFromWindow(_draggedWindow);
-
-            // 保存当前位置到历史
-            var (x, y, w, h) = _win32.GetWindowRect(_draggedWindow);
-            // TODO: 保存到 WindowHistory
-
-            // 计算目标位置
-            var calculator = new CalculatorFactory(_configService).GetCalculator(action);
-            if (calculator != null)
-            {
-                var target = calculator.Calculate(
-                    new WorkArea(workArea.X, workArea.Y, workArea.Width, workArea.Height),
-                    new WindowRect(x, y, w, h),
-                    action,
-                    config.GapSize);
-
-                _win32.SetWindowRect(_draggedWindow, target.X, target.Y, target.Width, target.Height);
-                Logger.Info("SnapDetectionService", $"窗口吸附到: {action}");
-            }
+            // 统一走 WindowManager 管道，确保：
+            // 1) 记录撤销/重做历史
+            // 2) 应用间隙、最小尺寸、边界约束等一致规则
+            // 3) 拖拽吸附是显式动作，跳过循环模式
+            _windowManager.Execute(action, _draggedWindow, forceDirectAction: true);
+            Logger.Info("SnapDetectionService", $"窗口吸附到: {action}");
         }
 
         private WindowAction? DetectSnapAction(int x, int y, AppConfig config)
