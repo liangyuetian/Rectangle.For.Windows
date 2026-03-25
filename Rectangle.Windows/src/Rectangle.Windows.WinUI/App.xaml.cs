@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Rectangle.Windows.WinUI
 {
@@ -19,6 +20,7 @@ namespace Rectangle.Windows.WinUI
         public static ConfigService? ConfigService { get; private set; }
 
         private static App? _instance;
+        private static int _cleanupStarted;
         private TrayIconService? _trayIconService;
         private LastActiveWindowService? _lastActiveService;
         private SnapDetectionService? _snapDetectionService;
@@ -50,6 +52,28 @@ namespace Rectangle.Windows.WinUI
 
             // 进程退出时清理托盘图标，确保图标立即消失（dotnet run Ctrl+C、任务管理器结束等场景）
             AppDomain.CurrentDomain.ProcessExit += (s, e) => CleanupTrayIcon();
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            {
+                try
+                {
+                    if (e.ExceptionObject is Exception ex)
+                        Logger.Error("App", "发生未处理异常，准备清理托盘图标", ex);
+                    else
+                        Logger.Error("App", "发生未处理异常（非 Exception），准备清理托盘图标");
+                }
+                catch { }
+                CleanupTrayIcon();
+            };
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+            {
+                try { Logger.Error("App", "发生未观察任务异常", e.Exception); } catch { }
+                e.SetObserved();
+            };
+            this.UnhandledException += (_, e) =>
+            {
+                try { Logger.Error("App", "发生 WinUI 未处理异常，准备清理托盘图标", e.Exception); } catch { }
+                CleanupTrayIcon();
+            };
 
             this.InitializeComponent();
         }
@@ -64,7 +88,8 @@ namespace Rectangle.Windows.WinUI
                     // 注册 Ctrl+C 处理器
                     Console.CancelKeyPress += (s, e) =>
                     {
-                        e.Cancel = false;
+                        // 拦截默认终止流程，先确保托盘图标删除再退出
+                        e.Cancel = true;
                         Logger.Info("App", "收到 Ctrl+C，正在退出...");
                         ExitApplication();
                     };
@@ -76,12 +101,15 @@ namespace Rectangle.Windows.WinUI
 
         private static void CleanupTrayIcon()
         {
+            if (Interlocked.Exchange(ref _cleanupStarted, 1) == 1)
+                return;
+
             try
             {
                 _instance?._snapDetectionService?.Dispose();
                 _instance?._trayIconService?.Dispose();
                 // 给 Shell 时间处理 NIM_DELETE，确保托盘图标立即消失
-                Thread.Sleep(150);
+                Thread.Sleep(250);
             }
             catch { }
         }

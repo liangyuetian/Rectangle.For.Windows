@@ -1,6 +1,8 @@
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
+using Rectangle.Windows.WinUI.Services;
+using System;
 
 namespace Rectangle.Windows.WinUI.Views
 {
@@ -64,18 +66,34 @@ namespace Rectangle.Windows.WinUI.Views
 
         private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
         {
-            if (args.SelectedItem is NavigationViewItem item)
+            if (args.SelectedItem is not NavigationViewItem item) return;
+
+            try
             {
+                Type? targetPage = item.Tag?.ToString() switch
+                {
+                    "Shortcuts" => typeof(SettingsPage),
+                    "SnapAreas" => typeof(SnapAreasPage),
+                    "Settings" => typeof(GeneralSettingsPage),
+                    _ => null
+                };
+
+                if (targetPage == null) return;
+                if (_contentFrame.CurrentSourcePageType == targetPage) return;
+
+                _contentFrame.Navigate(targetPage);
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("MainWindow", $"导航到页面失败: {item.Tag}", ex);
                 switch (item.Tag?.ToString())
                 {
                     case "Shortcuts":
-                        _contentFrame.Navigate(typeof(SettingsPage));
+                        sender.SelectedItem = sender.MenuItems.Count > 0 ? sender.MenuItems[0] : null;
                         break;
                     case "SnapAreas":
-                        _contentFrame.Navigate(typeof(SnapAreasPage));
-                        break;
                     case "Settings":
-                        _contentFrame.Navigate(typeof(GeneralSettingsPage));
+                        sender.SelectedItem = sender.MenuItems.Count > 0 ? sender.MenuItems[0] : null;
                         break;
                 }
             }

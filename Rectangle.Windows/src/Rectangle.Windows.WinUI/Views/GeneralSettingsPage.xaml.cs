@@ -3,6 +3,7 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Navigation;
 using Rectangle.Windows.WinUI.ViewModels;
 using Rectangle.Windows.WinUI;
+using Rectangle.Windows.WinUI.Services;
 using System;
 
 namespace Rectangle.Windows.WinUI.Views
@@ -10,6 +11,7 @@ namespace Rectangle.Windows.WinUI.Views
     public sealed partial class GeneralSettingsPage : Page
     {
         public SettingsViewModel ViewModel { get; } = new SettingsViewModel();
+        private bool _propertyChangedHooked;
 
         public GeneralSettingsPage()
         {
@@ -20,24 +22,36 @@ namespace Rectangle.Windows.WinUI.Views
 
         private async void GeneralSettingsPage_Loaded(object sender, RoutedEventArgs e)
         {
-            await ViewModel.LoadSettingsAsync();
-            HorizontalSplitSlider.Value = ViewModel.HorizontalSplitRatio;
-            VerticalSplitSlider.Value = ViewModel.VerticalSplitRatio;
-            HorizontalSplitValue.Text = $"{ViewModel.HorizontalSplitRatio}%";
-            VerticalSplitValue.Text = $"{ViewModel.VerticalSplitRatio}%";
-            LogLevelComboBox.SelectedIndex = ViewModel.LogLevel;
-            LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
-            ThemeComboBox.SelectedIndex = Services.ThemeService.Instance.CurrentTheme switch
+            try
             {
-                ElementTheme.Dark => 1,
-                ElementTheme.Light => 2,
-                _ => 0
-            };
-            ViewModel.PropertyChanged += (s, e) =>
+                await ViewModel.LoadSettingsAsync();
+                HorizontalSplitSlider.Value = ViewModel.HorizontalSplitRatio;
+                VerticalSplitSlider.Value = ViewModel.VerticalSplitRatio;
+                HorizontalSplitValue.Text = $"{ViewModel.HorizontalSplitRatio}%";
+                VerticalSplitValue.Text = $"{ViewModel.VerticalSplitRatio}%";
+                LogLevelComboBox.SelectedIndex = ViewModel.LogLevel;
+                LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
+                ThemeComboBox.SelectedIndex = Services.ThemeService.Instance.CurrentTheme switch
+                {
+                    ElementTheme.Dark => 1,
+                    ElementTheme.Light => 2,
+                    _ => 0
+                };
+
+                if (!_propertyChangedHooked)
+                {
+                    ViewModel.PropertyChanged += (s, e) =>
+                    {
+                        if (e.PropertyName == nameof(ViewModel.LogToFile))
+                            LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
+                    };
+                    _propertyChangedHooked = true;
+                }
+            }
+            catch (Exception ex)
             {
-                if (e.PropertyName == nameof(ViewModel.LogToFile))
-                    LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
-            };
+                Logger.Error("GeneralSettingsPage", "加载设置页失败", ex);
+            }
         }
 
         private void HorizontalSplitSlider_ValueChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
