@@ -234,7 +234,7 @@ namespace Rectangle.Windows.WinUI.ViewModels
                     Math.Clamp(config.HorizontalSplitRatio, 1, 99),
                     Math.Clamp(config.VerticalSplitRatio, 1, 99),
                     config.LogToFile,
-                    config.LogLevel,
+                    Math.Clamp(config.LogLevel, 0, 3),
                     config.Language switch { "en" => 1, _ => 0 }
                 );
             });
@@ -246,7 +246,7 @@ namespace Rectangle.Windows.WinUI.ViewModels
             _verticalSplitRatio = vRatio;
             _logToFile = logToFile;
             _logLevel = logLevel;
-            _languageIndex = langIdx;
+            _languageIndex = Math.Clamp(langIdx, 0, 1);
             OnPropertyChanged(nameof(LaunchOnLogin));
             OnPropertyChanged(nameof(GapSize));
             OnPropertyChanged(nameof(HorizontalSplitRatio));

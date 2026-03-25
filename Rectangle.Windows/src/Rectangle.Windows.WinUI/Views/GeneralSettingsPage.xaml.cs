@@ -12,6 +12,7 @@ namespace Rectangle.Windows.WinUI.Views
     {
         public SettingsViewModel ViewModel { get; } = new SettingsViewModel();
         private bool _propertyChangedHooked;
+        private bool _isInitializing;
 
         public GeneralSettingsPage()
         {
@@ -24,12 +25,13 @@ namespace Rectangle.Windows.WinUI.Views
         {
             try
             {
+                _isInitializing = true;
                 await ViewModel.LoadSettingsAsync();
                 HorizontalSplitSlider.Value = ViewModel.HorizontalSplitRatio;
                 VerticalSplitSlider.Value = ViewModel.VerticalSplitRatio;
                 HorizontalSplitValue.Text = $"{ViewModel.HorizontalSplitRatio}%";
                 VerticalSplitValue.Text = $"{ViewModel.VerticalSplitRatio}%";
-                LogLevelComboBox.SelectedIndex = ViewModel.LogLevel;
+                LogLevelComboBox.SelectedIndex = Math.Clamp(ViewModel.LogLevel, 0, 3);
                 LogLevelComboBox.IsEnabled = ViewModel.LogToFile;
                 ThemeComboBox.SelectedIndex = Services.ThemeService.Instance.CurrentTheme switch
                 {
@@ -37,6 +39,7 @@ namespace Rectangle.Windows.WinUI.Views
                     ElementTheme.Light => 2,
                     _ => 0
                 };
+                LanguageComboBox.SelectedIndex = Math.Clamp(ViewModel.LanguageIndex, 0, 1);
 
                 if (!_propertyChangedHooked)
                 {
@@ -51,6 +54,10 @@ namespace Rectangle.Windows.WinUI.Views
             catch (Exception ex)
             {
                 Logger.Error("GeneralSettingsPage", "加载设置页失败", ex);
+            }
+            finally
+            {
+                _isInitializing = false;
             }
         }
 
@@ -70,6 +77,7 @@ namespace Rectangle.Windows.WinUI.Views
 
         private void ThemeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_isInitializing) return;
             var selectedTag = ((sender as ComboBox)?.SelectedItem as ComboBoxItem)?.Tag?.ToString();
             var themeService = Services.ThemeService.Instance;
 
@@ -89,6 +97,7 @@ namespace Rectangle.Windows.WinUI.Views
 
         private void LogLevelComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (_isInitializing) return;
             if (sender is ComboBox cb)
                 ViewModel.LogLevel = cb.SelectedIndex;
         }
