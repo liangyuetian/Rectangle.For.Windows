@@ -6,6 +6,7 @@
 #include "Services/WindowEnumerator.h"
 #include "Services/ScreenDetectionService.h"
 #include <shlobj.h>
+#include <winrt/Windows.Data.Json.h>
 
 namespace winrt::Rectangle::Services
 {
@@ -53,7 +54,7 @@ namespace winrt::Rectangle::Services
         ScreenDetectionService screenService(&win32);
         auto workArea = screenService.GetPrimaryWorkArea();
 
-        auto windows = WindowEnumerator::EnumerateVisibleWindows();
+        auto windows = WindowEnumerator::GetAllWindows();
         for (int64_t hwnd : windows)
         {
             int32_t x, y, w, h;
@@ -63,6 +64,7 @@ namespace winrt::Rectangle::Services
                     y >= workArea.Top && y < workArea.Bottom)
                 {
                     WindowPositionInfo info;
+                    info.ProcessName = WindowEnumerator::GetProcessNameFromWindow(hwnd);
                     info.X = x;
                     info.Y = y;
                     info.Width = w;
@@ -93,10 +95,19 @@ namespace winrt::Rectangle::Services
         Win32WindowService win32;
         for (const auto& info : it->Windows)
         {
-            auto windows = WindowEnumerator::EnumerateVisibleWindows();
+            auto windows = WindowEnumerator::GetAllWindows();
             for (int64_t hwnd : windows)
             {
+                if (!info.ProcessName.empty())
+                {
+                    auto process = WindowEnumerator::GetProcessNameFromWindow(hwnd);
+                    if (_wcsicmp(process.c_str(), info.ProcessName.c_str()) != 0)
+                    {
+                        continue;
+                    }
+                }
                 win32.SetWindowRect(hwnd, info.X, info.Y, info.Width, info.Height);
+                break;
             }
         }
 
@@ -144,11 +155,87 @@ namespace winrt::Rectangle::Services
 
     void LayoutManager::SaveLayoutsToFile()
     {
-        Logger::Instance().Info(L"LayoutManager", L"Saving layouts to file");
+        try
+        {
+            winrt::Windows::Data::Json::JsonArray layoutsArr;
+            for (auto const& layout : m_layouts)
+            {
+                winrt::Windows::Data::Json::JsonObject layoutObj;
+                layoutObj.Insert(L"Id", winrt::Windows::Data::Json::JsonValue::CreateStringValue(layout.Id));
+                layoutObj.Insert(L"Name", winrt::Windows::Data::Json::JsonValue::CreateStringValue(layout.Name));
+                layoutObj.Insert(L"CreatedAt", winrt::Windows::Data::Json::JsonValue::CreateStringValue(layout.CreatedAt));
+
+                winrt::Windows::Data::Json::JsonArray windowsArr;
+                for (auto const& w : layout.Windows)
+                {
+                    winrt::Windows::Data::Json::JsonObject wObj;
+                    wObj.Insert(L"ProcessName", winrt::Windows::Data::Json::JsonValue::CreateStringValue(w.ProcessName));
+                    wObj.Insert(L"WindowTitle", winrt::Windows::Data::Json::JsonValue::CreateStringValue(w.WindowTitle));
+                    wObj.Insert(L"X", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(w.X));
+                    wObj.Insert(L"Y", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(w.Y));
+                    wObj.Insert(L"Width", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(w.Width));
+                    wObj.Insert(L"Height", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(w.Height));
+                    windowsArr.Append(wObj);
+                }
+                layoutObj.Insert(L"Windows", windowsArr);
+                layoutsArr.Append(layoutObj);
+            }
+
+            std::wofstream file(m_layoutsFilePath, std::ios::trunc);
+            if (!file.is_open()) return;
+            file << layoutsArr.Stringify().c_str();
+            file.close();
+        }
+        catch (...)
+        {
+            Logger::Instance().Warning(L"LayoutManager", L"保存布局文件失败");
+        }
     }
 
     void LayoutManager::LoadLayoutsFromFile()
     {
-        Logger::Instance().Info(L"LayoutManager", L"Loading layouts from file");
+        m_layouts.clear();
+        try
+        {
+            std::wifstream file(m_layoutsFilePath);
+            if (!file.is_open()) return;
+            std::wstringstream buffer;
+            buffer << file.rdbuf();
+            file.close();
+            auto text = buffer.str();
+            if (text.empty()) return;
+
+            auto layoutsArr = winrt::Windows::Data::Json::JsonArray::Parse(text);
+            for (uint32_t i = 0; i < layoutsArr.Size(); i++)
+            {
+                auto layoutObj = layoutsArr.GetObjectAt(i);
+                WindowLayout layout;
+                layout.Id = layoutObj.GetNamedString(L"Id", L"");
+                layout.Name = layoutObj.GetNamedString(L"Name", L"");
+                layout.CreatedAt = layoutObj.GetNamedString(L"CreatedAt", L"");
+
+                if (layoutObj.HasKey(L"Windows"))
+                {
+                    auto windowsArr = layoutObj.GetNamedArray(L"Windows");
+                    for (uint32_t j = 0; j < windowsArr.Size(); j++)
+                    {
+                        auto wObj = windowsArr.GetObjectAt(j);
+                        WindowPositionInfo w;
+                        w.ProcessName = wObj.GetNamedString(L"ProcessName", L"");
+                        w.WindowTitle = wObj.GetNamedString(L"WindowTitle", L"");
+                        w.X = static_cast<int32_t>(wObj.GetNamedNumber(L"X", 0));
+                        w.Y = static_cast<int32_t>(wObj.GetNamedNumber(L"Y", 0));
+                        w.Width = static_cast<int32_t>(wObj.GetNamedNumber(L"Width", 0));
+                        w.Height = static_cast<int32_t>(wObj.GetNamedNumber(L"Height", 0));
+                        layout.Windows.push_back(w);
+                    }
+                }
+                m_layouts.push_back(layout);
+            }
+        }
+        catch (...)
+        {
+            Logger::Instance().Warning(L"LayoutManager", L"加载布局文件失败");
+        }
     }
 }

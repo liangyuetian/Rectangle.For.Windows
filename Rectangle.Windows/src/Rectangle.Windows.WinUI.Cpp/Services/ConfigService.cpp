@@ -3,6 +3,7 @@
 #include "Services/Logger.h"
 #include <shlobj.h>
 #include <filesystem>
+#include <winrt/Windows.Data.Json.h>
 
 namespace winrt::Rectangle::Services
 {
@@ -46,8 +47,7 @@ namespace winrt::Rectangle::Services
 
     AppConfig ConfigService::Load()
     {
-        std::wifstream file(m_configPath);
-        if (!file.is_open())
+        if (!std::filesystem::exists(m_configPath))
         {
             Logger::Instance().Info(L"ConfigService", L"配置文件不存在，使用默认配置");
             return CreateDefaultConfig();
@@ -55,43 +55,167 @@ namespace winrt::Rectangle::Services
 
         try
         {
+            AppConfig config = CreateDefaultConfig();
+            std::wifstream file(m_configPath);
+            if (!file.is_open()) return config;
             std::wstringstream buffer;
             buffer << file.rdbuf();
             std::wstring json = buffer.str();
-
-            // Simple JSON parsing - in production would use a proper JSON library
-            // For now, just return default
             file.close();
-            return CreateDefaultConfig();
+            if (json.empty()) return config;
+
+            auto root = winrt::Windows::Data::Json::JsonObject::Parse(json);
+            auto tryGetBool = [&](wchar_t const* key, bool fallback)
+            {
+                if (!root.HasKey(key)) return fallback;
+                return root.GetNamedBoolean(key, fallback);
+            };
+            auto tryGetInt = [&](wchar_t const* key, int32_t fallback)
+            {
+                if (!root.HasKey(key)) return fallback;
+                return static_cast<int32_t>(root.GetNamedNumber(key, fallback));
+            };
+            auto tryGetFloat = [&](wchar_t const* key, float fallback)
+            {
+                if (!root.HasKey(key)) return fallback;
+                return static_cast<float>(root.GetNamedNumber(key, fallback));
+            };
+            auto tryGetString = [&](wchar_t const* key, std::wstring const& fallback)
+            {
+                if (!root.HasKey(key)) return fallback;
+                return std::wstring(root.GetNamedString(key, fallback).c_str());
+            };
+
+            config.GapSize = tryGetInt(L"GapSize", config.GapSize);
+            config.HorizontalSplitRatio = tryGetInt(L"HorizontalSplitRatio", config.HorizontalSplitRatio);
+            config.VerticalSplitRatio = tryGetInt(L"VerticalSplitRatio", config.VerticalSplitRatio);
+            config.LaunchOnLogin = tryGetBool(L"LaunchOnLogin", config.LaunchOnLogin);
+            config.SubsequentExecutionMode = tryGetInt(L"SubsequentExecutionMode", config.SubsequentExecutionMode);
+            config.UseCursorScreenDetection = tryGetBool(L"UseCursorScreenDetection", config.UseCursorScreenDetection);
+            config.MoveCursor = tryGetBool(L"MoveCursor", config.MoveCursor);
+            config.MoveCursorAcrossDisplays = tryGetBool(L"MoveCursorAcrossDisplays", config.MoveCursorAcrossDisplays);
+            config.SnapEdgeMarginTop = tryGetInt(L"SnapEdgeMarginTop", config.SnapEdgeMarginTop);
+            config.SnapEdgeMarginBottom = tryGetInt(L"SnapEdgeMarginBottom", config.SnapEdgeMarginBottom);
+            config.SnapEdgeMarginLeft = tryGetInt(L"SnapEdgeMarginLeft", config.SnapEdgeMarginLeft);
+            config.SnapEdgeMarginRight = tryGetInt(L"SnapEdgeMarginRight", config.SnapEdgeMarginRight);
+            config.CornerSnapAreaSize = tryGetInt(L"CornerSnapAreaSize", config.CornerSnapAreaSize);
+            config.SnapModifiers = tryGetInt(L"SnapModifiers", config.SnapModifiers);
+            config.LogLevel = tryGetInt(L"LogLevel", config.LogLevel);
+            config.LogToFile = tryGetBool(L"LogToFile", config.LogToFile);
+            config.LogFilePath = tryGetString(L"LogFilePath", config.LogFilePath);
+            config.MaxLogFileSize = tryGetInt(L"MaxLogFileSize", config.MaxLogFileSize);
+            config.Theme = tryGetString(L"Theme", config.Theme);
+            config.Language = tryGetString(L"Language", config.Language);
+            config.CheckForUpdates = tryGetBool(L"CheckForUpdates", config.CheckForUpdates);
+            config.MinimumWindowWidth = tryGetFloat(L"MinimumWindowWidth", config.MinimumWindowWidth);
+            config.MinimumWindowHeight = tryGetFloat(L"MinimumWindowHeight", config.MinimumWindowHeight);
+
+            if (root.HasKey(L"IgnoredApps"))
+            {
+                config.IgnoredApps.clear();
+                auto arr = root.GetNamedArray(L"IgnoredApps");
+                for (uint32_t i = 0; i < arr.Size(); i++)
+                {
+                    config.IgnoredApps.push_back(std::wstring(arr.GetStringAt(i).c_str()));
+                }
+            }
+
+            if (root.HasKey(L"Shortcuts"))
+            {
+                auto shortcutsObj = root.GetNamedObject(L"Shortcuts");
+                for (auto const& kv : shortcutsObj)
+                {
+                    auto value = kv.Value().GetObject();
+                    ShortcutConfig sc{};
+                    sc.Enabled = value.GetNamedBoolean(L"Enabled", true);
+                    sc.KeyCode = static_cast<int32_t>(value.GetNamedNumber(L"KeyCode", 0));
+                    sc.ModifierFlags = static_cast<uint32_t>(value.GetNamedNumber(L"ModifierFlags", 0));
+                    config.Shortcuts[std::wstring(kv.Key().c_str())] = sc;
+                }
+            }
+
+            if (root.HasKey(L"History"))
+            {
+                auto history = root.GetNamedObject(L"History");
+                config.History.Enabled = history.GetNamedBoolean(L"Enabled", config.History.Enabled);
+                config.History.MaxHistoryCount = static_cast<int32_t>(history.GetNamedNumber(L"MaxHistoryCount", config.History.MaxHistoryCount));
+                config.History.EnableUndo = history.GetNamedBoolean(L"EnableUndo", config.History.EnableUndo);
+            }
+
+            return config;
         }
         catch (const std::exception& ex)
         {
-            Logger::Instance().Error(L"ConfigService", L"读取配置文件失败: " + std::to_wstring(errno));
+            Logger::Instance().Error(L"ConfigService", L"读取配置文件失败");
             return CreateDefaultConfig();
         }
     }
 
     void ConfigService::Save(const AppConfig& config)
     {
-        std::wofstream file(m_configPath);
-        if (!file.is_open())
+        try
         {
-            Logger::Instance().Error(L"ConfigService", L"无法保存配置文件");
+            winrt::Windows::Data::Json::JsonObject root;
+            root.Insert(L"GapSize", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.GapSize));
+            root.Insert(L"HorizontalSplitRatio", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.HorizontalSplitRatio));
+            root.Insert(L"VerticalSplitRatio", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.VerticalSplitRatio));
+            root.Insert(L"LaunchOnLogin", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(config.LaunchOnLogin));
+            root.Insert(L"SubsequentExecutionMode", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.SubsequentExecutionMode));
+            root.Insert(L"UseCursorScreenDetection", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(config.UseCursorScreenDetection));
+            root.Insert(L"MoveCursor", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(config.MoveCursor));
+            root.Insert(L"MoveCursorAcrossDisplays", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(config.MoveCursorAcrossDisplays));
+            root.Insert(L"SnapEdgeMarginTop", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.SnapEdgeMarginTop));
+            root.Insert(L"SnapEdgeMarginBottom", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.SnapEdgeMarginBottom));
+            root.Insert(L"SnapEdgeMarginLeft", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.SnapEdgeMarginLeft));
+            root.Insert(L"SnapEdgeMarginRight", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.SnapEdgeMarginRight));
+            root.Insert(L"CornerSnapAreaSize", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.CornerSnapAreaSize));
+            root.Insert(L"SnapModifiers", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.SnapModifiers));
+            root.Insert(L"LogLevel", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.LogLevel));
+            root.Insert(L"LogToFile", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(config.LogToFile));
+            root.Insert(L"LogFilePath", winrt::Windows::Data::Json::JsonValue::CreateStringValue(config.LogFilePath));
+            root.Insert(L"MaxLogFileSize", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.MaxLogFileSize));
+            root.Insert(L"Theme", winrt::Windows::Data::Json::JsonValue::CreateStringValue(config.Theme));
+            root.Insert(L"Language", winrt::Windows::Data::Json::JsonValue::CreateStringValue(config.Language));
+            root.Insert(L"CheckForUpdates", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(config.CheckForUpdates));
+            root.Insert(L"MinimumWindowWidth", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.MinimumWindowWidth));
+            root.Insert(L"MinimumWindowHeight", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.MinimumWindowHeight));
+
+            winrt::Windows::Data::Json::JsonArray ignoredApps;
+            for (auto const& app : config.IgnoredApps)
+                ignoredApps.Append(winrt::Windows::Data::Json::JsonValue::CreateStringValue(app));
+            root.Insert(L"IgnoredApps", ignoredApps);
+
+            winrt::Windows::Data::Json::JsonObject shortcutsObj;
+            for (auto const& [name, sc] : config.Shortcuts)
+            {
+                winrt::Windows::Data::Json::JsonObject item;
+                item.Insert(L"Enabled", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(sc.Enabled));
+                item.Insert(L"KeyCode", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(sc.KeyCode));
+                item.Insert(L"ModifierFlags", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(sc.ModifierFlags));
+                shortcutsObj.Insert(name, item);
+            }
+            root.Insert(L"Shortcuts", shortcutsObj);
+
+            winrt::Windows::Data::Json::JsonObject history;
+            history.Insert(L"Enabled", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(config.History.Enabled));
+            history.Insert(L"MaxHistoryCount", winrt::Windows::Data::Json::JsonValue::CreateNumberValue(config.History.MaxHistoryCount));
+            history.Insert(L"EnableUndo", winrt::Windows::Data::Json::JsonValue::CreateBooleanValue(config.History.EnableUndo));
+            root.Insert(L"History", history);
+
+            std::wofstream file(m_configPath, std::ios::trunc);
+            if (!file.is_open())
+            {
+                Logger::Instance().Error(L"ConfigService", L"无法保存配置文件");
+                return;
+            }
+            file << root.Stringify().c_str();
+            file.close();
+        }
+        catch (...)
+        {
+            Logger::Instance().Error(L"ConfigService", L"保存配置异常");
             return;
         }
-
-        // Simple JSON-like output - in production would use proper JSON serialization
-        file << L"{\n";
-        file << L"  \"GapSize\": " << config.GapSize << L",\n";
-        file << L"  \"IgnoredApps\": [";
-        for (size_t i = 0; i < config.IgnoredApps.size(); ++i)
-        {
-            file << L"\"" << config.IgnoredApps[i] << L"\"";
-            if (i < config.IgnoredApps.size() - 1) file << L", ";
-        }
-        file << L"]\n";
-        file << L"}\n";
-        file.close();
 
         Logger::Instance().Info(L"ConfigService", L"配置已保存");
         if (ConfigChanged)
