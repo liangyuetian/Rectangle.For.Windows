@@ -21,6 +21,7 @@ public class SnappingManager : IDisposable
     private readonly DragState _dragState;
     private readonly WindowHistory _history;
     private WindowManager? _windowManager;
+    private Views.SnapPreviewWindow? _previewWindow;
 
     // 配置
     private bool _isEnabled = true;
@@ -127,6 +128,7 @@ public class SnappingManager : IDisposable
         if (!_isEnabled) return;
 
         _isEnabled = false;
+        HideSnapPreview();
         _dragState.Reset();
         Logger.Info("SnappingManager", "拖拽吸附已禁用");
     }
@@ -243,7 +245,7 @@ public class SnappingManager : IDisposable
             // 隐藏预览窗口
             if (_lastSnapArea != null)
             {
-                // TODO: 隐藏预览窗口
+                HideSnapPreview();
             }
         }
 
@@ -271,8 +273,21 @@ public class SnappingManager : IDisposable
         var config = GetCachedConfig();
         var previewRect = calculator.Calculate(workArea.Value, default, snapArea.Action, config?.GapSize ?? 0);
 
-        // TODO: 显示预览窗口
+        _previewWindow ??= new Views.SnapPreviewWindow();
+        _previewWindow.ShowPreview(previewRect);
         Logger.Debug("SnappingManager", $"预览窗口位置: ({previewRect.X}, {previewRect.Y}, {previewRect.Width}, {previewRect.Height})");
+    }
+
+    /// <summary>
+    /// 隐藏吸附预览窗口
+    /// </summary>
+    private void HideSnapPreview()
+    {
+        try
+        {
+            _previewWindow?.HidePreview();
+        }
+        catch { }
     }
 
     /// <summary>
@@ -331,6 +346,7 @@ public class SnappingManager : IDisposable
 
         Logger.Debug("SnappingManager", $"结束拖拽窗口: {hwnd}");
 
+        HideSnapPreview();
         _dragState.Reset();
     }
 
@@ -525,7 +541,7 @@ public class SnappingManager : IDisposable
         // 执行窗口操作
         if (_windowManager != null)
         {
-            _windowManager.Execute(snapArea.Action, hwnd);
+            _windowManager.Execute(snapArea.Action, hwnd, forceDirectAction: true);
             Logger.Info("SnappingManager", $"执行吸附: {snapArea.Name} -> {snapArea.Action}");
         }
         else
@@ -610,6 +626,12 @@ public class SnappingManager : IDisposable
     public void Dispose()
     {
         Disable();
+        try
+        {
+            _previewWindow?.Dispose();
+            _previewWindow = null;
+        }
+        catch { }
         _mouseHook?.Dispose();
     }
 }
