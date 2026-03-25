@@ -40,6 +40,7 @@ namespace winrt::Rectangle::Services
         std::map<int32_t, class WindowAction> m_hotkeyActions;
         int32_t m_nextHotkeyId{ 1 };
         bool m_isCapturingMode{ false };
+        bool m_subclassInstalled{ false };
 
         std::function<LRESULT(HWND, UINT, WPARAM, LPARAM)> m_subclassProc;
     };

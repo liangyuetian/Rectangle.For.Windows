@@ -3,6 +3,7 @@
 #include "Services/Logger.h"
 #include "Services/Win32WindowService.h"
 #include "Services/OperationHistoryManager.h"
+#include "Services/LastActiveWindowService.h"
 #include "Core/CalculatorFactory.h"
 #include "Core/WindowHistory.h"
 #include "Services/ConfigService.h"
@@ -365,7 +366,12 @@ namespace winrt::Rectangle::Services
     {
         if (m_lastActiveService)
         {
-            return 0;
+            auto* lastActive = static_cast<LastActiveWindowService*>(m_lastActiveService);
+            int64_t hwnd = lastActive->GetTargetWindow();
+            if (hwnd != 0)
+            {
+                return hwnd;
+            }
         }
 
         return Win32WindowService().GetForegroundWindow();
@@ -374,7 +380,16 @@ namespace winrt::Rectangle::Services
     Core::WorkArea WindowManager::GetTargetWorkArea(int64_t hwnd) const
     {
         Win32WindowService win32;
-        return win32.GetMonitorWorkAreaFromWindow(hwnd);
+        bool useCursorScreen = true;
+        if (m_configService)
+        {
+            auto config = m_configService->Load();
+            useCursorScreen = config.UseCursorScreenDetection;
+        }
+
+        return useCursorScreen
+            ? win32.GetMonitorWorkAreaFromCursor()
+            : win32.GetMonitorWorkAreaFromWindow(hwnd);
     }
 
     Core::WorkArea WindowManager::GetWorkAreaByDisplayIndex(int32_t index) const
@@ -445,7 +460,60 @@ namespace winrt::Rectangle::Services
 
     Core::WindowRect WindowManager::ApplyWindowGap(Core::WindowRect target, const Core::WorkArea& workArea, WindowAction action)
     {
-        if (m_gapSize == 0) return target;
+        if (m_gapSize <= 0) return target;
+
+        const int32_t halfGap = m_gapSize / 2;
+
+        switch (action)
+        {
+        case WindowAction::LeftHalf:
+            target.Width -= halfGap;
+            break;
+        case WindowAction::RightHalf:
+            target.X += halfGap;
+            target.Width -= halfGap;
+            break;
+        case WindowAction::TopHalf:
+            target.Height -= halfGap;
+            break;
+        case WindowAction::BottomHalf:
+            target.Y += halfGap;
+            target.Height -= halfGap;
+            break;
+        case WindowAction::TopLeft:
+            target.Width -= halfGap;
+            target.Height -= halfGap;
+            break;
+        case WindowAction::TopRight:
+            target.X += halfGap;
+            target.Width -= halfGap;
+            target.Height -= halfGap;
+            break;
+        case WindowAction::BottomLeft:
+            target.Y += halfGap;
+            target.Width -= halfGap;
+            target.Height -= halfGap;
+            break;
+        case WindowAction::BottomRight:
+            target.X += halfGap;
+            target.Y += halfGap;
+            target.Width -= halfGap;
+            target.Height -= halfGap;
+            break;
+        case WindowAction::FirstThird:
+            target.Width -= halfGap;
+            break;
+        case WindowAction::CenterThird:
+            target.X += halfGap;
+            target.Width -= m_gapSize;
+            break;
+        case WindowAction::LastThird:
+            target.X += halfGap;
+            target.Width -= halfGap;
+            break;
+        default:
+            break;
+        }
 
         return target;
     }
@@ -532,5 +600,19 @@ namespace winrt::Rectangle::Services
         const Core::WindowRect& oldRect, const Core::WindowRect& newRect,
         const std::wstring& processName)
     {
+        if (!m_configService || !m_operationHistory)
+        {
+            return;
+        }
+
+        auto config = m_configService->Load();
+        if (!config.History.Enabled)
+        {
+            return;
+        }
+
+        auto* historyManager = static_cast<OperationHistoryManager*>(m_operationHistory);
+        historyManager->SetMaxHistoryCount(config.History.MaxHistoryCount);
+        historyManager->RecordOperation(action, hwnd, oldRect, newRect, processName);
     }
 }

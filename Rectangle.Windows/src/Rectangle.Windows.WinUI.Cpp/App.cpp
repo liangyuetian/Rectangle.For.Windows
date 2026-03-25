@@ -9,6 +9,7 @@
 #include "Services/SnapDetectionService.h"
 #include "Services/OperationHistoryManager.h"
 #include "Services/LayoutManager.h"
+#include "Views/MainWindow.h"
 #include "Services/ThemeService.h"
 #include "Core/CalculatorFactory.h"
 #include "Core/WindowHistory.h"
@@ -64,7 +65,7 @@ namespace winrt::Rectangle
 
         ThemeService::Instance().LoadThemeFromConfig();
 
-        Services::Win32WindowService win32;
+        m_win32Service = std::make_unique<Services::Win32WindowService>();
         Core::CalculatorFactory factory;
         Core::WindowHistory history;
 
@@ -90,7 +91,7 @@ namespace winrt::Rectangle
         );
 
         m_trayIconService = std::make_unique<Services::TrayIconService>(
-            [this]() { },
+            [this]() { Views::MainWindow::ShowSettings(); },
             [this]() { Exit(); },
             [this](const std::wstring& actionTag) {
                 Logger::Instance().Info(L"App", L"Tray menu action: " + actionTag);
@@ -176,10 +177,11 @@ namespace winrt::Rectangle
         m_trayIconService->Initialize();
 
         m_snapDetectionService = std::make_unique<Services::SnapDetectionService>(
-            &win32,
+            m_win32Service.get(),
             m_windowManager.get(),
             m_configService.get()
         );
+        m_snapDetectionService->Start();
 
         Services::TrayIconService::PreloadMenuIcons();
 
@@ -252,6 +254,7 @@ namespace winrt::Rectangle
     void App::Cleanup()
     {
         m_snapDetectionService.reset();
+        m_win32Service.reset();
         m_trayIconService.reset();
         m_layoutManager.reset();
         m_hotkeyManager.reset();

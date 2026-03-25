@@ -28,6 +28,7 @@ namespace winrt::Rectangle::Services
 
         std::vector<Core::WorkArea> GetMonitorWorkAreas() const;
         Core::WorkArea GetMonitorWorkAreaFromWindow(int64_t hwnd) const;
+        Core::WorkArea GetMonitorWorkAreaFromCursor() const;
         int32_t GetWindowDpi(int64_t hwnd) const;
 
         int64_t GetAncestorWindow(int64_t hwnd) const;

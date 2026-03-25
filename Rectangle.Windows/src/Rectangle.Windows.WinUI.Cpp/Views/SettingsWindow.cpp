@@ -50,18 +50,25 @@ namespace winrt::Rectangle::Views
 
     void SettingsWindow::SaveSettings()
     {
-        Logger::Instance().Info(L"SettingsWindow", L"Saving settings...");
+        auto configService = Services::ConfigService();
+        auto config = configService.Load();
+        config.GapSize = m_gapSize;
+        config.LaunchOnLogin = m_launchOnLogin;
+        configService.Save(config);
+        Logger::Instance().Info(L"SettingsWindow", L"Settings saved");
     }
 
     void SettingsWindow::OnGapSizeChanged(int32_t newValue)
     {
         m_gapSize = newValue;
+        SaveSettings();
         Logger::Instance().Info(L"SettingsWindow", L"Gap size changed to: " + std::to_wstring(newValue));
     }
 
     void SettingsWindow::OnLaunchOnLoginChanged(bool enabled)
     {
         m_launchOnLogin = enabled;
+        SaveSettings();
         Logger::Instance().Info(L"SettingsWindow", L"Launch on login changed to: " + std::to_wstring(enabled));
     }
 }

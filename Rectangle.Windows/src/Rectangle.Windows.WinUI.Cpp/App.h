@@ -4,6 +4,19 @@
 
 namespace winrt::Rectangle
 {
+    namespace Services
+    {
+        class ConfigService;
+        class Win32WindowService;
+        class WindowManager;
+        class HotkeyManager;
+        class TrayIconService;
+        class LastActiveWindowService;
+        class SnapDetectionService;
+        class OperationHistoryManager;
+        class LayoutManager;
+    }
+
     class App
     {
     public:
@@ -34,6 +47,7 @@ namespace winrt::Rectangle
         int64_t m_hotkeyHwnd{ 0 };
 
         std::unique_ptr<Services::ConfigService> m_configService;
+        std::unique_ptr<Services::Win32WindowService> m_win32Service;
         std::unique_ptr<Services::WindowManager> m_windowManager;
         std::unique_ptr<Services::HotkeyManager> m_hotkeyManager;
         std::unique_ptr<Services::TrayIconService> m_trayIconService;

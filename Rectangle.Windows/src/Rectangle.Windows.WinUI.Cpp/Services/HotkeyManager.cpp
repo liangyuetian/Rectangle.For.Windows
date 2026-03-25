@@ -5,6 +5,7 @@
 #include <Windows.h>
 
 #pragma comment(lib, "user32.lib")
+#pragma comment(lib, "comctl32.lib")
 
 extern "C" {
     WINUSERAPI BOOL WINAPI RegisterHotKey(_In_ HWND hWnd, _In_ int id, _In_ UINT fsModifiers, _In_ UINT vk);
@@ -16,6 +17,41 @@ extern "C" {
 
 namespace winrt::Rectangle::Services
 {
+    static Core::WindowAction TryParseAction(const std::wstring& actionName)
+    {
+        static const std::map<std::wstring, Core::WindowAction> actionMap = {
+            { L"LeftHalf", Core::WindowAction::LeftHalf }, { L"RightHalf", Core::WindowAction::RightHalf },
+            { L"CenterHalf", Core::WindowAction::CenterHalf }, { L"TopHalf", Core::WindowAction::TopHalf },
+            { L"BottomHalf", Core::WindowAction::BottomHalf }, { L"TopLeft", Core::WindowAction::TopLeft },
+            { L"TopRight", Core::WindowAction::TopRight }, { L"BottomLeft", Core::WindowAction::BottomLeft },
+            { L"BottomRight", Core::WindowAction::BottomRight }, { L"FirstThird", Core::WindowAction::FirstThird },
+            { L"CenterThird", Core::WindowAction::CenterThird }, { L"LastThird", Core::WindowAction::LastThird },
+            { L"FirstTwoThirds", Core::WindowAction::FirstTwoThirds }, { L"CenterTwoThirds", Core::WindowAction::CenterTwoThirds },
+            { L"LastTwoThirds", Core::WindowAction::LastTwoThirds }, { L"FirstFourth", Core::WindowAction::FirstFourth },
+            { L"SecondFourth", Core::WindowAction::SecondFourth }, { L"ThirdFourth", Core::WindowAction::ThirdFourth },
+            { L"LastFourth", Core::WindowAction::LastFourth }, { L"FirstThreeFourths", Core::WindowAction::FirstThreeFourths },
+            { L"CenterThreeFourths", Core::WindowAction::CenterThreeFourths }, { L"LastThreeFourths", Core::WindowAction::LastThreeFourths },
+            { L"TopLeftSixth", Core::WindowAction::TopLeftSixth }, { L"TopCenterSixth", Core::WindowAction::TopCenterSixth },
+            { L"TopRightSixth", Core::WindowAction::TopRightSixth }, { L"BottomLeftSixth", Core::WindowAction::BottomLeftSixth },
+            { L"BottomCenterSixth", Core::WindowAction::BottomCenterSixth }, { L"BottomRightSixth", Core::WindowAction::BottomRightSixth },
+            { L"TopVerticalThird", Core::WindowAction::TopVerticalThird }, { L"MiddleVerticalThird", Core::WindowAction::MiddleVerticalThird },
+            { L"BottomVerticalThird", Core::WindowAction::BottomVerticalThird }, { L"TopVerticalTwoThirds", Core::WindowAction::TopVerticalTwoThirds },
+            { L"BottomVerticalTwoThirds", Core::WindowAction::BottomVerticalTwoThirds }, { L"Maximize", Core::WindowAction::Maximize },
+            { L"AlmostMaximize", Core::WindowAction::AlmostMaximize }, { L"MaximizeHeight", Core::WindowAction::MaximizeHeight },
+            { L"Larger", Core::WindowAction::Larger }, { L"Smaller", Core::WindowAction::Smaller },
+            { L"LargerWidth", Core::WindowAction::LargerWidth }, { L"SmallerWidth", Core::WindowAction::SmallerWidth },
+            { L"LargerHeight", Core::WindowAction::LargerHeight }, { L"SmallerHeight", Core::WindowAction::SmallerHeight },
+            { L"Center", Core::WindowAction::Center }, { L"Restore", Core::WindowAction::Restore },
+            { L"MoveLeft", Core::WindowAction::MoveLeft }, { L"MoveRight", Core::WindowAction::MoveRight },
+            { L"MoveUp", Core::WindowAction::MoveUp }, { L"MoveDown", Core::WindowAction::MoveDown },
+            { L"NextDisplay", Core::WindowAction::NextDisplay }, { L"PreviousDisplay", Core::WindowAction::PreviousDisplay },
+            { L"Undo", Core::WindowAction::Undo }, { L"Redo", Core::WindowAction::Redo }
+        };
+
+        auto it = actionMap.find(actionName);
+        return it != actionMap.end() ? it->second : Core::WindowAction::None;
+    }
+
     HotkeyManager::HotkeyManager(int64_t hwnd, WindowManager* windowManager, ConfigService* configService)
         : m_hwnd(hwnd)
         , m_windowManager(windowManager)
@@ -23,12 +59,24 @@ namespace winrt::Rectangle::Services
     {
         Logger::Instance().Info(L"HotkeyManager", L"HotkeyManager initializing");
 
+        auto hWnd = reinterpret_cast<HWND>(m_hwnd);
+        if (hWnd && SetWindowSubclass(hWnd, &HotkeyManager::WindowSubclassProc, 1, reinterpret_cast<DWORD_PTR>(this)))
+        {
+            m_subclassInstalled = true;
+        }
+
         LoadFromConfig();
     }
 
     HotkeyManager::~HotkeyManager()
     {
         UnregisterAllHotkeys();
+        if (m_subclassInstalled)
+        {
+            auto hWnd = reinterpret_cast<HWND>(m_hwnd);
+            if (hWnd) RemoveWindowSubclass(hWnd, &HotkeyManager::WindowSubclassProc, 1);
+            m_subclassInstalled = false;
+        }
     }
 
     void HotkeyManager::ReloadFromConfig()
@@ -69,22 +117,8 @@ namespace winrt::Rectangle::Services
                 continue;
             }
 
-            auto action = Core::WindowAction::None;
-            if (actionName == L"LeftHalf") action = Core::WindowAction::LeftHalf;
-            else if (actionName == L"RightHalf") action = Core::WindowAction::RightHalf;
-            else if (actionName == L"TopHalf") action = Core::WindowAction::TopHalf;
-            else if (actionName == L"BottomHalf") action = Core::WindowAction::BottomHalf;
-            else if (actionName == L"TopLeft") action = Core::WindowAction::TopLeft;
-            else if (actionName == L"TopRight") action = Core::WindowAction::TopRight;
-            else if (actionName == L"BottomLeft") action = Core::WindowAction::BottomLeft;
-            else if (actionName == L"BottomRight") action = Core::WindowAction::BottomRight;
-            else if (actionName == L"Maximize") action = Core::WindowAction::Maximize;
-            else if (actionName == L"Restore") action = Core::WindowAction::Restore;
-            else if (actionName == L"NextDisplay") action = Core::WindowAction::NextDisplay;
-            else if (actionName == L"PreviousDisplay") action = Core::WindowAction::PreviousDisplay;
-            else if (actionName == L"Undo") action = Core::WindowAction::Undo;
-            else if (actionName == L"Redo") action = Core::WindowAction::Redo;
-            else continue;
+            auto action = TryParseAction(actionName);
+            if (action == Core::WindowAction::None) continue;
 
             auto modifiers = ToHotKeyModifiers(cfg.ModifierFlags);
             auto vk = static_cast<uint32_t>(cfg.KeyCode);

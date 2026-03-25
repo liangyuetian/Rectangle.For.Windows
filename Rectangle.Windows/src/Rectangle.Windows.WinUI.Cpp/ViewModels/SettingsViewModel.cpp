@@ -119,11 +119,74 @@ namespace winrt::Rectangle::ViewModels
 
     void SettingsViewModel::LoadSettings()
     {
-        Logger::Instance().Info(L"SettingsViewModel", L"Loading settings");
+        Services::ConfigService configService;
+        auto config = configService.Load();
+
+        LaunchOnLogin.Set(config.LaunchOnLogin);
+        GapSize.Set(config.GapSize);
+        HorizontalSplitRatio.Set(std::clamp(config.HorizontalSplitRatio, 1, 99));
+        VerticalSplitRatio.Set(std::clamp(config.VerticalSplitRatio, 1, 99));
+        LogToFile.Set(config.LogToFile);
+        LogLevel.Set(std::clamp(config.LogLevel, 0, 3));
+        CurrentTheme.Set(config.Theme);
+        LanguageIndex.Set(config.Language == L"en" ? 1 : 0);
+        LoadShortcutsFromConfig();
+        Logger::Instance().Info(L"SettingsViewModel", L"Settings loaded");
     }
 
     void SettingsViewModel::SaveSettings()
     {
-        Logger::Instance().Info(L"SettingsViewModel", L"Saving settings");
+        Services::ConfigService configService;
+        auto config = configService.Load();
+        config.LaunchOnLogin = LaunchOnLogin.Get();
+        config.GapSize = GapSize.Get();
+        config.HorizontalSplitRatio = std::clamp(HorizontalSplitRatio.Get(), 1, 99);
+        config.VerticalSplitRatio = std::clamp(VerticalSplitRatio.Get(), 1, 99);
+        config.LogToFile = LogToFile.Get();
+        config.LogLevel = std::clamp(LogLevel.Get(), 0, 3);
+        config.Theme = CurrentTheme.Get();
+        config.Language = LanguageIndex.Get() == 1 ? L"en" : L"zh-CN";
+        configService.Save(config);
+        Logger::Instance().Info(L"SettingsViewModel", L"Settings saved");
+    }
+
+    void SettingsViewModel::LoadShortcutsFromConfig()
+    {
+        Services::ConfigService configService;
+        auto config = configService.Load();
+        auto merged = Services::ConfigService::GetDefaultShortcuts();
+        for (auto const& [key, value] : config.Shortcuts)
+        {
+            merged[key] = value;
+        }
+
+        auto apply = [&](std::vector<ShortcutItem>& list)
+        {
+            for (auto& item : list)
+            {
+                auto it = merged.find(item.Action);
+                if (it == merged.end())
+                {
+                    item.IsEnabled = false;
+                    item.KeyCode = 0;
+                    item.ModifierFlags = 0;
+                    continue;
+                }
+                item.IsEnabled = it->second.Enabled;
+                item.KeyCode = it->second.KeyCode;
+                item.ModifierFlags = it->second.ModifierFlags;
+            }
+        };
+
+        apply(m_halfScreenShortcuts);
+        apply(m_cornerShortcuts);
+        apply(m_thirdShortcuts);
+        apply(m_fourthShortcuts);
+        apply(m_sixthShortcuts);
+        apply(m_maximizeShortcuts);
+        apply(m_resizeShortcuts);
+        apply(m_moveShortcuts);
+        apply(m_displayShortcuts);
+        apply(m_otherShortcuts);
     }
 }

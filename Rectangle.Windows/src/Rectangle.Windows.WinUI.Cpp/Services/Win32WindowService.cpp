@@ -65,7 +65,7 @@ namespace winrt::Rectangle::Services
             return false;
         }
 
-        wp.flags = 0;
+        wp.Flags = 0;
         wp.ShowCmd = SW_SHOWNORMAL;
         wp.NormalPosition.left = x;
         wp.NormalPosition.top = y;
@@ -239,6 +239,35 @@ namespace winrt::Rectangle::Services
     {
         HWND hwndVal = reinterpret_cast<HWND>(hwnd);
         HMONITOR hMonitor = MonitorFromWindow(hwndVal, MONITOR_DEFAULTTONEAREST);
+        if (!hMonitor)
+        {
+            return Core::WorkArea(0, 0, 1920, 1080);
+        }
+
+        MONITORINFO mi = {};
+        mi.cbSize = sizeof(MONITORINFO);
+        if (GetMonitorInfo(hMonitor, &mi))
+        {
+            return Core::WorkArea(
+                mi.rcWork.left,
+                mi.rcWork.top,
+                mi.rcWork.right,
+                mi.rcWork.bottom
+            );
+        }
+
+        return Core::WorkArea(0, 0, 1920, 1080);
+    }
+
+    Core::WorkArea Win32WindowService::GetMonitorWorkAreaFromCursor() const
+    {
+        POINT pt{};
+        if (!GetCursorPos(&pt))
+        {
+            return Core::WorkArea(0, 0, 1920, 1080);
+        }
+
+        HMONITOR hMonitor = MonitorFromPoint(pt, MONITOR_DEFAULTTONEAREST);
         if (!hMonitor)
         {
             return Core::WorkArea(0, 0, 1920, 1080);
