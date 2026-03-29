@@ -12,7 +12,7 @@
         IconSource="Assets/AppIcon.ico"
         NoLeftClickDelay="True"
         LeftClickCommand="{StaticResource ShowSettingsCommand}"
-        ContextMenuMode="SecondWindow"
+        ContextMenuMode="PopupMenu"
     >
         <tb:TaskbarIcon.ContextFlyout >
             <MenuFlyout>
@@ -75,26 +75,31 @@
                 </MenuFlyoutItem>
                 <MenuFlyoutSeparator />
 
-                <MenuFlyoutItem Text="左上" Tag="TopLeft">
-                    <MenuFlyoutItem.Icon>
+                <MenuFlyoutSubItem Text="四角定位">
+                    <MenuFlyoutSubItem.Icon>
                         <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/topLeftTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="右上" Tag="TopRight">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/topRightTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="左下" Tag="BottomLeft">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/bottomLeftTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="右下" Tag="BottomRight">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/bottomRightTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
+                    </MenuFlyoutSubItem.Icon>
+                    <MenuFlyoutItem Text="左上" Tag="TopLeft">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/topLeftTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="右上" Tag="TopRight">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/topRightTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="左下" Tag="BottomLeft">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/bottomLeftTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="右下" Tag="BottomRight">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/bottomRightTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                </MenuFlyoutSubItem>
                 <MenuFlyoutSeparator />
 
                 <MenuFlyoutSubItem Text="三等分">
@@ -250,90 +255,99 @@
                         <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/maximizeTemplate.png" ShowAsMonochrome="False" />
                     </MenuFlyoutItem.Icon>
                 </MenuFlyoutItem>
-                <MenuFlyoutItem Text="接近最大化" Tag="AlmostMaximize">
-                    <MenuFlyoutItem.Icon>
+                <MenuFlyoutSubItem Text="尺寸调整">
+                    <MenuFlyoutSubItem.Icon>
                         <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/almostMaximizeTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="最大化高度" Tag="MaximizeHeight">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/maximizeHeightTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="放大" Tag="Larger">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/makeLargerTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="缩小" Tag="Smaller">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/makeSmallerTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="加宽" Tag="LargerWidth">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/largerWidthTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="减宽" Tag="SmallerWidth">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/smallerWidthTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="加高" Tag="LargerHeight">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/makeLargerTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="减高" Tag="SmallerHeight">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/makeSmallerTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="居中" Tag="Center">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/centerTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="恢复" Tag="Restore">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/restoreTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
+                    </MenuFlyoutSubItem.Icon>
+                    <MenuFlyoutItem Text="接近最大化" Tag="AlmostMaximize">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/almostMaximizeTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="最大化高度" Tag="MaximizeHeight">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/maximizeHeightTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="放大" Tag="Larger">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/makeLargerTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="缩小" Tag="Smaller">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/makeSmallerTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="加宽" Tag="LargerWidth">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/largerWidthTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="减宽" Tag="SmallerWidth">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/smallerWidthTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="加高" Tag="LargerHeight">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/makeLargerTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="减高" Tag="SmallerHeight">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/makeSmallerTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="居中" Tag="Center">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/centerTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="恢复" Tag="Restore">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/restoreTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                </MenuFlyoutSubItem>
                 <MenuFlyoutSeparator />
 
-                <MenuFlyoutItem Text="左移" Tag="MoveLeft">
-                    <MenuFlyoutItem.Icon>
+                <MenuFlyoutSubItem Text="窗口移动">
+                    <MenuFlyoutSubItem.Icon>
                         <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/moveLeftTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="右移" Tag="MoveRight">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/moveRightTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="上移" Tag="MoveUp">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/moveUpTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="下移" Tag="MoveDown">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/moveDownTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutSeparator />
-
-                <MenuFlyoutItem Text="下一个显示器" Tag="NextDisplay">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/nextDisplayTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
-                <MenuFlyoutItem Text="上一个显示器" Tag="PreviousDisplay">
-                    <MenuFlyoutItem.Icon>
-                        <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/prevDisplayTemplate.png" ShowAsMonochrome="False" />
-                    </MenuFlyoutItem.Icon>
-                </MenuFlyoutItem>
+                    </MenuFlyoutSubItem.Icon>
+                    <MenuFlyoutItem Text="左移" Tag="MoveLeft">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/moveLeftTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="右移" Tag="MoveRight">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/moveRightTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="上移" Tag="MoveUp">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/moveUpTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="下移" Tag="MoveDown">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/moveDownTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="下一个显示器" Tag="NextDisplay">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/nextDisplayTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                    <MenuFlyoutItem Text="上一个显示器" Tag="PreviousDisplay">
+                        <MenuFlyoutItem.Icon>
+                            <BitmapIcon UriSource="ms-appx:///Assets/WindowPositions/prevDisplayTemplate.png" ShowAsMonochrome="False" />
+                        </MenuFlyoutItem.Icon>
+                    </MenuFlyoutItem>
+                </MenuFlyoutSubItem>
                 <MenuFlyoutSeparator />
                 <MenuFlyoutItem Text="撤销" Tag="Undo">
                     <MenuFlyoutItem.Icon>

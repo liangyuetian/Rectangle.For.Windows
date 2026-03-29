@@ -111,8 +111,20 @@ public class WindowManager
         };
     }
 
-    public void Execute(WindowAction action, nint? targetHwnd = null)
+    public void Execute(WindowAction action, nint? targetHwnd = null, bool forceDirectAction = false)
     {
+        if (action == WindowAction.Undo)
+        {
+            ExecuteUndo(targetHwnd);
+            return;
+        }
+
+        if (action == WindowAction.Redo)
+        {
+            ExecuteRedo(targetHwnd);
+            return;
+        }
+
         if (action == WindowAction.Restore)
         {
             ExecuteRestore(targetHwnd);
@@ -203,13 +215,16 @@ public class WindowManager
 
         // 检测窗口是否被用户手动移动
         bool windowMovedExternally = _history.IsWindowMovedExternally(hwnd, x, y, w, h);
-        
+
         if (windowMovedExternally)
         {
             // 用户手动移动了窗口，清除程序操作记录
             _history.RemoveLastAction(hwnd);
             Logger.Info("WindowManager", $"检测到窗口被用户手动移动: {processName}");
         }
+
+        // 保存当前状态到 Undo 栈
+        _history.PushUndoState(hwnd, x, y, w, h, action);
 
         // 处理重复执行模式（循环尺寸）
         var actualAction = GetActualAction(hwnd, action, windowMovedExternally);
@@ -497,6 +512,56 @@ public class WindowManager
         _maximizedWindows.Remove(hwnd);
         
         Logger.Info("WindowManager", $"恢复了 {processName} 到 ({rect.X}, {rect.Y}, {rect.W}, {rect.H})");
+    }
+
+    private void ExecuteUndo(nint? targetHwnd = null)
+    {
+        var hwnd = targetHwnd ?? GetTargetWindow();
+        if (hwnd == 0)
+        {
+            System.Media.SystemSounds.Beep.Play();
+            return;
+        }
+
+        if (!_history.CanUndo(hwnd))
+        {
+            Logger.Info("WindowManager", "没有可撤销的操作");
+            System.Media.SystemSounds.Beep.Play();
+            return;
+        }
+
+        var processName = _win32.GetProcessNameFromWindow(hwnd);
+        var state = _history.TryUndo(hwnd);
+        if (state.HasValue)
+        {
+            _win32.SetWindowRect(hwnd, state.Value.X, state.Value.Y, state.Value.Width, state.Value.Height);
+            Logger.Info("WindowManager", $"撤销了 {processName} 的操作");
+        }
+    }
+
+    private void ExecuteRedo(nint? targetHwnd = null)
+    {
+        var hwnd = targetHwnd ?? GetTargetWindow();
+        if (hwnd == 0)
+        {
+            System.Media.SystemSounds.Beep.Play();
+            return;
+        }
+
+        if (!_history.CanRedo(hwnd))
+        {
+            Logger.Info("WindowManager", "没有可重做的操作");
+            System.Media.SystemSounds.Beep.Play();
+            return;
+        }
+
+        var processName = _win32.GetProcessNameFromWindow(hwnd);
+        var state = _history.TryRedo(hwnd);
+        if (state.HasValue)
+        {
+            _win32.SetWindowRect(hwnd, state.Value.X, state.Value.Y, state.Value.Width, state.Value.Height);
+            Logger.Info("WindowManager", $"重做了 {processName} 的操作");
+        }
     }
 
     private void ExecuteNextDisplay(nint? targetHwnd = null)

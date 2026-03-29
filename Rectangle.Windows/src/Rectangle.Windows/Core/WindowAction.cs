@@ -107,5 +107,8 @@ public enum WindowAction
     CascadeActiveApp,
     // Todo 模式
     LeftTodo,
-    RightTodo
+    RightTodo,
+    // 撤销重做
+    Undo,
+    Redo
 }

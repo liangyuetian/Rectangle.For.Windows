@@ -11,7 +11,7 @@ public class ConfigService
 {
     private const string ConfigFileName = "config.json";
     private readonly string _configPath;
-    
+
     public event EventHandler<AppConfig>? ConfigChanged;
 
     public ConfigService()
@@ -24,17 +24,17 @@ public class ConfigService
     {
         if (!File.Exists(_configPath))
         {
-            return new AppConfig();
+            return CreateDefaultConfig();
         }
 
         try
         {
             var json = File.ReadAllText(_configPath);
-            return JsonSerializer.Deserialize<AppConfig>(json) ?? new AppConfig();
+            return JsonSerializer.Deserialize<AppConfig>(json) ?? CreateDefaultConfig();
         }
         catch
         {
-            return new AppConfig();
+            return CreateDefaultConfig();
         }
     }
 
@@ -49,6 +49,40 @@ public class ConfigService
         var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
         File.WriteAllText(_configPath, json);
         ConfigChanged?.Invoke(this, config);
+    }
+
+    public string ExportToFile(string? filePath = null)
+    {
+        var target = string.IsNullOrWhiteSpace(filePath)
+            ? Path.Combine(Path.GetDirectoryName(_configPath) ?? "", "config.export.json")
+            : filePath;
+
+        var config = Load();
+        var json = JsonSerializer.Serialize(config, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(target, json);
+        return target;
+    }
+
+    public bool ImportFromFile(string? filePath = null)
+    {
+        var source = string.IsNullOrWhiteSpace(filePath)
+            ? Path.Combine(Path.GetDirectoryName(_configPath) ?? "", "config.import.json")
+            : filePath;
+
+        if (!File.Exists(source)) return false;
+
+        try
+        {
+            var json = File.ReadAllText(source);
+            var imported = JsonSerializer.Deserialize<AppConfig>(json);
+            if (imported == null) return false;
+            Save(imported);
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public static Dictionary<string, ShortcutConfig> GetDefaultShortcuts()
@@ -113,72 +147,77 @@ public class ConfigService
             ["MoveRight"] = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
             ["MoveUp"] = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
             ["MoveDown"] = new() { KeyCode = 0, ModifierFlags = 0, Enabled = false },
+            // 撤销重做
+            ["Undo"] = new() { KeyCode = 0x5A, ModifierFlags = ctrlAlt },          // Ctrl+Alt+Z
+            ["Redo"] = new() { KeyCode = 0x5A, ModifierFlags = ctrlAltShift },     // Ctrl+Alt+Shift+Z
         };
     }
+
+    private AppConfig CreateDefaultConfig() => new AppConfig { Shortcuts = GetDefaultShortcuts() };
 }
 
 public class AppConfig
 {
     // === 基础配置 ===
-    
+
     public int GapSize { get; set; } = 0;
     public bool LaunchOnLogin { get; set; } = false;
     public List<string> IgnoredApps { get; set; } = GetDefaultIgnoredApps();
     public Dictionary<string, ShortcutConfig> Shortcuts { get; set; } = new();
     public SnapAreaConfig SnapAreas { get; set; } = new();
-    
+
     /// <summary>
     /// 重复执行模式：连续按同一快捷键时的行为
     /// </summary>
     public SubsequentExecutionMode SubsequentExecutionMode { get; set; } = SubsequentExecutionMode.CycleSize;
 
     // === 高级配置 ===
-    
+
     /// <summary>
     /// 接近最大化的高度比例（0.5 - 1.0）
     /// </summary>
     public float AlmostMaximizeHeight { get; set; } = 0.9f;
-    
+
     /// <summary>
     /// 接近最大化的宽度比例（0.5 - 1.0）
     /// </summary>
     public float AlmostMaximizeWidth { get; set; } = 0.9f;
-    
+
     /// <summary>
     /// 最小窗口宽度（像素），0 表示无限制
     /// </summary>
     public float MinimumWindowWidth { get; set; } = 0;
-    
+
     /// <summary>
     /// 最小窗口高度（像素），0 表示无限制
     /// </summary>
     public float MinimumWindowHeight { get; set; } = 0;
-    
+
     /// <summary>
     /// 放大/缩小的步长（像素）
     /// </summary>
     public float SizeOffset { get; set; } = 30;
-    
+
     /// <summary>
     /// 移动窗口时是否居中（而不是保持位置）
     /// </summary>
     public bool CenteredDirectionalMove { get; set; } = false;
-    
+
     /// <summary>
     /// 移动窗口时是否调整大小
     /// </summary>
     public bool ResizeOnDirectionalMove { get; set; } = false;
-    
+
     /// <summary>
     /// 使用光标位置检测屏幕（而不是窗口位置）
     /// </summary>
     public bool UseCursorScreenDetection { get; set; } = false;
-    
+
     /// <summary>
     /// 移动窗口后将光标移动到窗口中心
     /// </summary>
     public bool MoveCursor { get; set; } = false;
-    
+
     /// <summary>
     /// 跨显示器移动窗口后将光标也移动过去
     /// </summary>
@@ -338,7 +377,29 @@ public class AppConfig
     /// </summary>
     public int SpecifiedHeight { get; set; } = 1050;
 
-        private static List<string> GetDefaultIgnoredApps()
+    // === 托盘配置 ===
+
+    /// <summary>
+    /// 收藏托盘动作列表
+    /// </summary>
+    public List<string> FavoriteTrayActions { get; set; } = new() { "LeftHalf", "RightHalf", "Maximize", "Undo" };
+
+    /// <summary>
+    /// 托盘可见动作筛选（空列表表示显示所有）
+    /// </summary>
+    public List<string> TrayVisibleActions { get; set; } = new();
+
+    /// <summary>
+    /// 最近操作数量限制
+    /// </summary>
+    public int RecentActionLimit { get; set; } = 8;
+
+    /// <summary>
+    /// 启用动作执行通知
+    /// </summary>
+    public bool EnableActionNotification { get; set; } = false;
+
+    private static List<string> GetDefaultIgnoredApps()
     {
         return new List<string>
         {

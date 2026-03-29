@@ -139,6 +139,116 @@ public static class MenuIconGenerator
                 DrawArrowLeft(g, pen, 6, 7);
                 break;
 
+            // 六等分
+            case WindowAction.TopLeftSixth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 2, 2, 4, 5);
+                break;
+            case WindowAction.TopCenterSixth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 6, 2, 4, 5);
+                break;
+            case WindowAction.TopRightSixth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 10, 2, 4, 5);
+                break;
+            case WindowAction.BottomLeftSixth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 2, 8, 4, 5);
+                break;
+            case WindowAction.BottomCenterSixth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 6, 8, 4, 5);
+                break;
+            case WindowAction.BottomRightSixth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 10, 8, 4, 5);
+                break;
+
+            // 四等分
+            case WindowAction.FirstFourth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 2, 2, 3, 11);
+                break;
+            case WindowAction.SecondFourth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 5, 2, 3, 11);
+                break;
+            case WindowAction.ThirdFourth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 8, 2, 3, 11);
+                break;
+            case WindowAction.LastFourth:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 11, 2, 3, 11);
+                break;
+            case WindowAction.FirstThreeFourths:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 2, 2, 9, 11);
+                break;
+            case WindowAction.CenterThreeFourths:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 3, 2, 9, 11);
+                break;
+            case WindowAction.LastThreeFourths:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 4, 2, 9, 11);
+                break;
+
+            // 垂直三等分
+            case WindowAction.TopVerticalThird:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 2, 2, 12, 3);
+                break;
+            case WindowAction.MiddleVerticalThird:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 2, 5, 12, 3);
+                break;
+            case WindowAction.BottomVerticalThird:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 2, 8, 12, 3);
+                break;
+            case WindowAction.TopVerticalTwoThirds:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 2, 2, 12, 7);
+                break;
+            case WindowAction.BottomVerticalTwoThirds:
+                DrawWindowOutline(g, pen);
+                g.FillRectangle(accentBrush, 2, 6, 12, 7);
+                break;
+
+            // 移动
+            case WindowAction.MoveLeft:
+                DrawWindowOutline(g, pen);
+                DrawArrowLeft(g, pen, 4, 7);
+                break;
+            case WindowAction.MoveRight:
+                DrawWindowOutline(g, pen);
+                DrawArrowRight(g, pen, 8, 7);
+                break;
+            case WindowAction.MoveUp:
+                DrawWindowOutline(g, pen);
+                g.DrawLine(pen, 8, 4, 8, 6);
+                g.DrawLine(pen, 6, 5, 8, 4);
+                g.DrawLine(pen, 10, 5, 8, 4);
+                break;
+            case WindowAction.MoveDown:
+                DrawWindowOutline(g, pen);
+                g.DrawLine(pen, 8, 8, 8, 10);
+                g.DrawLine(pen, 6, 9, 8, 10);
+                g.DrawLine(pen, 10, 9, 8, 10);
+                break;
+
+            // 撤销/重做
+            case WindowAction.Undo:
+                DrawWindowOutline(g, pen);
+                DrawUndoArrow(g, pen, 8, 7);
+                break;
+            case WindowAction.Redo:
+                DrawWindowOutline(g, pen);
+                DrawRedoArrow(g, pen, 8, 7);
+                break;
+
             default:
                 DrawWindowOutline(g, pen);
                 break;
@@ -164,5 +274,21 @@ public static class MenuIconGenerator
         g.DrawLine(pen, x, y, x + 4, y);
         g.DrawLine(pen, x, y, x + 2, y - 2);
         g.DrawLine(pen, x, y, x + 2, y + 2);
+    }
+
+    private static void DrawUndoArrow(Graphics g, Pen pen, int x, int y)
+    {
+        // 绘制向左弯曲的箭头
+        g.DrawLine(pen, x - 3, y, x + 2, y);
+        g.DrawLine(pen, x - 3, y, x - 1, y - 2);
+        g.DrawLine(pen, x - 3, y, x - 1, y + 2);
+    }
+
+    private static void DrawRedoArrow(Graphics g, Pen pen, int x, int y)
+    {
+        // 绘制向右弯曲的箭头
+        g.DrawLine(pen, x - 2, y, x + 3, y);
+        g.DrawLine(pen, x + 3, y, x + 1, y - 2);
+        g.DrawLine(pen, x + 3, y, x + 1, y + 2);
     }
 }

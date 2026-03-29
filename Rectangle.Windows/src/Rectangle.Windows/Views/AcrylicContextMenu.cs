@@ -320,25 +320,29 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
         var textColor = e.Item.Enabled ? TextColor : DisabledColor;
         var item = e.Item;
 
-        // 计算文本区域
-        int leftPadding = 16;
-        int rightPadding = 12;
-        int shortcutWidth = 140; // 快捷键区域宽度
+        // 计算文本区域 - 调整边距
+        int leftPadding = 8;
+        int rightPadding = 8;
+        int shortcutWidth = 120; // 减小快捷键区域宽度
 
-        // 判断是否有图标，如果没有则减少左边距
+        // 判断是否有图标
         bool hasImage = item.Image != null;
-        int iconWidth = hasImage ? 24 : 0;
+        int iconWidth = hasImage ? 28 : 0; // 图标区域宽度（包括间距）
         int textLeft = hasImage ? iconWidth + leftPadding : leftPadding;
 
-        // 判断是否有快捷键，只有有快捷键时才预留空间
+        // 判断是否有快捷键
         var menuItem = e.Item as ToolStripMenuItem;
         bool hasShortcut = menuItem != null && !string.IsNullOrEmpty(menuItem.ShortcutKeyDisplayString);
         int actualShortcutWidth = hasShortcut ? shortcutWidth : 0;
 
+        // 计算可用文本宽度 - 确保至少有一些空间
+        int availableWidth = item.Width - textLeft - rightPadding - actualShortcutWidth;
+        if (availableWidth < 50) availableWidth = 50; // 最小宽度保证
+
         var textRect = new System.Drawing.Rectangle(
             textLeft,
             2,
-            item.Width - textLeft - rightPadding - actualShortcutWidth,
+            availableWidth,
             item.Height - 4);
 
         // 绘制菜单项文本
@@ -355,12 +359,20 @@ public class AcrylicMenuRenderer : ToolStripProfessionalRenderer
             ?? SystemFonts.MenuFont
             ?? new Font("Microsoft YaHei UI", 9f, FontStyle.Regular, GraphicsUnit.Point);
 
+        // 先测量文本实际需要多宽
+        var textSize = g.MeasureString(item.Text, font, int.MaxValue, format);
+        if (textSize.Width > availableWidth)
+        {
+            // 如果文本太长，使用省略号
+            format.Trimming = StringTrimming.EllipsisCharacter;
+        }
+
         g.DrawString(item.Text, font, textBrush, textRect, format);
 
         // 绘制快捷键文本（如果有）
         if (hasShortcut)
         {
-            // 快捷键区域在右侧，固定宽度
+            // 快捷键区域在右侧
             var shortcutRect = new System.Drawing.Rectangle(
                 item.Width - shortcutWidth - rightPadding,
                 2,

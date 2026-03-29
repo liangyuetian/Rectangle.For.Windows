@@ -6,6 +6,7 @@ using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Rectangle.Windows.WinUI.Core;
 using Windows.Foundation;
+using Windows.Win32;
 using Rectangle.Windows.WinUI.ViewModels;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,7 @@ namespace Rectangle.Windows.WinUI.Services
         private LastActiveWindowService? _lastActiveService;
         private bool _contextMenuPrewarmed;
         private bool _contextMenuPrewarming;
+        private const double TrayMenuPresenterWidth = 408;
 
         /// <summary>
         /// 统一的菜单项命令，通过 CommandParameter 传递 action tag。使用 Command 而非 Click，因 H.NotifyIcon 托盘菜单下 Click 可能不触发。
@@ -256,26 +258,38 @@ namespace Rectangle.Windows.WinUI.Services
                 // 创建忽略应用命令
                 _ignoreAppCommand = new XamlUICommand();
                 _ignoreAppCommand.ExecuteRequested += OnIgnoreAppExecuteRequested;
+                var usesSecondWindowContextMenu = _taskbarIcon.ContextMenuMode == ContextMenuMode.SecondWindow;
 
                 // 遍历 ContextFlyout 注入图标、快捷键文字、点击命令
                 if (_taskbarIcon.ContextFlyout is MenuFlyout flyout)
                 {
-                    void FixMenuLayout(object? s, object? _) => TryFixMenuFlyoutPresenterWidth(flyout);
-
                     flyout.Opening += (_, _) =>
                     {
                         // 先更新忽略菜单项（在焦点变化前获取活动窗口），再暂停跟踪
                         UpdateIgnoreMenuItem();
                         PopulateDynamicSections(flyout);
                         _lastActiveService?.PauseTracking();
-                        // 首次打开时强制布局：LayoutUpdated 即时响应 + 延迟重试兜底（H.NotifyIcon SecondWindow 布局问题）
-                        flyout.LayoutUpdated += FixMenuLayout;
-                        _ = EnqueueFixMenuLayoutAsync(flyout);
+                        if (usesSecondWindowContextMenu)
+                        {
+                            ScheduleMenuLayoutStabilization(flyout);
+                        }
+                    };
+                    flyout.Opened += (_, _) =>
+                    {
+                        // 菜单打开后修复布局（H.NotifyIcon SecondWindow 布局问题）
+                        if (usesSecondWindowContextMenu) TryFixMenuFlyoutPresenterWidth(flyout);
                     };
                     flyout.Closed += (_, _) =>
                     {
-                        flyout.LayoutUpdated -= FixMenuLayout;
                         _lastActiveService?.ResumeTracking();
+                    };
+
+                    flyout.Opened += (_, _) =>
+                    {
+                        if (usesSecondWindowContextMenu)
+                        {
+                            ScheduleMenuLayoutStabilization(flyout);
+                        }
                     };
 
                     DecorateItems(flyout.Items, shortcuts);
@@ -284,7 +298,10 @@ namespace Rectangle.Windows.WinUI.Services
                 _taskbarIcon.ForceCreate(enablesEfficiencyMode: false);
 
                 // 预加载菜单以解决首次打开布局挤压（SecondWindow 首次测量可能尚未稳定）
-                _ = PrewarmContextMenuAsync();
+                if (usesSecondWindowContextMenu)
+                {
+                    _ = PrewarmContextMenuAsync();
+                }
 
                 Logger.Info("TrayIconService", "托盘图标初始化成功");
             }
@@ -305,6 +322,8 @@ namespace Rectangle.Windows.WinUI.Services
                 if (item is MenuFlyoutSubItem sub)
                 {
                     sub.AccessKey = string.Empty;
+                    // 阻止 Alt 键导致菜单关闭
+                    sub.PreviewKeyDown += OnMenuItemPreviewKeyDown;
                     if (sub.Tag is string subTag)
                     {
                         if (subTag == "RecentActions") _recentActionsSubMenu = sub;
@@ -317,6 +336,8 @@ namespace Rectangle.Windows.WinUI.Services
                 else if (item is MenuFlyoutItem fi)
                 {
                     fi.AccessKey = string.Empty;
+                    // 阻止 Alt 键导致菜单关闭
+                    fi.PreviewKeyDown += OnMenuItemPreviewKeyDown;
 
                     if (fi.Tag is string tag)
                     {
@@ -331,6 +352,7 @@ namespace Rectangle.Windows.WinUI.Services
                         {
                             _ignoreAppMenuItem = fi;
                             fi.Command = _ignoreAppCommand;
+                            fi.CommandParameter = null;
                             continue;
                         }
 
@@ -347,6 +369,31 @@ namespace Rectangle.Windows.WinUI.Services
                         }
                     }
                 }
+            }
+        }
+
+        private static void OnMenuItemPreviewKeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            // 阻止 Alt 键导致菜单关闭（方便使用 Alt+F3 等截图快捷键）
+            if (e.Key == global::Windows.System.VirtualKey.Menu ||
+                e.Key == global::Windows.System.VirtualKey.LeftMenu ||
+                e.Key == global::Windows.System.VirtualKey.RightMenu)
+            {
+                e.Handled = true;
+                return;
+            }
+
+            // 阻止 Alt+任意键 导致菜单关闭（如 Alt+F3 截图快捷键）
+            var altState = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(
+                global::Windows.System.VirtualKey.LeftMenu);
+            var rightAltState = Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(
+                global::Windows.System.VirtualKey.RightMenu);
+
+            // Down 或 Locked 状态表示按键被按下
+            if (altState.HasFlag(global::Windows.UI.Core.CoreVirtualKeyStates.Down) ||
+                rightAltState.HasFlag(global::Windows.UI.Core.CoreVirtualKeyStates.Down))
+            {
+                e.Handled = true;
             }
         }
 
@@ -424,19 +471,10 @@ namespace Rectangle.Windows.WinUI.Services
             if (_ignoreAppMenuItem == null || _lastActiveService == null) return;
 
             // 使用 GetTargetWindow 而非 GetLastValidWindow，以便在缓存无效时回退到当前前台窗口
-            var hwnd = _lastActiveService.GetTargetWindow();
-            if (hwnd == 0)
-            {
-                _ignoreAppMenuItem.Text = "忽略 [无有效窗口]";
-                _ignoreAppMenuItem.IsEnabled = false;
-                _ignoreAppMenuItem.CommandParameter = null;
-                return;
-            }
-
-            var processName = WindowEnumerator.GetProcessNameFromWindow(hwnd);
+            string? processName = ResolveIgnoreTargetProcessName();
             if (string.IsNullOrEmpty(processName))
             {
-                _ignoreAppMenuItem.Text = "忽略 [未知应用]";
+                _ignoreAppMenuItem.Text = "忽略 [无有效窗口]";
                 _ignoreAppMenuItem.IsEnabled = false;
                 _ignoreAppMenuItem.CommandParameter = null;
                 return;
@@ -450,6 +488,49 @@ namespace Rectangle.Windows.WinUI.Services
             _ignoreAppMenuItem.Text = isIgnored ? $"取消忽略 {processName}" : $"忽略 {processName}";
             _ignoreAppMenuItem.IsEnabled = true;
             _ignoreAppMenuItem.CommandParameter = processName;
+        }
+
+        private string? ResolveIgnoreTargetProcessName()
+        {
+            if (_lastActiveService == null)
+            {
+                return null;
+            }
+
+            foreach (var hwnd in EnumerateIgnoreTargetCandidates())
+            {
+                var processName = WindowEnumerator.GetProcessNameFromWindow(hwnd);
+                if (!string.IsNullOrWhiteSpace(processName) && !IsSelfProcess(processName))
+                {
+                    return processName;
+                }
+            }
+
+            return null;
+        }
+
+        private IEnumerable<nint> EnumerateIgnoreTargetCandidates()
+        {
+            var seen = new HashSet<nint>();
+
+            foreach (var hwnd in new[]
+            {
+                _lastActiveService?.GetLastValidWindow() ?? 0,
+                _lastActiveService?.GetTargetWindow() ?? 0,
+                (nint)(long)PInvoke.GetForegroundWindow()
+            })
+            {
+                if (hwnd != 0 && seen.Add(hwnd))
+                {
+                    yield return hwnd;
+                }
+            }
+        }
+
+        private static bool IsSelfProcess(string processName)
+        {
+            return processName.Equals("Rectangle.Windows.WinUI", StringComparison.OrdinalIgnoreCase)
+                || processName.Equals("Rectangle.Windows", StringComparison.OrdinalIgnoreCase);
         }
 
         private void PopulateDynamicSections(MenuFlyout flyout)
@@ -657,7 +738,7 @@ namespace Rectangle.Windows.WinUI.Services
 
                             // 屏幕外显示触发布局测量
                             flyout.ShowAt(target, new global::Windows.Foundation.Point(-10000, -10000));
-                            TryFixMenuFlyoutPresenterWidth(flyout);
+                            ScheduleMenuLayoutStabilization(flyout);
                         }
                         catch { }
                     });
@@ -680,6 +761,29 @@ namespace Rectangle.Windows.WinUI.Services
         /// <summary>
         /// 尝试查找并设置 MenuFlyoutPresenter 宽度，修复 H.NotifyIcon SecondWindow 首次打开挤压。
         /// </summary>
+        private void ScheduleMenuLayoutStabilization(MenuFlyout flyout)
+        {
+            TryFixMenuFlyoutPresenterWidth(flyout);
+
+            var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            if (dispatcher == null)
+            {
+                return;
+            }
+
+            _ = Task.Run(async () =>
+            {
+                foreach (var delayMs in new[] { 16, 48, 120 })
+                {
+                    await Task.Delay(delayMs);
+                    dispatcher.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+                    {
+                        TryFixMenuFlyoutPresenterWidth(flyout);
+                    });
+                }
+            });
+        }
+
         private void TryFixMenuFlyoutPresenterWidth(MenuFlyout flyout)
         {
             try
@@ -692,27 +796,17 @@ namespace Rectangle.Windows.WinUI.Services
                     var presenter = FindChildByType<MenuFlyoutPresenter>(popup.Child);
                     if (presenter != null)
                     {
-                        presenter.MinWidth = 408;
-                        presenter.Width = 408;
+                        presenter.MinWidth = TrayMenuPresenterWidth;
+                        presenter.Width = TrayMenuPresenterWidth;
+                        presenter.MaxWidth = TrayMenuPresenterWidth;
+                        presenter.Measure(new Size(TrayMenuPresenterWidth, double.PositiveInfinity));
+                        presenter.Arrange(new Rect(0, 0, TrayMenuPresenterWidth, Math.Max(presenter.DesiredSize.Height, presenter.ActualHeight)));
                         presenter.UpdateLayout();
                         break;
                     }
                 }
             }
             catch { }
-        }
-
-        /// <summary>
-        /// 延迟重试修复布局，兜底处理 SecondWindow 创建较慢的情况。
-        /// </summary>
-        private async Task EnqueueFixMenuLayoutAsync(MenuFlyout flyout)
-        {
-            foreach (var delayMs in new[] { 50, 100, 150, 200 })
-            {
-                await Task.Delay(delayMs);
-                var dispatcher = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
-                dispatcher.TryEnqueue(() => TryFixMenuFlyoutPresenterWidth(flyout));
-            }
         }
 
         private static T? FindChildByType<T>(DependencyObject? parent) where T : DependencyObject

@@ -31,6 +31,19 @@ public struct RectangleAction
     public (int X, int Y, int W, int H) Rect { get; set; }
 }
 
+/// <summary>
+/// 窗口状态 - 用于 Undo/Redo
+/// </summary>
+public struct WindowState
+{
+    public int X { get; set; }
+    public int Y { get; set; }
+    public int Width { get; set; }
+    public int Height { get; set; }
+    public WindowAction Action { get; set; }
+    public DateTime Timestamp { get; set; }
+}
+
 public class WindowHistory
 {
     /// <summary>
@@ -42,6 +55,16 @@ public class WindowHistory
     /// 记录程序最后一次对窗口的操作信息（用于重复执行检测）
     /// </summary>
     private readonly Dictionary<nint, RectangleAction> _lastActions = new();
+
+    /// <summary>
+    /// Undo 栈 - 每个窗口的操作历史
+    /// </summary>
+    private readonly Dictionary<nint, Stack<WindowState>> _undoStacks = new();
+
+    /// <summary>
+    /// Redo 栈 - 每个窗口的撤销历史
+    /// </summary>
+    private readonly Dictionary<nint, Stack<WindowState>> _redoStacks = new();
 
     /// <summary>
     /// 记录哪些窗口是由程序调整的（这些窗口的位置变化不应该被记录）
@@ -319,6 +342,128 @@ public class WindowHistory
         _lastActions.Remove(hwnd);
     }
 
+    // ========== Undo/Redo 支持 ==========
+
+    /// <summary>
+    /// 保存窗口状态到 Undo 栈
+    /// </summary>
+    public void PushUndoState(nint hwnd, int x, int y, int w, int h, WindowAction action)
+    {
+        CleanupIfNeeded();
+
+        if (!_undoStacks.TryGetValue(hwnd, out var stack))
+        {
+            stack = new Stack<WindowState>();
+            _undoStacks[hwnd] = stack;
+        }
+
+        // 限制栈大小
+        if (stack.Count >= _maxHistoryCount)
+        {
+            var tempList = stack.ToList();
+            tempList.RemoveAt(tempList.Count - 1);
+            stack.Clear();
+            foreach (var item in tempList.Reverse<WindowState>())
+            {
+                stack.Push(item);
+            }
+        }
+
+        stack.Push(new WindowState
+        {
+            X = x,
+            Y = y,
+            Width = w,
+            Height = h,
+            Action = action,
+            Timestamp = DateTime.Now
+        });
+
+        // 清空 Redo 栈（新操作后无法 redo）
+        if (_redoStacks.TryGetValue(hwnd, out var redoStack))
+        {
+            redoStack.Clear();
+        }
+
+        _lastAccessTimes[hwnd] = DateTime.Now;
+    }
+
+    /// <summary>
+    /// 尝试执行 Undo
+    /// </summary>
+    /// <returns>返回撤销前的窗口状态，如果没有可撤销的状态则返回 null</returns>
+    public WindowState? TryUndo(nint hwnd)
+    {
+        if (!_undoStacks.TryGetValue(hwnd, out var stack) || stack.Count == 0)
+            return null;
+
+        var currentState = stack.Pop();
+
+        // 保存到 Redo 栈
+        if (!_redoStacks.TryGetValue(hwnd, out var redoStack))
+        {
+            redoStack = new Stack<WindowState>();
+            _redoStacks[hwnd] = redoStack;
+        }
+        redoStack.Push(currentState);
+
+        _lastAccessTimes[hwnd] = DateTime.Now;
+        return currentState;
+    }
+
+    /// <summary>
+    /// 尝试执行 Redo
+    /// </summary>
+    /// <returns>返回重做后的窗口状态，如果没有可重做的状态则返回 null</returns>
+    public WindowState? TryRedo(nint hwnd)
+    {
+        if (!_redoStacks.TryGetValue(hwnd, out var stack) || stack.Count == 0)
+            return null;
+
+        var state = stack.Pop();
+
+        // 保存回 Undo 栈
+        if (_undoStacks.TryGetValue(hwnd, out var undoStack))
+        {
+            undoStack.Push(state);
+        }
+
+        _lastAccessTimes[hwnd] = DateTime.Now;
+        return state;
+    }
+
+    /// <summary>
+    /// 检查是否可以 Undo
+    /// </summary>
+    public bool CanUndo(nint hwnd)
+    {
+        return _undoStacks.TryGetValue(hwnd, out var stack) && stack.Count > 0;
+    }
+
+    /// <summary>
+    /// 检查是否可以 Redo
+    /// </summary>
+    public bool CanRedo(nint hwnd)
+    {
+        return _redoStacks.TryGetValue(hwnd, out var stack) && stack.Count > 0;
+    }
+
+    /// <summary>
+    /// 获取当前窗口的 Undo 栈深度
+    /// </summary>
+    public int GetUndoDepth(nint hwnd)
+    {
+        return _undoStacks.TryGetValue(hwnd, out var stack) ? stack.Count : 0;
+    }
+
+    /// <summary>
+    /// 获取当前窗口的 Redo 栈深度
+    /// </summary>
+    public int GetRedoDepth(nint hwnd)
+    {
+        return _redoStacks.TryGetValue(hwnd, out var stack) ? stack.Count : 0;
+    }
+
     /// <summary>
     /// 完全移除窗口的所有记录（窗口关闭时调用）
     /// </summary>
@@ -328,13 +473,15 @@ public class WindowHistory
         _lastActions.Remove(hwnd);
         _programAdjustedWindows.Remove(hwnd);
         _lastAccessTimes.Remove(hwnd);
+        _undoStacks.Remove(hwnd);
+        _redoStacks.Remove(hwnd);
     }
-    
+
     /// <summary>
     /// 检查窗口是否有恢复点
     /// </summary>
     public bool HasRestoreRect(nint hwnd) => _restoreRects.ContainsKey(hwnd);
-    
+
     /// <summary>
     /// 清除所有历史记录
     /// </summary>
@@ -344,6 +491,8 @@ public class WindowHistory
         _lastActions.Clear();
         _programAdjustedWindows.Clear();
         _lastAccessTimes.Clear();
+        _undoStacks.Clear();
+        _redoStacks.Clear();
         _lastCleanupTime = DateTime.MinValue;
         Logger.Info("WindowHistory", "历史记录已清空");
     }
@@ -356,8 +505,15 @@ public class WindowHistory
     /// <summary>
     /// 获取历史记录统计信息
     /// </summary>
-    public (int RestoreRects, int LastActions, int ProgramAdjusted, int AccessTimes) GetStats()
+    public (int RestoreRects, int LastActions, int ProgramAdjusted, int AccessTimes, int UndoStacks, int RedoStacks) GetStats()
     {
-        return (_restoreRects.Count, _lastActions.Count, _programAdjustedWindows.Count, _lastAccessTimes.Count);
+        return (
+            _restoreRects.Count,
+            _lastActions.Count,
+            _programAdjustedWindows.Count,
+            _lastAccessTimes.Count,
+            _undoStacks.Sum(s => s.Value.Count),
+            _redoStacks.Sum(s => s.Value.Count)
+        );
     }
 }

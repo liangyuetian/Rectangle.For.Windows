@@ -3,8 +3,11 @@ using Rectangle.Windows.Services;
 using Rectangle.Windows.Views;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Windows.Win32;
 
@@ -77,6 +80,9 @@ internal static class Program
         _lastActiveWindowService = new LastActiveWindowService();
         _windowManager.SetLastActiveWindowService(_lastActiveWindowService);
         _windowManager.SetConfigService(_configService);
+
+        // 创建布局管理器
+        _layoutManager = new LayoutManager(_configService, win32);
 
         // 创建托盘菜单
         _contextMenu = CreateContextMenu();
@@ -214,34 +220,6 @@ internal static class Program
         }
     }
 
-    private static System.Drawing.Image? LoadMenuIcon(string iconName)
-    {
-        var assembly = System.Reflection.Assembly.GetExecutingAssembly();
-        string resourceName = $"Rectangle.Windows.Assets.WindowPositions.{iconName}";
-        var stream = assembly.GetManifestResourceStream(resourceName);
-        if (stream != null)
-        {
-            try
-            {
-                var ms = new System.IO.MemoryStream();
-                stream.CopyTo(ms);
-                ms.Position = 0;
-                stream.Dispose();
-                return System.Drawing.Image.FromStream(ms);
-            }
-            catch
-            {
-                stream.Dispose();
-            }
-        }
-        return null;
-    }
-
-    private static System.Drawing.Image? GetMenuIcon(WindowAction action)
-    {
-        return MenuIconGenerator.GenerateIcon(action);
-    }
-
     private static void NotifyIcon_MouseClick(object? sender, MouseEventArgs e)
     {
         // 左键点击也显示菜单
@@ -322,21 +300,51 @@ internal static class Program
         }
     }
 
+    private static List<string> _recentActionTags = new();
+    private static LayoutManager? _layoutManager;
+
     private static ContextMenuStrip CreateContextMenu()
     {
-        var menu = new Views.AcrylicContextMenu();
-        
-        // 加载配置获取快捷键
-        var shortcuts = _configService?.Load()?.Shortcuts ?? new();
+        var config = _configService?.Load();
+        var shortcuts = config?.Shortcuts ?? new();
         var defaultShortcuts = ConfigService.GetDefaultShortcuts();
-        
-        // 合并默认快捷键和用户配置
         var mergedShortcuts = new Dictionary<string, ShortcutConfig>(defaultShortcuts);
-        foreach (var kvp in shortcuts)
-        {
-            mergedShortcuts[kvp.Key] = kvp.Value;
-        }
+        foreach (var kvp in shortcuts) mergedShortcuts[kvp.Key] = kvp.Value;
 
+        var menu = new Views.AcrylicContextMenu();
+
+        // === 顶部动态菜单 ===
+        // 搜索动作
+        var searchItem = new ToolStripMenuItem("搜索动作...", null, (s, e) => ShowActionSearch())
+        {
+            ShortcutKeyDisplayString = ""
+        };
+        menu.Items.Add(searchItem);
+
+        // 最近操作
+        var recentMenu = new ToolStripMenuItem("最近操作") { Enabled = false };
+        menu.Items.Add(recentMenu);
+        _recentActionsSubMenu = recentMenu;
+
+        // 收藏动作
+        var favoriteMenu = new ToolStripMenuItem("收藏动作");
+        PopulateFavoriteActionsMenu(favoriteMenu, mergedShortcuts);
+        menu.Items.Add(favoriteMenu);
+
+        // 布局预设
+        var layoutsMenu = new ToolStripMenuItem("布局预设");
+        PopulateLayoutsMenu(layoutsMenu);
+        menu.Items.Add(layoutsMenu);
+
+        // 配置菜单
+        var configMenu = new ToolStripMenuItem("配置");
+        configMenu.DropDownItems.Add(new ToolStripMenuItem("导出配置", null, (s, e) => ExportConfig()));
+        configMenu.DropDownItems.Add(new ToolStripMenuItem("导入配置", null, (s, e) => ImportConfig()));
+        menu.Items.Add(configMenu);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        // === 主要操作菜单 ===
         // 半屏
         AddMenuItem(menu, "左半屏", GetShortcutText(mergedShortcuts, "LeftHalf"), WindowAction.LeftHalf);
         AddMenuItem(menu, "右半屏", GetShortcutText(mergedShortcuts, "RightHalf"), WindowAction.RightHalf);
@@ -361,22 +369,77 @@ internal static class Program
         AddMenuItem(menu, "右侧 2/3", GetShortcutText(mergedShortcuts, "LastTwoThirds"), WindowAction.LastTwoThirds);
         menu.Items.Add(new ToolStripSeparator());
 
-        // 最大化与缩放
+        // 四等分子菜单
+        var fourthsMenu = new ToolStripMenuItem("四等分");
+        AddSubMenuItem(fourthsMenu, "左 1/4", GetShortcutText(mergedShortcuts, "FirstFourth"), WindowAction.FirstFourth);
+        AddSubMenuItem(fourthsMenu, "中左 1/4", GetShortcutText(mergedShortcuts, "SecondFourth"), WindowAction.SecondFourth);
+        AddSubMenuItem(fourthsMenu, "中右 1/4", GetShortcutText(mergedShortcuts, "ThirdFourth"), WindowAction.ThirdFourth);
+        AddSubMenuItem(fourthsMenu, "右 1/4", GetShortcutText(mergedShortcuts, "LastFourth"), WindowAction.LastFourth);
+        fourthsMenu.DropDownItems.Add(new ToolStripSeparator());
+        AddSubMenuItem(fourthsMenu, "左 3/4", GetShortcutText(mergedShortcuts, "FirstThreeFourths"), WindowAction.FirstThreeFourths);
+        AddSubMenuItem(fourthsMenu, "中间 3/4", GetShortcutText(mergedShortcuts, "CenterThreeFourths"), WindowAction.CenterThreeFourths);
+        AddSubMenuItem(fourthsMenu, "右 3/4", GetShortcutText(mergedShortcuts, "LastThreeFourths"), WindowAction.LastThreeFourths);
+        menu.Items.Add(fourthsMenu);
+
+        // 六等分子菜单
+        var sixthsMenu = new ToolStripMenuItem("六等分");
+        AddSubMenuItem(sixthsMenu, "左上 1/6", GetShortcutText(mergedShortcuts, "TopLeftSixth"), WindowAction.TopLeftSixth);
+        AddSubMenuItem(sixthsMenu, "上中 1/6", GetShortcutText(mergedShortcuts, "TopCenterSixth"), WindowAction.TopCenterSixth);
+        AddSubMenuItem(sixthsMenu, "右上 1/6", GetShortcutText(mergedShortcuts, "TopRightSixth"), WindowAction.TopRightSixth);
+        sixthsMenu.DropDownItems.Add(new ToolStripSeparator());
+        AddSubMenuItem(sixthsMenu, "左下 1/6", GetShortcutText(mergedShortcuts, "BottomLeftSixth"), WindowAction.BottomLeftSixth);
+        AddSubMenuItem(sixthsMenu, "下中 1/6", GetShortcutText(mergedShortcuts, "BottomCenterSixth"), WindowAction.BottomCenterSixth);
+        AddSubMenuItem(sixthsMenu, "右下 1/6", GetShortcutText(mergedShortcuts, "BottomRightSixth"), WindowAction.BottomRightSixth);
+        menu.Items.Add(sixthsMenu);
+
+        // 垂直三等分子菜单
+        var verticalThirdsMenu = new ToolStripMenuItem("垂直三等分");
+        AddSubMenuItem(verticalThirdsMenu, "上部 1/3", GetShortcutText(mergedShortcuts, "TopVerticalThird"), WindowAction.TopVerticalThird);
+        AddSubMenuItem(verticalThirdsMenu, "中间 1/3", GetShortcutText(mergedShortcuts, "MiddleVerticalThird"), WindowAction.MiddleVerticalThird);
+        AddSubMenuItem(verticalThirdsMenu, "下部 1/3", GetShortcutText(mergedShortcuts, "BottomVerticalThird"), WindowAction.BottomVerticalThird);
+        verticalThirdsMenu.DropDownItems.Add(new ToolStripSeparator());
+        AddSubMenuItem(verticalThirdsMenu, "上部 2/3", GetShortcutText(mergedShortcuts, "TopVerticalTwoThirds"), WindowAction.TopVerticalTwoThirds);
+        AddSubMenuItem(verticalThirdsMenu, "下部 2/3", GetShortcutText(mergedShortcuts, "BottomVerticalTwoThirds"), WindowAction.BottomVerticalTwoThirds);
+        menu.Items.Add(verticalThirdsMenu);
+
+        menu.Items.Add(new ToolStripSeparator());
+
+        // 最大化
         AddMenuItem(menu, "最大化", GetShortcutText(mergedShortcuts, "Maximize"), WindowAction.Maximize);
-        AddMenuItem(menu, "接近最大化", GetShortcutText(mergedShortcuts, "AlmostMaximize"), WindowAction.AlmostMaximize);
-        AddMenuItem(menu, "最大化高度", GetShortcutText(mergedShortcuts, "MaximizeHeight"), WindowAction.MaximizeHeight);
-        AddMenuItem(menu, "放大", GetShortcutText(mergedShortcuts, "Larger"), WindowAction.Larger);
-        AddMenuItem(menu, "缩小", GetShortcutText(mergedShortcuts, "Smaller"), WindowAction.Smaller);
-        AddMenuItem(menu, "居中", GetShortcutText(mergedShortcuts, "Center"), WindowAction.Center);
-        AddMenuItem(menu, "恢复", GetShortcutText(mergedShortcuts, "Restore"), WindowAction.Restore);
+
+        // 尺寸调整子菜单
+        var resizeMenu = new ToolStripMenuItem("尺寸调整");
+        AddSubMenuItem(resizeMenu, "接近最大化", GetShortcutText(mergedShortcuts, "AlmostMaximize"), WindowAction.AlmostMaximize);
+        AddSubMenuItem(resizeMenu, "最大化高度", GetShortcutText(mergedShortcuts, "MaximizeHeight"), WindowAction.MaximizeHeight);
+        AddSubMenuItem(resizeMenu, "放大", GetShortcutText(mergedShortcuts, "Larger"), WindowAction.Larger);
+        AddSubMenuItem(resizeMenu, "缩小", GetShortcutText(mergedShortcuts, "Smaller"), WindowAction.Smaller);
+        AddSubMenuItem(resizeMenu, "加宽", GetShortcutText(mergedShortcuts, "LargerWidth"), WindowAction.LargerWidth);
+        AddSubMenuItem(resizeMenu, "减宽", GetShortcutText(mergedShortcuts, "SmallerWidth"), WindowAction.SmallerWidth);
+        AddSubMenuItem(resizeMenu, "加高", GetShortcutText(mergedShortcuts, "LargerHeight"), WindowAction.LargerHeight);
+        AddSubMenuItem(resizeMenu, "减高", GetShortcutText(mergedShortcuts, "SmallerHeight"), WindowAction.SmallerHeight);
+        AddSubMenuItem(resizeMenu, "居中", GetShortcutText(mergedShortcuts, "Center"), WindowAction.Center);
+        AddSubMenuItem(resizeMenu, "恢复", GetShortcutText(mergedShortcuts, "Restore"), WindowAction.Restore);
+        menu.Items.Add(resizeMenu);
+
+        // 窗口移动子菜单
+        var moveMenu = new ToolStripMenuItem("窗口移动");
+        AddSubMenuItem(moveMenu, "左移", GetShortcutText(mergedShortcuts, "MoveLeft"), WindowAction.MoveLeft);
+        AddSubMenuItem(moveMenu, "右移", GetShortcutText(mergedShortcuts, "MoveRight"), WindowAction.MoveRight);
+        AddSubMenuItem(moveMenu, "上移", GetShortcutText(mergedShortcuts, "MoveUp"), WindowAction.MoveUp);
+        AddSubMenuItem(moveMenu, "下移", GetShortcutText(mergedShortcuts, "MoveDown"), WindowAction.MoveDown);
+        moveMenu.DropDownItems.Add(new ToolStripSeparator());
+        AddSubMenuItem(moveMenu, "下一个显示器", GetShortcutText(mergedShortcuts, "NextDisplay"), WindowAction.NextDisplay);
+        AddSubMenuItem(moveMenu, "上一个显示器", GetShortcutText(mergedShortcuts, "PreviousDisplay"), WindowAction.PreviousDisplay);
+        menu.Items.Add(moveMenu);
+
         menu.Items.Add(new ToolStripSeparator());
 
-        // 显示器
-        AddMenuItem(menu, "下一个显示器", GetShortcutText(mergedShortcuts, "NextDisplay"), WindowAction.NextDisplay);
-        AddMenuItem(menu, "上一个显示器", GetShortcutText(mergedShortcuts, "PreviousDisplay"), WindowAction.PreviousDisplay);
+        // 撤销/重做
+        AddMenuItem(menu, "撤销", GetShortcutText(mergedShortcuts, "Undo"), WindowAction.Undo);
+        AddMenuItem(menu, "重做", GetShortcutText(mergedShortcuts, "Redo"), WindowAction.Redo);
         menu.Items.Add(new ToolStripSeparator());
 
-        // 忽略 [应用名] - 动态菜单项（放在偏好设置上方）
+        // 忽略应用（动态）
         _ignoreAppMenuItem = new ToolStripMenuItem("忽略 [无有效窗口]") { Enabled = false };
         _ignoreAppMenuItem.Click += (s, e) =>
         {
@@ -385,89 +448,218 @@ internal static class Program
                 ToggleIgnoreApp(processName);
             }
         };
-        // 颜色由渲染器根据主题自动设置
         menu.Items.Add(_ignoreAppMenuItem);
+        menu.Items.Add(new ToolStripSeparator());
 
-        // 设置与退出
+        // 偏好设置与退出
         menu.Items.Add(new ToolStripMenuItem("偏好设置...", null, (s, e) => OpenSettings()));
         menu.Items.Add(new ToolStripSeparator());
         menu.Items.Add(new ToolStripMenuItem("退出 Rectangle", null, (s, e) => Application.Exit()));
 
         return menu;
     }
-    
-    private static void AddMenuItem(ContextMenuStrip menu, string text, string shortcut, WindowAction action)
+
+    private static ToolStripMenuItem? _recentActionsSubMenu;
+
+    private static void PopulateFavoriteActionsMenu(ToolStripMenuItem menu, Dictionary<string, ShortcutConfig> shortcuts)
     {
-        var iconName = GetIconNameForAction(action);
-        var icon = LoadMenuIcon(iconName) ?? GetMenuIcon(action);
-        var item = new ToolStripMenuItem(text, icon, (s, e) => _windowManager?.Execute(action));
+        menu.DropDownItems.Clear();
+        var favorites = _configService?.Load().FavoriteTrayActions ?? new List<string>();
+
+        if (favorites.Count == 0)
+        {
+            menu.DropDownItems.Add(new ToolStripMenuItem("暂无收藏（在配置中设置）") { Enabled = false });
+            return;
+        }
+
+        foreach (var tag in favorites)
+        {
+            if (!TryParseActionTag(tag, out var action)) continue;
+            AddSubMenuItem(menu, GetActionDisplayName(action), GetShortcutText(shortcuts, tag), action);
+        }
+    }
+
+    private static void PopulateLayoutsMenu(ToolStripMenuItem menu)
+    {
+        menu.DropDownItems.Clear();
+        menu.DropDownItems.Add(new ToolStripMenuItem("保存当前布局", null, async (s, e) => await SaveCurrentLayoutAsync()));
+        menu.DropDownItems.Add(new ToolStripMenuItem("恢复最近布局", null, async (s, e) => await RestoreLatestLayoutAsync()));
+        menu.DropDownItems.Add(new ToolStripSeparator());
+
+        // 异步加载布局列表
+        Task.Run(async () =>
+        {
+            try
+            {
+                if (_layoutManager == null) return;
+                var layouts = await _layoutManager.GetLayoutsAsync();
+                var recentLayouts = layouts.OrderByDescending(l => l.CreatedAt).Take(8);
+
+                foreach (var layout in recentLayouts)
+                {
+                    var item = new ToolStripMenuItem($"{layout.Name} ({layout.CreatedAt:MM-dd HH:mm})", null, async (s, e) =>
+                    {
+                        try { await _layoutManager.RestoreLayoutAsync(layout.Id); }
+                        catch (Exception ex) { Logger.Warning("Program", $"恢复布局失败: {ex.Message}"); }
+                    });
+                    menu.DropDownItems.Add(item);
+                }
+            }
+            catch { }
+        });
+    }
+
+    private static async Task SaveCurrentLayoutAsync()
+    {
+        try
+        {
+            if (_layoutManager == null) return;
+            var name = $"布局 {DateTime.Now:yyyy-MM-dd HH:mm:ss}";
+            await _layoutManager.SaveCurrentLayoutAsync(name);
+            _notifyIcon?.ShowBalloonTip(2000, "Rectangle", $"已保存布局: {name}", ToolTipIcon.Info);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Program", $"保存布局失败: {ex.Message}");
+        }
+    }
+
+    private static async Task RestoreLatestLayoutAsync()
+    {
+        try
+        {
+            if (_layoutManager == null) return;
+            var layouts = await _layoutManager.GetLayoutsAsync();
+            var latest = layouts.OrderByDescending(l => l.CreatedAt).FirstOrDefault();
+            if (latest == null)
+            {
+                _notifyIcon?.ShowBalloonTip(2000, "Rectangle", "暂无可恢复布局", ToolTipIcon.Info);
+                return;
+            }
+            await _layoutManager.RestoreLayoutAsync(latest.Id);
+            _notifyIcon?.ShowBalloonTip(2000, "Rectangle", $"已恢复布局: {latest.Name}", ToolTipIcon.Info);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Program", $"恢复布局失败: {ex.Message}");
+        }
+    }
+
+    private static void ExportConfig()
+    {
+        try
+        {
+            var path = _configService?.ExportToFile();
+            _notifyIcon?.ShowBalloonTip(2000, "Rectangle", $"配置已导出到: {Path.GetFileName(path)}", ToolTipIcon.Info);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Program", $"导出配置失败: {ex.Message}");
+        }
+    }
+
+    private static void ImportConfig()
+    {
+        try
+        {
+            var ok = _configService?.ImportFromFile() ?? false;
+            _notifyIcon?.ShowBalloonTip(2000, "Rectangle", ok ? "配置导入成功" : "未找到 config.import.json", ToolTipIcon.Info);
+        }
+        catch (Exception ex)
+        {
+            Logger.Warning("Program", $"导入配置失败: {ex.Message}");
+        }
+    }
+
+    private static void ShowActionSearch()
+    {
+        var form = new Views.ActionSearchForm(_windowManager!, _configService!);
+        form.Show();
+    }
+
+    private static bool TryParseActionTag(string tag, out WindowAction action)
+    {
+        return Enum.TryParse<WindowAction>(tag, out action);
+    }
+
+    private static string GetActionDisplayName(WindowAction action)
+    {
+        return action switch
+        {
+            WindowAction.LeftHalf => "左半屏",
+            WindowAction.RightHalf => "右半屏",
+            WindowAction.CenterHalf => "中间半屏",
+            WindowAction.TopHalf => "上半屏",
+            WindowAction.BottomHalf => "下半屏",
+            WindowAction.TopLeft => "左上",
+            WindowAction.TopRight => "右上",
+            WindowAction.BottomLeft => "左下",
+            WindowAction.BottomRight => "右下",
+            WindowAction.FirstThird => "左首 1/3",
+            WindowAction.CenterThird => "中间 1/3",
+            WindowAction.LastThird => "右首 1/3",
+            WindowAction.FirstTwoThirds => "左侧 2/3",
+            WindowAction.CenterTwoThirds => "中间 2/3",
+            WindowAction.LastTwoThirds => "右侧 2/3",
+            WindowAction.Maximize => "最大化",
+            WindowAction.AlmostMaximize => "接近最大化",
+            WindowAction.MaximizeHeight => "最大化高度",
+            WindowAction.Larger => "放大",
+            WindowAction.Smaller => "缩小",
+            WindowAction.Center => "居中",
+            WindowAction.Restore => "恢复",
+            WindowAction.NextDisplay => "下一个显示器",
+            WindowAction.PreviousDisplay => "上一个显示器",
+            WindowAction.MoveLeft => "左移",
+            WindowAction.MoveRight => "右移",
+            WindowAction.MoveUp => "上移",
+            WindowAction.MoveDown => "下移",
+            WindowAction.Undo => "撤销",
+            WindowAction.Redo => "重做",
+            _ => action.ToString()
+        };
+    }
+
+    private static void AddSubMenuItem(ToolStripMenuItem parent, string text, string shortcut, WindowAction action)
+    {
+        var icon = MenuIconGenerator.GenerateIcon(action);
+        var item = new ToolStripMenuItem(text, icon, (s, e) =>
+        {
+            _windowManager?.Execute(action, forceDirectAction: true);
+            RecordRecentAction(action.ToString());
+        });
         if (!string.IsNullOrEmpty(shortcut))
         {
             item.ShortcutKeyDisplayString = shortcut;
         }
-        // 颜色由渲染器根据主题自动设置
+        parent.DropDownItems.Add(item);
+    }
+
+    private static void RecordRecentAction(string tag)
+    {
+        _recentActionTags.RemoveAll(t => t.Equals(tag, StringComparison.OrdinalIgnoreCase));
+        _recentActionTags.Insert(0, tag);
+        if (_recentActionTags.Count > 32)
+        {
+            _recentActionTags.RemoveRange(32, _recentActionTags.Count - 32);
+        }
+    }
+    
+    private static void AddMenuItem(ContextMenuStrip menu, string text, string shortcut, WindowAction action)
+    {
+        var icon = MenuIconGenerator.GenerateIcon(action);
+        var item = new ToolStripMenuItem(text, icon, (s, e) =>
+        {
+            _windowManager?.Execute(action, forceDirectAction: true);
+            RecordRecentAction(action.ToString());
+        });
+        if (!string.IsNullOrEmpty(shortcut))
+        {
+            item.ShortcutKeyDisplayString = shortcut;
+        }
         menu.Items.Add(item);
     }
 
-    private static string GetIconNameForAction(WindowAction action)
-    {
-        return action switch
-        {
-            // 半屏
-            WindowAction.LeftHalf => "leftHalfTemplate.png",
-            WindowAction.RightHalf => "rightHalfTemplate.png",
-            WindowAction.CenterHalf => "halfWidthCenterTemplate.png",
-            WindowAction.TopHalf => "topHalfTemplate.png",
-            WindowAction.BottomHalf => "bottomHalfTemplate.png",
-            // 四角
-            WindowAction.TopLeft => "topLeftTemplate.png",
-            WindowAction.TopRight => "topRightTemplate.png",
-            WindowAction.BottomLeft => "bottomLeftTemplate.png",
-            WindowAction.BottomRight => "bottomRightTemplate.png",
-            // 三分之一
-            WindowAction.FirstThird => "firstThirdTemplate.png",
-            WindowAction.CenterThird => "centerThirdTemplate.png",
-            WindowAction.LastThird => "lastThirdTemplate.png",
-            // 三分之二
-            WindowAction.FirstTwoThirds => "firstTwoThirdsTemplate.png",
-            WindowAction.CenterTwoThirds => "centerTwoThirdsTemplate.png",
-            WindowAction.LastTwoThirds => "lastTwoThirdsTemplate.png",
-            // 四等分
-            WindowAction.FirstFourth => "leftFourthTemplate.png",
-            WindowAction.SecondFourth => "centerLeftFourthTemplate.png",
-            WindowAction.ThirdFourth => "centerRightFourthTemplate.png",
-            WindowAction.LastFourth => "rightFourthTemplate.png",
-            WindowAction.FirstThreeFourths => "firstThreeFourthsTemplate.png",
-            WindowAction.CenterThreeFourths => "centerThreeFourthsTemplate.png",
-            WindowAction.LastThreeFourths => "lastThreeFourthsTemplate.png",
-            // 六等分
-            WindowAction.TopLeftSixth => "topLeftSixthTemplate.png",
-            WindowAction.TopCenterSixth => "topCenterSixthTemplate.png",
-            WindowAction.TopRightSixth => "topRightSixthTemplate.png",
-            WindowAction.BottomLeftSixth => "bottomLeftSixthTemplate.png",
-            WindowAction.BottomCenterSixth => "bottomCenterSixthTemplate.png",
-            WindowAction.BottomRightSixth => "bottomRightSixthTemplate.png",
-            // 最大化相关
-            WindowAction.Maximize => "maximizeTemplate.png",
-            WindowAction.AlmostMaximize => "almostMaximizeTemplate.png",
-            WindowAction.MaximizeHeight => "maximizeHeightTemplate.png",
-            WindowAction.Center => "centerTemplate.png",
-            WindowAction.Restore => "restoreTemplate.png",
-            // 放大缩小
-            WindowAction.Larger => "makeLargerTemplate.png",
-            WindowAction.Smaller => "makeSmallerTemplate.png",
-            // 移动
-            WindowAction.MoveLeft => "moveLeftTemplate.png",
-            WindowAction.MoveRight => "moveRightTemplate.png",
-            WindowAction.MoveUp => "moveUpTemplate.png",
-            WindowAction.MoveDown => "moveDownTemplate.png",
-            // 显示器
-            WindowAction.NextDisplay => "nextDisplayTemplate.png",
-            WindowAction.PreviousDisplay => "prevDisplayTemplate.png",
-            _ => ""
-        };
-    }
-    
     private static string GetShortcutText(Dictionary<string, ShortcutConfig> shortcuts, string actionName)
     {
         if (!shortcuts.TryGetValue(actionName, out var config) || !config.Enabled || config.KeyCode <= 0)
